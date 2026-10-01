@@ -478,18 +478,25 @@
   <script src="/client.js"></script>
 
   <script>
+    // Переключение вкладок внутри раздела "Друзья"
     document.querySelectorAll('.friends-tab').forEach(tab => {
       tab.addEventListener('click', () => {
+
         const target = tab.getAttribute('data-tab');
-        document.querySelectorAll('.friends-tab').forEach(t => t.classList.remove('active'));
+
+        document
+          .querySelectorAll('.friends-tab')
+          .forEach(t => t.classList.remove('active'));
+
         tab.classList.add('active');
-        const blocks = {
-          friends: document.getElementById('friendsList'),
-          requests: document.getElementById('friendRequests'),
-          add: document.getElementById('addFriends')
-        };
-        Object.entries(blocks).forEach(([key, el]) => { if (el) el.style.display = key === target ? 'block' : 'none'; });
-        if (target === 'add' && window.initFriendSearch) window.initFriendSearch();
+
+        if (target === 'friends') {
+          document.getElementById('friendsList').style.display = 'block';
+          document.getElementById('friendRequests').style.display = 'none';
+        } else {
+          document.getElementById('friendsList').style.display = 'none';
+          document.getElementById('friendRequests').style.display = 'block';
+        }
       });
     });
   </script>

@@ -739,281 +739,567 @@ nav {
 }
 
 /* =========================================================
-   StandKnife — финальные исправления UI
+   StandKnife — refined UI v2
+   Умеренный визуальный стиль: без чрезмерного неона.
    ========================================================= */
+:root {
+  --sk-bg: #0b1222;
+  --sk-bg-soft: #101a2e;
+  --sk-card: #18243a;
+  --sk-card-2: #1c2940;
+  --sk-border: rgba(100, 135, 190, 0.28);
+  --sk-border-strong: rgba(72, 132, 235, 0.55);
+  --sk-blue: #4d8dff;
+  --sk-blue-soft: rgba(77, 141, 255, 0.14);
+  --sk-text: #e7edf8;
+  --sk-muted: #94a4bf;
+  --sk-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
+}
+
 html {
+  background: var(--sk-bg);
   color-scheme: dark;
 }
 
+body {
+  min-height: 100vh;
+  background:
+    radial-gradient(circle at 12% 8%, rgba(56, 105, 190, 0.10), transparent 28%),
+    radial-gradient(circle at 88% 85%, rgba(45, 92, 170, 0.07), transparent 30%),
+    var(--sk-bg);
+  color: var(--sk-text);
+}
+
+button,
 input,
 textarea,
 select {
-  color-scheme: dark;
+  font: inherit;
 }
 
-/* Кнопка смены аватарки: маленькая, круглая, снаружи аватара */
-.avatar-container {
-  position: relative;
-  overflow: visible;
+button {
+  -webkit-tap-highlight-color: transparent;
 }
 
-.avatar-upload-btn,
-#changeAvatarBtn {
-  position: absolute !important;
-  width: 20px !important;
-  min-width: 20px !important;
-  max-width: 20px !important;
-  height: 20px !important;
-  min-height: 20px !important;
-  max-height: 20px !important;
-  padding: 0 !important;
-  margin: 0 !important;
-  right: -5px !important;
-  bottom: -5px !important;
-  border-radius: 50% !important;
-  border: 2px solid #0f172a !important;
-  background: #334155 !important;
-  color: #e2e8f0 !important;
-  display: flex !important;
-  align-items: center !important;
-  justify-content: center !important;
-  font-size: 9px !important;
-  line-height: 1 !important;
-  z-index: 10 !important;
-  box-shadow: 0 2px 7px rgba(0,0,0,.45) !important;
-  transform: none !important;
+/* ---------- Единый стиль полей ввода ---------- */
+input[type="text"],
+input[type="password"],
+input[type="search"],
+input[type="number"],
+input[type="email"],
+textarea,
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  width: auto;
+  min-height: 44px;
+  padding: 11px 14px;
+  border: 1px solid var(--sk-border);
+  border-radius: 11px;
+  outline: none;
+  background: #0d172a;
+  color: var(--sk-text);
+  caret-color: var(--sk-blue);
+  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025), 0 4px 14px rgba(0,0,0,0.12);
+  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease, transform .2s ease;
 }
 
-.avatar-upload-btn:hover,
-#changeAvatarBtn:hover {
-  transform: scale(1.08) !important;
-  background: #475569 !important;
-  box-shadow: 0 0 8px rgba(59,130,246,.35) !important;
+input::placeholder,
+textarea::placeholder {
+  color: #71819d;
+  opacity: 1;
 }
 
-/* Глобальный чат: аватарка — именно изображение, а не стилизованная кнопка */
+input:hover,
+textarea:hover,
+select:hover {
+  border-color: rgba(100, 135, 190, 0.48);
+  background: #0f1b30;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: var(--sk-blue);
+  background: #0e1a2f;
+  box-shadow: 0 0 0 3px rgba(77, 141, 255, 0.11), 0 6px 18px rgba(0,0,0,0.18);
+}
+
+input[type="file"] {
+  max-width: 100%;
+  color: var(--sk-muted);
+  background: #0d172a;
+  border: 1px solid var(--sk-border);
+  border-radius: 10px;
+  padding: 7px;
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 8px;
+  border: 1px solid var(--sk-border-strong);
+  border-radius: 8px;
+  padding: 7px 10px;
+  background: #182944;
+  color: var(--sk-text);
+  cursor: pointer;
+}
+
+/* ---------- Более аккуратные кнопки ---------- */
+button,
+.nav-btn,
+.queue-mode-btn,
+.leave-queue-btn,
+.friend-item button,
+.invite-friend,
+.pm-friend,
+.accept-request,
+.reject-request,
+#createPartyBtn,
+#joinPartyBtn,
+#searchBtn,
+.add-friend-from-party,
+.add-friend-lobby,
+.info-icon,
 .chat-avatar,
 .participant-avatar,
 .lobby-avatar,
 .friend-avatar,
 .mini-avatar,
-.top-avatar,
-.clan-avatar {
+.leave-party-btn,
+.friends-tab,
+.top-tab,
+.glow-btn {
+  border: 1px solid rgba(100, 135, 190, 0.18);
+}
+
+button:hover,
+.nav-btn:hover,
+.queue-mode-btn:hover,
+.leave-queue-btn:hover,
+.friend-item button:hover,
+.invite-friend:hover,
+.pm-friend:hover,
+.accept-request:hover,
+.reject-request:hover,
+#createPartyBtn:hover,
+#joinPartyBtn:hover,
+#searchBtn:hover,
+.add-friend-from-party:hover,
+.add-friend-lobby:hover,
+.glow-btn:hover {
+  transform: translateY(-1px);
+  background: #253651;
+  box-shadow: 0 7px 18px rgba(0,0,0,0.18);
+}
+
+/* ---------- Карточки ---------- */
+.profile-card,
+.stat-card,
+.mode-card,
+.friend-item,
+.chat-messages,
+#partyMembers,
+.modal-content,
+.match-found-content {
+  background: linear-gradient(145deg, rgba(29, 43, 66, 0.98), rgba(22, 34, 54, 0.98));
+  border: 1px solid var(--sk-border);
+  box-shadow: var(--sk-shadow);
+}
+
+.profile-card,
+.stat-card,
+.mode-card,
+.friend-item {
+  position: relative;
+  overflow: visible;
+}
+
+.profile-card::before,
+.stat-card::before,
+.mode-card::before {
+  content: "";
+  position: absolute;
+  left: 16px;
+  right: 16px;
+  top: 0;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(94, 151, 245, 0.34), transparent);
+  pointer-events: none;
+}
+
+.profile-card:hover,
+.stat-card:hover,
+.mode-card:hover,
+.friend-item:hover {
+  border-color: rgba(100, 145, 215, 0.38);
+}
+
+/* ---------- Профиль / аватар ---------- */
+.avatar-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex: 0 0 80px;
+  overflow: visible;
+}
+
+#avatar {
+  display: block;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+  border: 2px solid #4d8dff;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.25), 0 0 0 4px rgba(77,141,255,0.07);
+}
+
+.avatar-upload-btn {
+  position: absolute;
+  right: -9px;
+  bottom: -7px;
+  z-index: 3;
+  width: 28px;
+  height: 28px;
+  min-width: 28px;
   padding: 0 !important;
-  margin-top: 0 !important;
-  background: transparent !important;
-  border: 1px solid #3b82f6 !important;
-  object-fit: cover !important;
-  flex: 0 0 auto;
-}
-
-.chat-avatar {
-  width: 34px !important;
-  height: 34px !important;
-  min-width: 34px !important;
-  min-height: 34px !important;
-}
-
-.chat-message {
   display: flex;
-  align-items: flex-start;
-}
-
-.chat-message > span:not(.chat-avatar),
-.chat-message > strong {
-  min-width: 0;
-}
-
-/* Друзья — поиск */
-.friend-search-box {
-  display: flex;
-  gap: 8px;
-  margin-bottom: 14px;
-}
-
-.friend-search-box input {
-  flex: 1;
-  min-width: 0;
-}
-
-.friend-search-box button {
-  flex: 0 0 auto;
-}
-
-.friend-search-item {
   align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  background: #17253b !important;
+  border: 2px solid #0d172a !important;
+  box-shadow: 0 3px 10px rgba(0,0,0,0.35), 0 0 0 1px rgba(77,141,255,0.55);
+  font-size: 13px;
 }
 
-.friend-search-info {
+.avatar-upload-btn:hover {
+  transform: translateY(-1px) !important;
+  background: #213553 !important;
+  box-shadow: 0 5px 13px rgba(0,0,0,0.35), 0 0 0 1px rgba(77,141,255,0.8);
+}
+
+/* ---------- Заголовки ---------- */
+.view h2 {
+  color: #eaf1ff;
+  border-bottom: 2px solid rgba(77,141,255,0.8);
+  text-shadow: 0 2px 10px rgba(0,0,0,0.2);
+}
+
+.mode-card h3,
+.stat-card h3 {
+  color: #67a0ff;
+}
+
+/* ---------- Режимы / очереди ---------- */
+.mode-buttons button {
+  border: 1px solid rgba(100,135,190,0.22);
+}
+
+.mode-buttons button:hover,
+.mode-buttons button:focus-visible {
+  background: #254d8d;
+  color: #fff;
+}
+
+.queue-stats {
+  border: 1px solid rgba(100,135,190,0.12);
+}
+
+/* ---------- Контент ---------- */
+.content {
   min-width: 0;
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  gap: 3px;
 }
 
-.friend-search-info strong {
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
-}
-
-.friend-search-info small,
-.muted-text {
-  color: #94a3b8;
-  font-size: 12px;
-}
-
-.add-search-friend {
-  flex: 0 0 auto;
-}
-
-/* Профиль игрока — логин никогда не показываем */
-.profile-modal .modal-content p {
-  margin: 7px 0;
-}
-
-/* Системные элементы ввода */
-input[type="file"] {
-  color: #cbd5e1;
-  background: #0f172a;
-  border: 1px solid #334155;
-}
-
-input[type="file"]::file-selector-button {
-  color: #e2e8f0;
-  background: #1e293b;
-  border: 1px solid #334155;
-  border-radius: 6px;
-  padding: 6px 10px;
-}
-
-select,
-select option {
-  background-color: #0f172a;
-  color: #e2e8f0;
-}
-
-@media (max-width: 600px) {
-  .avatar-upload-btn,
-  #changeAvatarBtn {
-    width: 18px !important;
-    min-width: 18px !important;
-    max-width: 18px !important;
-    height: 18px !important;
-    min-height: 18px !important;
-    max-height: 18px !important;
-    right: -5px !important;
-    bottom: -5px !important;
-    font-size: 8px !important;
-    border-width: 1.5px !important;
+/* ---------- Мобильная версия ---------- */
+@media (max-width: 800px) {
+  body {
+    overflow-x: hidden;
   }
 
-  .friend-search-box {
+  #mainScreen {
+    min-height: 100dvh;
     flex-direction: column;
   }
 
-  .friend-search-box button {
+  .sidebar {
+    width: 100%;
+    padding: 12px 12px 0;
+    gap: 10px;
+    border-right: none;
+    border-bottom: 1px solid rgba(100,135,190,0.18);
+    background: rgba(11,18,34,0.97);
+    position: sticky;
+    top: 0;
+    z-index: 20;
+    backdrop-filter: blur(12px);
+  }
+
+  .profile-card {
+    padding: 12px;
+    border-radius: 14px;
+  }
+
+  .profile-header {
+    gap: 13px;
+    margin-bottom: 10px;
+  }
+
+  .avatar-container,
+  #avatar {
+    width: 68px;
+    height: 68px;
+  }
+
+  .avatar-container {
+    flex-basis: 68px;
+  }
+
+  .avatar-upload-btn {
+    width: 26px;
+    height: 26px;
+    min-width: 26px;
+    right: -8px;
+    bottom: -7px;
+  }
+
+  #nickname {
+    font-size: 17px;
+  }
+
+  #logoutBtn {
+    margin-top: 4px;
+    min-height: 42px;
+  }
+
+  nav {
+    width: 100%;
+    flex-direction: row;
+    gap: 6px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0 2px 8px;
+    scrollbar-width: none;
+  }
+
+  nav::-webkit-scrollbar {
+    display: none;
+  }
+
+  .nav-btn {
+    flex: 0 0 auto;
+    min-height: 42px;
+    padding: 9px 14px;
+    text-align: center;
+    white-space: nowrap;
+    font-size: 14px;
+  }
+
+  .nav-btn.active {
+    border-left: none;
+    border-bottom: 2px solid #4d8dff;
+    background: #1b2b45;
+  }
+
+  .content {
+    width: 100%;
+    padding: 18px 12px 28px;
+  }
+
+  .view {
+    width: 100%;
+    max-width: none;
+  }
+
+  .view h2 {
+    font-size: 22px;
+    margin-bottom: 18px;
+  }
+
+  #playView > div[style*="margin-bottom: 15px"] {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  #playView > div[style*="margin-bottom: 15px"] button,
+  #playView > div[style*="margin-bottom: 15px"] input {
+    width: 100% !important;
+    min-width: 0;
+    margin: 0;
+  }
+
+  .modes-container {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .mode-card {
+    min-width: 0;
+    padding: 16px;
+    border-radius: 15px;
+  }
+
+  .mode-buttons {
+    gap: 8px;
+  }
+
+  .mode-buttons button {
+    min-height: 42px;
+    padding: 8px 10px;
+  }
+
+  .queue-stats {
+    min-height: 42px;
+    gap: 8px;
+  }
+
+  .stats-grid {
+    grid-template-columns: 1fr;
+    gap: 14px;
+  }
+
+  .stat-card {
+    padding: 16px;
+  }
+
+  #newNickInput {
+    width: 100%;
+    margin: 0 0 9px;
+  }
+
+  #changeNickBtn {
+    width: 100%;
+    margin-left: 0;
+    min-height: 44px;
+  }
+
+  .chat-input,
+  .lobby-input {
+    flex-direction: column;
+  }
+
+  .chat-input input,
+  .lobby-input input,
+  .chat-input button,
+  .lobby-input button {
+    width: 100%;
+    min-height: 44px;
+  }
+
+  .friend-item {
+    flex-wrap: wrap;
+  }
+
+  .friend-item > div {
+    width: 100%;
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: 6px;
+    margin-left: 52px;
+  }
+
+  .friend-item button {
+    margin-left: 0;
+    width: 100%;
+  }
+
+  .modal-content,
+  .match-found-content {
+    width: calc(100% - 24px);
+    max-width: none;
+    padding: 18px;
+    border-radius: 18px;
+  }
+
+  .match-buttons {
+    display: grid;
+    gap: 8px;
+  }
+
+  .match-buttons button {
+    width: 100%;
+    margin: 0;
+  }
+
+  #notificationContainer {
+    left: 12px !important;
+    right: 12px !important;
+    top: 12px !important;
+  }
+
+  .notification {
+    max-width: none !important;
     width: 100%;
   }
 }
 
-@media (max-width: 380px) {
-  .avatar-upload-btn,
-  #changeAvatarBtn {
-    width: 17px !important;
-    min-width: 17px !important;
-    max-width: 17px !important;
-    height: 17px !important;
-    min-height: 17px !important;
-    max-height: 17px !important;
-    font-size: 7px !important;
-  }
-}
-
-
-/* StandKnife final mobile layout */
-.mobile-menu-btn { display:none; }
-body.menu-open { overflow:hidden; }
-
-@media (max-width: 900px) {
-  #mainScreen { display:flex; min-height:100vh; }
-  .sidebar { width:260px; flex:0 0 260px; }
-  .content { padding:24px 18px; }
-}
-
-@media (max-width: 700px) {
-  #mainScreen { display:block !important; }
+@media (max-width: 430px) {
   .sidebar {
-    position:fixed;
-    inset:0 auto 0 0;
-    width:min(86vw, 300px);
-    height:100dvh;
-    padding:16px 12px;
-    overflow-y:auto;
-    transform:translateX(-105%);
-    transition:transform .22s ease;
-    z-index:10001;
-    box-shadow:10px 0 30px rgba(0,0,0,.45);
+    padding-left: 9px;
+    padding-right: 9px;
   }
-  .sidebar.mobile-open { transform:translateX(0); }
-  .content { width:100%; min-height:100dvh; padding:64px 12px 20px; overflow-x:hidden; }
-  .view { width:100%; max-width:none; }
-  .view h2 { font-size:20px; margin-bottom:16px; }
-  .stats-grid { grid-template-columns:1fr; gap:12px; }
-  .modes-container { flex-direction:column; gap:12px; }
-  .mode-card { min-width:0; width:100%; padding:14px; }
-  .mode-buttons { gap:8px; }
-  .mode-buttons button { min-width:0; padding:9px 8px; }
-  .chat-messages { height:calc(100dvh - 190px); min-height:280px; }
-  .chat-input { gap:7px; }
-  .chat-input button { padding:0 12px; }
-  .friends-tabs { gap:4px; overflow-x:auto; scrollbar-width:none; }
-  .friends-tabs::-webkit-scrollbar { display:none; }
-  .friends-tab { flex:0 0 auto; font-size:13px; padding:8px 10px; }
-  .friend-item { align-items:center; flex-wrap:wrap; padding:10px; }
-  .friend-item > div { width:100%; margin-left:52px; display:flex; flex-wrap:wrap; gap:5px; }
-  .friend-item button { margin-left:0; }
-  .friend-search-box { flex-direction:row !important; }
-  .friend-search-box button { width:auto !important; }
-  .login-container { width:calc(100vw - 24px); max-width:360px; padding:22px 16px; }
-  .match-found-content, .modal-content { width:calc(100vw - 24px); max-width:none; padding:18px; border-radius:16px; }
-  .lobby-input { flex-wrap:wrap; }
-  .lobby-input input { min-width:0; width:100%; }
-  .lobby-input button { flex:1; }
-  .admin-button { right:12px !important; bottom:12px !important; }
-  .mobile-menu-btn {
-    display:flex;
-    position:fixed;
-    top:12px;
-    left:12px;
-    width:42px;
-    height:42px;
-    align-items:center;
-    justify-content:center;
-    padding:0;
-    border:1px solid #334155;
-    border-radius:12px;
-    background:#1e293b;
-    color:#e2e8f0;
-    font-size:21px;
-    z-index:10000;
-    box-shadow:0 6px 20px rgba(0,0,0,.3);
+
+  .content {
+    padding-left: 9px;
+    padding-right: 9px;
   }
-  .mobile-menu-btn:hover { transform:none; background:#334155; }
-  .profile-header { align-items:flex-start; }
-  .avatar-container { flex:0 0 80px; }
-  .avatar-upload-btn, #changeAvatarBtn {
-    width:22px !important;
-    min-width:22px !important;
-    max-width:22px !important;
-    height:22px !important;
-    min-height:22px !important;
-    max-height:22px !important;
-    right:-6px !important;
-    bottom:-6px !important;
-    font-size:10px !important;
-    z-index:20 !important;
+
+  .profile-card {
+    padding: 10px;
   }
-  input, textarea, select { max-width:100%; }
+
+  .profile-header {
+    gap: 11px;
+  }
+
+  .nav-btn {
+    padding-left: 12px;
+    padding-right: 12px;
+  }
+
+  .queue-stats {
+    font-size: 12px;
+  }
+}
+
+@media (min-width: 801px) {
+  .sidebar {
+    box-shadow: 8px 0 28px rgba(0,0,0,0.10);
+  }
+
+  .content {
+    background:
+      radial-gradient(circle at 80% 15%, rgba(77,141,255,0.045), transparent 28%),
+      var(--sk-bg);
+  }
+}
+
+
+/* FINAL VISIBILITY FIX
+   Login and main application can never be visible simultaneously.
+   JS only changes the inline display value.
+*/
+#loginScreen[style*="display: none"] { display: none !important; }
+#mainScreen[style*="display: none"] { display: none !important; }
+
+/* Login is a real full-screen layout, not a normal app view. */
+#loginScreen.screen {
+  min-height: 100vh;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+/* Main app is the only thing shown after successful authentication. */
+#mainScreen.screen {
+  min-height: 100vh;
+}
+
+/* Never let the mode selector leak into the authentication card. */
+#loginScreen #playView,
+#loginScreen .modes-container,
+#loginScreen .mode-card,
+#loginScreen .queue-mode-btn {
+  display: none !important;
 }
