@@ -1,1352 +1,1285 @@
 * {
-  margin: 0;
-  padding: 0;
   box-sizing: border-box;
-  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
-}
-
-body {
-  background: #0f172a;
-  color: #e2e8f0;
-}
-
-/* Общие анимации и частицы */
-@keyframes slideIn {
-  from { transform: translateX(100%); opacity: 0; }
-  to { transform: translateX(0); opacity: 1; }
-}
-@keyframes slideOut {
-  from { transform: translateX(0); opacity: 1; }
-  to { transform: translateX(100%); opacity: 0; }
-}
-@keyframes pulse {
-  0% { transform: scale(1); }
-  50% { transform: scale(1.05); background: rgba(59,130,246,0.3); }
-  100% { transform: scale(1); }
-}
-@keyframes glow {
-  0% { box-shadow: 0 0 0 0 rgba(59,130,246,0.4); }
-  70% { box-shadow: 0 0 0 10px rgba(59,130,246,0); }
-  100% { box-shadow: 0 0 0 0 rgba(59,130,246,0); }
-}
-
-.particle {
-  position: fixed;
-  pointer-events: none;
-  width: 6px;
-  height: 6px;
-  background: #3b82f6;
-  border-radius: 50%;
-  animation: particleFly 0.6s ease-out forwards;
-  z-index: 10000;
-}
-@keyframes particleFly {
-  0% { transform: translate(0,0) scale(1); opacity: 1; }
-  100% { transform: translate(var(--dx), var(--dy)) scale(0); opacity: 0; }
-}
-
-/* Кнопки и интерактивные элементы */
-button, .nav-btn, .queue-mode-btn, .leave-queue-btn, .friend-item button,
-.invite-friend, .pm-friend, .accept-request, .reject-request, #createPartyBtn, #joinPartyBtn,
-#searchBtn, .add-friend-from-party, .add-friend-lobby, .avatar-upload-btn,
-.info-icon, .chat-avatar, .participant-avatar, .lobby-avatar, .friend-avatar,
-.mini-avatar, .leave-party-btn, .friends-tab, .top-tab, .glow-btn {
-  transition: transform 0.2s ease, background-color 0.2s ease, box-shadow 0.2s ease;
-  background: #1e293b;
-  color: #e2e8f0;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  cursor: pointer;
-  font-weight: 500;
-}
-button:hover, .nav-btn:hover, .queue-mode-btn:hover, .leave-queue-btn:hover,
-.friend-item button:hover, .invite-friend:hover, .pm-friend:hover,
-.accept-request:hover, .reject-request:hover, #createPartyBtn:hover, #joinPartyBtn:hover,
-#searchBtn:hover, .add-friend-from-party:hover, .add-friend-lobby:hover,
-.avatar-upload-btn:hover, .info-icon:hover, .chat-avatar:hover,
-.participant-avatar:hover, .lobby-avatar:hover, .friend-avatar:hover,
-.mini-avatar:hover, .leave-party-btn:hover, .friends-tab:hover, .top-tab:hover,
-.glow-btn:hover {
-  transform: scale(1.02);
-  background: #334155;
-  box-shadow: 0 0 12px rgba(59,130,246,0.3);
-}
-button:active, .nav-btn:active, .queue-mode-btn:active, .glow-btn:active {
-  transform: scale(0.96);
-}
-
-/* Экран входа */
-.login-container {
-  background: #1e293b;
-  border-radius: 24px;
-  padding: 32px;
-  width: 360px;
-  box-shadow: 0 8px 24px rgba(0,0,0,0.4);
-  text-align: center;
-}
-.login-container h1 {
-  color: #3b82f6;
-  font-weight: 700;
-  margin-bottom: 8px;
-}
-.login-container input {
-  background: #0f172a;
-  border: 1px solid #334155;
-  color: #fff;
-  border-radius: 8px;
-  padding: 12px;
-  margin: 10px 0;
-  width: 100%;
-}
-.login-container input:focus {
-  border-color: #3b82f6;
-  outline: none;
-}
-.login-container button {
-  background: #3b82f6;
-  border: none;
-  border-radius: 8px;
-  padding: 12px;
-  font-weight: 600;
-  cursor: pointer;
-  width: 100%;
-}
-.login-container button:hover {
-  background: #2563eb;
-}
-
-/* Главный экран */
-#mainScreen {
-  display: flex;
-  min-height: 100vh;
-}
-.sidebar {
-  width: 320px;
-  background: #0f172a;
-  border-right: 1px solid #1e293b;
-  padding: 24px 16px;
-  display: flex;
-  flex-direction: column;
-  gap: 24px;
-}
-.profile-card {
-  background: #1e293b;
-  border-radius: 16px;
-  padding: 16px;
-}
-.profile-header {
-  display: flex;
-  gap: 16px;
-  align-items: center;
-  margin-bottom: 16px;
-}
-.avatar-container {
-  position: relative;
-  width: 80px;
-  height: 80px;
-}
-#avatar {
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  object-fit: cover;
-  border: 2px solid #3b82f6;
-}
-.avatar-upload-btn {
-  position: absolute;
-  bottom: 0;
-  right: 0;
-  background: #0f172a;
-  border: 1px solid #3b82f6;
-  border-radius: 50%;
-  width: 24px;
-  height: 24px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  font-size: 12px;
-  padding: 0;
-}
-.profile-info {
-  flex: 1;
-}
-.streak-container {
-  background: #0f172a;
-  padding: 2px 8px;
-  border-radius: 12px;
-  display: inline-block;
-  font-size: 12px;
-  font-weight: bold;
-  cursor: help;
-  margin-bottom: 4px;
-}
-.nickname-container {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-#nickname {
-  font-size: 18px;
-  font-weight: 600;
   margin: 0;
-}
-.info-icon {
-  font-size: 14px;
-  cursor: pointer;
-  position: relative;
-}
-.info-tooltip {
-  position: absolute;
-  background: #1e293b;
-  border: 1px solid #3b82f6;
-  border-radius: 8px;
-  padding: 8px;
-  font-size: 12px;
-  z-index: 1000;
-  white-space: nowrap;
-  box-shadow: 0 2px 8px rgba(0,0,0,0.3);
-}
-.info-tooltip div {
-  margin: 4px 0;
-}
-#logoutBtn, .leave-party-btn {
-  background: #334155;
-  border: none;
-  border-radius: 8px;
-  padding: 8px;
-  width: 100%;
-  cursor: pointer;
-  font-size: 14px;
-  margin-top: 8px;
-}
-nav {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-.nav-btn {
-  background: transparent;
-  border: none;
-  padding: 10px 16px;
-  text-align: left;
-  font-size: 15px;
-  font-weight: 500;
-  color: #cbd5e1;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: 0.2s;
-}
-.nav-btn.active {
-  background: #1e293b;
-  color: #3b82f6;
-  border-left: 3px solid #3b82f6;
-}
-.nav-btn:hover:not(.active) {
-  background: #1e293b;
+  padding: 0;
+  font-family:
+    Inter,
+    -apple-system,
+    BlinkMacSystemFont,
+    "Segoe UI",
+    sans-serif;
 }
 
-.content {
-  flex: 1;
-  padding: 32px;
-  overflow-y: auto;
-  background: #0f172a;
-}
-.view {
-  max-width: 1000px;
-  margin: 0 auto;
-}
-.view h2 {
-  font-size: 24px;
-  font-weight: 600;
-  margin-bottom: 24px;
-  border-bottom: 2px solid #3b82f6;
-  display: inline-block;
-  padding-bottom: 4px;
-}
-
-/* Карточки статистики */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
-  gap: 24px;
-}
-.stat-card {
-  background: #1e293b;
-  border-radius: 16px;
-  padding: 20px;
-  border: 1px solid #334155;
-}
-.stat-card h3 {
-  font-size: 18px;
-  font-weight: 600;
-  margin-bottom: 16px;
-  color: #3b82f6;
-}
-.stat-row {
-  display: flex;
-  justify-content: space-between;
-  padding: 8px 0;
-  border-bottom: 1px solid #334155;
-  font-size: 14px;
-}
-.stat-row strong {
-  font-weight: 700;
-  color: #fff;
-}
-.admin-badge {
-  background: #fbbf24;
-  color: #0f172a;
-  padding: 2px 8px;
-  border-radius: 12px;
-  font-size: 12px;
-  font-weight: bold;
-  display: inline-block;
-  margin-top: 8px;
-}
-
-/* Карточки режимов */
-.modes-container {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 24px;
-}
-.mode-card {
-  background: #1e293b;
-  border-radius: 16px;
-  padding: 20px;
-  flex: 1;
-  min-width: 260px;
-  border: 1px solid #334155;
-}
-.mode-card h3 {
-  font-size: 18px;
-  margin-bottom: 16px;
-  color: #3b82f6;
-}
-.mode-buttons {
-  display: flex;
-  gap: 12px;
-  margin-bottom: 16px;
-}
-.mode-buttons button {
-  background: #0f172a;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  color: white;
-  cursor: pointer;
-  transition: 0.2s;
-  flex: 1;
-}
-.mode-buttons button:hover {
-  background: #3b82f6;
-  color: #0f172a;
-}
-.queue-stats {
-  background: #0f172a;
-  border-radius: 8px;
-  padding: 8px 12px;
-  margin: 8px 0;
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  font-size: 13px;
-}
-.queue-count {
-  font-weight: 700;
-  color: #3b82f6;
-}
-.leave-queue-btn {
-  background: #334155;
-  border: none;
-  padding: 2px 8px;
-  border-radius: 4px;
-  color: #ccc;
-  font-size: 11px;
-  cursor: pointer;
-}
-.leave-queue-btn:hover {
-  background: #475569;
-}
-
-/* Модальное окно найденного матча */
-.match-found-modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(8px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 2000;
-}
-.match-found-content {
-  background: #1e293b;
-  border-radius: 24px;
-  padding: 32px;
-  max-width: 500px;
-  width: 90%;
-  text-align: center;
-  border: 1px solid #334155;
-}
-.match-found-content h2 {
-  color: #3b82f6;
-  margin-bottom: 16px;
-}
-.participants-list {
-  margin: 20px 0;
-  max-height: 300px;
-  overflow-y: auto;
-  text-align: left;
-}
-.participant {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #0f172a;
-  padding: 8px 12px;
-  border-radius: 12px;
-  margin: 8px 0;
-}
-.participant-avatar {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 1px solid #3b82f6;
-}
-.timer {
-  font-size: 18px;
-  font-weight: 600;
-  margin: 16px 0;
-}
-.match-buttons button {
-  background: #3b82f6;
-  border: none;
-  padding: 10px 20px;
-  border-radius: 8px;
-  font-weight: 600;
-  cursor: pointer;
-  margin: 0 8px;
-}
-.match-buttons button:first-child {
-  background: #22c55e;
-}
-.match-buttons button:first-child:hover {
-  background: #16a34a;
-}
-.match-buttons button:last-child:hover {
-  background: #2563eb;
-}
-
-/* Лобби */
-.modal {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: rgba(0,0,0,0.85);
-  backdrop-filter: blur(4px);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 1500;
-}
-.modal-content {
-  background: #1e293b;
-  border-radius: 24px;
-  padding: 24px;
-  max-width: 600px;
-  width: 90%;
-  max-height: 80vh;
-  overflow-y: auto;
-}
-.lobby-chat {
-  background: #0f172a;
-  border-radius: 12px;
-  height: 200px;
-  overflow-y: auto;
-  padding: 12px;
-  margin: 12px 0;
-}
-.lobby-input {
-  display: flex;
-  gap: 8px;
-}
-.lobby-input input {
-  flex: 1;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  padding: 8px;
-  color: white;
-}
-.lobby-input button {
-  background: #3b82f6;
-  border: none;
-  border-radius: 8px;
-  padding: 8px 16px;
-  cursor: pointer;
-}
-#screenshotArea {
-  margin: 12px 0;
-  display: flex;
-  gap: 8px;
-}
-#screenshotUpload {
-  background: #0f172a;
-  padding: 6px;
-  border-radius: 8px;
-}
-#closeLobbyBtn {
-  background: #334155;
-  border: none;
-  padding: 8px 16px;
-  border-radius: 8px;
-  margin-top: 12px;
-  cursor: pointer;
-  width: 100%;
-}
-
-/* Чат */
-.chat-messages {
-  background: #1e293b;
-  border-radius: 16px;
-  height: 400px;
-  overflow-y: auto;
-  padding: 16px;
-  margin-bottom: 16px;
-}
-.chat-message {
-  display: flex;
-  align-items: flex-start;
-  gap: 10px;
-  padding: 8px 0;
-  border-bottom: 1px solid #334155;
-}
-.chat-avatar {
-  width: 32px;
-  height: 32px;
-  border-radius: 50%;
-  cursor: pointer;
-}
-.chat-message strong {
-  color: #3b82f6;
-}
-.chat-message small {
-  margin-left: 8px;
-  color: #94a3b8;
-  font-size: 11px;
-}
-.chat-input {
-  display: flex;
-  gap: 12px;
-}
-.chat-input input {
-  flex: 1;
-  background: #0f172a;
-  border: 1px solid #334155;
-  border-radius: 12px;
-  padding: 12px;
-  color: white;
-}
-.chat-input button {
-  background: #3b82f6;
-  border: none;
-  border-radius: 12px;
-  padding: 0 20px;
-  font-weight: 600;
-  cursor: pointer;
-}
-
-/* Друзья */
-.friends-tabs {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-  border-bottom: 1px solid #334155;
-}
-.friends-tab {
-  background: none;
-  border: none;
-  padding: 8px 16px;
-  color: #94a3b8;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  border-bottom: 2px solid transparent;
-}
-.friends-tab.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
-}
-.friends-list {
-  margin-top: 16px;
-}
-.friend-item {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  background: #1e293b;
-  padding: 12px;
-  border-radius: 12px;
-  margin: 8px 0;
-}
-.friend-avatar {
-  width: 40px;
-  height: 40px;
-  border-radius: 50%;
-  cursor: pointer;
-  border: 1px solid #3b82f6;
-}
-.friend-item button {
-  background: #0f172a;
-  border: none;
-  border-radius: 6px;
-  padding: 4px 8px;
-  margin-left: 8px;
-  cursor: pointer;
-  font-size: 12px;
-}
-.friend-item button:hover {
-  background: #334155;
-}
-.accept-request {
-  background: #22c55e;
-  color: white;
-}
-.reject-request {
-  background: #ef4444;
-  color: white;
-}
-
-/* Пати */
-#partyMembers {
-  background: #1e293b;
-  border-radius: 16px;
-  padding: 16px;
-  margin-bottom: 20px;
-}
-#partyMembersList div {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  padding: 6px 0;
-}
-.mini-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  cursor: pointer;
-}
-.add-friend-from-party, .add-friend-lobby {
-  background: #0f172a;
-  border: none;
-  border-radius: 6px;
-  padding: 2px 8px;
-  font-size: 11px;
-  margin-left: 8px;
-  cursor: pointer;
-}
-.leave-party-btn {
-  margin-top: 8px;
-}
-
-/* История матчей */
-#matchList {
-  list-style: none;
-}
-#matchList li {
-  background: #1e293b;
-  border-left: 4px solid #3b82f6;
-  padding: 12px;
-  border-radius: 8px;
-  margin: 8px 0;
-}
-
-/* Топ */
-.top-tabs {
-  display: flex;
-  gap: 16px;
-  margin-bottom: 20px;
-}
-.top-tab {
-  background: none;
-  border: none;
-  padding: 8px 16px;
-  color: #94a3b8;
-  cursor: pointer;
-  font-size: 16px;
-  font-weight: 500;
-  border-bottom: 2px solid transparent;
-}
-.top-tab.active {
-  color: #3b82f6;
-  border-bottom-color: #3b82f6;
-}
-.top-table {
-  width: 100%;
-  border-collapse: collapse;
-}
-.top-table th, .top-table td {
-  padding: 8px;
-  text-align: left;
-  border-bottom: 1px solid #334155;
-}
-.top-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  vertical-align: middle;
-  margin-right: 8px;
-}
-
-/* Клан */
-.clan-avatar {
-  width: 24px;
-  height: 24px;
-  border-radius: 50%;
-  vertical-align: middle;
-  margin-right: 8px;
-}
-
-/* Уведомления */
-.notification {
-  animation: slideIn 0.3s ease, pulse 0.5s ease 0.3s;
-}
-.copy-code-btn {
-  background: #334155;
-  border: none;
-  padding: 2px 8px;
-  border-radius: 4px;
-  cursor: pointer;
-  font-size: 12px;
-  margin-left: 8px;
-}
-.copy-code-btn:hover {
-  background: #475569;
-}
-
-/* Кнопка смены ника */
-#changeNickBtn {
-  margin-left: 10px;
-}
-
-/* =========================================================
-   StandKnife — refined UI v2
-   Умеренный визуальный стиль: без чрезмерного неона.
-   ========================================================= */
-:root {
-  --sk-bg: #0b1222;
-  --sk-bg-soft: #101a2e;
-  --sk-card: #18243a;
-  --sk-card-2: #1c2940;
-  --sk-border: rgba(100, 135, 190, 0.28);
-  --sk-border-strong: rgba(72, 132, 235, 0.55);
-  --sk-blue: #4d8dff;
-  --sk-blue-soft: rgba(77, 141, 255, 0.14);
-  --sk-text: #e7edf8;
-  --sk-muted: #94a4bf;
-  --sk-shadow: 0 10px 30px rgba(0, 0, 0, 0.24);
-}
-
-html {
-  background: var(--sk-bg);
-  color-scheme: dark;
+html,
+body {
+  min-height: 100%;
 }
 
 body {
-  min-height: 100vh;
-  background:
-    radial-gradient(circle at 12% 8%, rgba(56, 105, 190, 0.10), transparent 28%),
-    radial-gradient(circle at 88% 85%, rgba(45, 92, 170, 0.07), transparent 30%),
-    var(--sk-bg);
-  color: var(--sk-text);
+  background: #08111f;
+  color: #e5edf8;
 }
 
 button,
-input,
-textarea,
-select {
+input {
   font: inherit;
 }
 
 button {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* ---------- Единый стиль полей ввода ---------- */
-input[type="text"],
-input[type="password"],
-input[type="search"],
-input[type="number"],
-input[type="email"],
-textarea,
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  width: auto;
-  min-height: 44px;
-  padding: 11px 14px;
-  border: 1px solid var(--sk-border);
-  border-radius: 11px;
-  outline: none;
-  background: #0d172a;
-  color: var(--sk-text);
-  caret-color: var(--sk-blue);
-  box-shadow: inset 0 1px 0 rgba(255,255,255,0.025), 0 4px 14px rgba(0,0,0,0.12);
-  transition: border-color .2s ease, box-shadow .2s ease, background-color .2s ease, transform .2s ease;
-}
-
-input::placeholder,
-textarea::placeholder {
-  color: #71819d;
-  opacity: 1;
-}
-
-input:hover,
-textarea:hover,
-select:hover {
-  border-color: rgba(100, 135, 190, 0.48);
-  background: #0f1b30;
-}
-
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: var(--sk-blue);
-  background: #0e1a2f;
-  box-shadow: 0 0 0 3px rgba(77, 141, 255, 0.11), 0 6px 18px rgba(0,0,0,0.18);
-}
-
-input[type="file"] {
-  max-width: 100%;
-  color: var(--sk-muted);
-  background: #0d172a;
-  border: 1px solid var(--sk-border);
-  border-radius: 10px;
-  padding: 7px;
-}
-
-input[type="file"]::file-selector-button {
-  margin-right: 8px;
-  border: 1px solid var(--sk-border-strong);
-  border-radius: 8px;
-  padding: 7px 10px;
-  background: #182944;
-  color: var(--sk-text);
   cursor: pointer;
 }
 
-/* ---------- Более аккуратные кнопки ---------- */
-button,
-.nav-btn,
-.queue-mode-btn,
-.leave-queue-btn,
-.friend-item button,
-.invite-friend,
-.pm-friend,
-.accept-request,
-.reject-request,
-#createPartyBtn,
-#joinPartyBtn,
-#searchBtn,
-.add-friend-from-party,
-.add-friend-lobby,
-.info-icon,
-.chat-avatar,
-.participant-avatar,
-.lobby-avatar,
-.friend-avatar,
-.mini-avatar,
-.leave-party-btn,
-.friends-tab,
-.top-tab,
-.glow-btn {
-  border: 1px solid rgba(100, 135, 190, 0.18);
+a {
+  color: #60a5fa;
+  text-decoration: none;
 }
 
-button:hover,
-.nav-btn:hover,
-.queue-mode-btn:hover,
-.leave-queue-btn:hover,
-.friend-item button:hover,
-.invite-friend:hover,
-.pm-friend:hover,
-.accept-request:hover,
-.reject-request:hover,
-#createPartyBtn:hover,
-#joinPartyBtn:hover,
-#searchBtn:hover,
-.add-friend-from-party:hover,
-.add-friend-lobby:hover,
-.glow-btn:hover {
-  transform: translateY(-1px);
-  background: #253651;
-  box-shadow: 0 7px 18px rgba(0,0,0,0.18);
+a:hover {
+  text-decoration: underline;
 }
 
-/* ---------- Карточки ---------- */
-.profile-card,
-.stat-card,
-.mode-card,
-.friend-item,
-.chat-messages,
-#partyMembers,
-.modal-content,
-.match-found-content {
-  background: linear-gradient(145deg, rgba(29, 43, 66, 0.98), rgba(22, 34, 54, 0.98));
-  border: 1px solid var(--sk-border);
-  box-shadow: var(--sk-shadow);
+/* =========================================================
+   LOGIN
+========================================================= */
+
+.screen {
+  min-height: 100vh;
 }
 
-.profile-card,
-.stat-card,
-.mode-card,
-.friend-item {
-  position: relative;
-  overflow: visible;
+#loginScreen {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+
+  background:
+    radial-gradient(
+      circle at 50% 30%,
+      rgba(37, 99, 235, .16),
+      transparent 40%
+    ),
+    #08111f;
 }
 
-.profile-card::before,
-.stat-card::before,
-.mode-card::before {
-  content: "";
-  position: absolute;
-  left: 16px;
-  right: 16px;
-  top: 0;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(94, 151, 245, 0.34), transparent);
-  pointer-events: none;
+.login-container {
+  width: min(420px, 100%);
+  padding: 34px;
+
+  border-radius: 24px;
+
+  background: rgba(30, 41, 59, .94);
+
+  border: 1px solid #334155;
+
+  box-shadow:
+    0 30px 80px rgba(0, 0, 0, .45);
+
+  text-align: center;
 }
 
-.profile-card:hover,
-.stat-card:hover,
-.mode-card:hover,
-.friend-item:hover {
-  border-color: rgba(100, 145, 215, 0.38);
+.login-container h1 {
+  margin-bottom: 28px;
+
+  font-size: 42px;
+
+  color: #3b82f6;
 }
 
-/* ---------- Профиль / аватар ---------- */
+.login-container input {
+  width: 100%;
+
+  margin-bottom: 12px;
+
+  padding: 15px;
+
+  border: 1px solid #334155;
+
+  border-radius: 12px;
+
+  outline: none;
+
+  background: #111c2e;
+  color: white;
+}
+
+.login-container input:focus {
+  border-color: #3b82f6;
+}
+
+.login-container button {
+  width: 100%;
+
+  padding: 14px;
+
+  margin-top: 5px;
+
+  border: 0;
+  border-radius: 12px;
+
+  background: #3b82f6;
+  color: white;
+
+  font-weight: 700;
+}
+
+.login-container button:hover {
+  background: #2563eb;
+}
+
+.login-container p {
+  margin-top: 18px;
+  color: #94a3b8;
+}
+
+.auth-message {
+  min-height: 24px;
+  margin-top: 15px;
+}
+
+/* =========================================================
+   MAIN
+========================================================= */
+
+#mainScreen {
+  display: flex;
+  min-height: 100vh;
+}
+
+.sidebar {
+  width: 280px;
+  flex: 0 0 280px;
+
+  min-height: 100vh;
+
+  padding: 20px;
+
+  background: #0b1424;
+
+  border-right: 1px solid #1e293b;
+}
+
+.content {
+  flex: 1;
+
+  min-width: 0;
+
+  padding: 30px;
+
+  overflow-x: hidden;
+}
+
+.view {
+  width: min(1100px, 100%);
+  margin: 0 auto;
+}
+
+.view h2 {
+  display: inline-block;
+
+  margin-bottom: 25px;
+
+  padding-bottom: 7px;
+
+  border-bottom: 2px solid #3b82f6;
+
+  font-size: 28px;
+}
+
+/* =========================================================
+   PROFILE SIDEBAR
+========================================================= */
+
+.profile-card {
+  padding: 15px;
+
+  margin-bottom: 25px;
+
+  border-radius: 18px;
+
+  background: #162238;
+
+  border: 1px solid #263750;
+}
+
+.profile-header {
+  display: flex;
+  gap: 12px;
+  align-items: center;
+}
+
 .avatar-container {
   position: relative;
-  width: 80px;
-  height: 80px;
-  flex: 0 0 80px;
-  overflow: visible;
+
+  width: 72px;
+  height: 72px;
+
+  flex: 0 0 72px;
 }
 
-#avatar {
-  display: block;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
+.main-avatar {
+  width: 72px;
+  height: 72px;
+
   object-fit: cover;
-  border: 2px solid #4d8dff;
-  box-shadow: 0 4px 16px rgba(0,0,0,0.25), 0 0 0 4px rgba(77,141,255,0.07);
+
+  border-radius: 50%;
+
+  border: 2px solid #3b82f6;
+
+  background: #1e293b;
 }
 
 .avatar-upload-btn {
   position: absolute;
-  right: -9px;
-  bottom: -7px;
-  z-index: 3;
-  width: 28px;
-  height: 28px;
-  min-width: 28px;
-  padding: 0 !important;
-  display: flex;
-  align-items: center;
-  justify-content: center;
+
+  right: -4px;
+  bottom: -4px;
+
+  width: 25px;
+  height: 25px;
+
+  padding: 0;
+
   border-radius: 50%;
-  background: #17253b !important;
-  border: 2px solid #0d172a !important;
-  box-shadow: 0 3px 10px rgba(0,0,0,0.35), 0 0 0 1px rgba(77,141,255,0.55);
-  font-size: 13px;
+  border: 2px solid #0b1424;
+
+  background: #334155;
+  color: white;
 }
 
-.avatar-upload-btn:hover {
-  transform: translateY(-1px) !important;
-  background: #213553 !important;
-  box-shadow: 0 5px 13px rgba(0,0,0,0.35), 0 0 0 1px rgba(77,141,255,0.8);
-}
-
-/* ---------- Заголовки ---------- */
-.view h2 {
-  color: #eaf1ff;
-  border-bottom: 2px solid rgba(77,141,255,0.8);
-  text-shadow: 0 2px 10px rgba(0,0,0,0.2);
-}
-
-.mode-card h3,
-.stat-card h3 {
-  color: #67a0ff;
-}
-
-/* ---------- Режимы / очереди ---------- */
-.mode-buttons button {
-  border: 1px solid rgba(100,135,190,0.22);
-}
-
-.mode-buttons button:hover,
-.mode-buttons button:focus-visible {
-  background: #254d8d;
-  color: #fff;
-}
-
-.queue-stats {
-  border: 1px solid rgba(100,135,190,0.12);
-}
-
-/* ---------- Контент ---------- */
-.content {
+.profile-info {
   min-width: 0;
 }
 
-/* ---------- Мобильная версия ---------- */
-@media (max-width: 800px) {
-  body {
-    overflow-x: hidden;
-  }
-
-  #mainScreen {
-    min-height: 100dvh;
-    flex-direction: column;
-  }
-
-  .sidebar {
-    width: 100%;
-    padding: 12px 12px 0;
-    gap: 10px;
-    border-right: none;
-    border-bottom: 1px solid rgba(100,135,190,0.18);
-    background: rgba(11,18,34,0.97);
-    position: sticky;
-    top: 0;
-    z-index: 20;
-    backdrop-filter: blur(12px);
-  }
-
-  .profile-card {
-    padding: 12px;
-    border-radius: 14px;
-  }
-
-  .profile-header {
-    gap: 13px;
-    margin-bottom: 10px;
-  }
-
-  .avatar-container,
-  #avatar {
-    width: 68px;
-    height: 68px;
-  }
-
-  .avatar-container {
-    flex-basis: 68px;
-  }
-
-  .avatar-upload-btn {
-    width: 26px;
-    height: 26px;
-    min-width: 26px;
-    right: -8px;
-    bottom: -7px;
-  }
-
-  #nickname {
-    font-size: 17px;
-  }
-
-  #logoutBtn {
-    margin-top: 4px;
-    min-height: 42px;
-  }
-
-  nav {
-    width: 100%;
-    flex-direction: row;
-    gap: 6px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    padding: 0 2px 8px;
-    scrollbar-width: none;
-  }
-
-  nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-btn {
-    flex: 0 0 auto;
-    min-height: 42px;
-    padding: 9px 14px;
-    text-align: center;
-    white-space: nowrap;
-    font-size: 14px;
-  }
-
-  .nav-btn.active {
-    border-left: none;
-    border-bottom: 2px solid #4d8dff;
-    background: #1b2b45;
-  }
-
-  .content {
-    width: 100%;
-    padding: 18px 12px 28px;
-  }
-
-  .view {
-    width: 100%;
-    max-width: none;
-  }
-
-  .view h2 {
-    font-size: 22px;
-    margin-bottom: 18px;
-  }
-
-  #playView > div[style*="margin-bottom: 15px"] {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  #playView > div[style*="margin-bottom: 15px"] button,
-  #playView > div[style*="margin-bottom: 15px"] input {
-    width: 100% !important;
-    min-width: 0;
-    margin: 0;
-  }
-
-  .modes-container {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  .mode-card {
-    min-width: 0;
-    padding: 16px;
-    border-radius: 15px;
-  }
-
-  .mode-buttons {
-    gap: 8px;
-  }
-
-  .mode-buttons button {
-    min-height: 42px;
-    padding: 8px 10px;
-  }
-
-  .queue-stats {
-    min-height: 42px;
-    gap: 8px;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 14px;
-  }
-
-  .stat-card {
-    padding: 16px;
-  }
-
-  #newNickInput {
-    width: 100%;
-    margin: 0 0 9px;
-  }
-
-  #changeNickBtn {
-    width: 100%;
-    margin-left: 0;
-    min-height: 44px;
-  }
-
-  .chat-input,
-  .lobby-input {
-    flex-direction: column;
-  }
-
-  .chat-input input,
-  .lobby-input input,
-  .chat-input button,
-  .lobby-input button {
-    width: 100%;
-    min-height: 44px;
-  }
-
-  .friend-item {
-    flex-wrap: wrap;
-  }
-
-  .friend-item > div {
-    width: 100%;
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 6px;
-    margin-left: 52px;
-  }
-
-  .friend-item button {
-    margin-left: 0;
-    width: 100%;
-  }
-
-  .modal-content,
-  .match-found-content {
-    width: calc(100% - 24px);
-    max-width: none;
-    padding: 18px;
-    border-radius: 18px;
-  }
-
-  .match-buttons {
-    display: grid;
-    gap: 8px;
-  }
-
-  .match-buttons button {
-    width: 100%;
-    margin: 0;
-  }
-
-  #notificationContainer {
-    left: 12px !important;
-    right: 12px !important;
-    top: 12px !important;
-  }
-
-  .notification {
-    max-width: none !important;
-    width: 100%;
-  }
-}
-
-@media (max-width: 430px) {
-  .sidebar {
-    padding-left: 9px;
-    padding-right: 9px;
-  }
-
-  .content {
-    padding-left: 9px;
-    padding-right: 9px;
-  }
-
-  .profile-card {
-    padding: 10px;
-  }
-
-  .profile-header {
-    gap: 11px;
-  }
-
-  .nav-btn {
-    padding-left: 12px;
-    padding-right: 12px;
-  }
-
-  .queue-stats {
-    font-size: 12px;
-  }
-}
-
-@media (min-width: 801px) {
-  .sidebar {
-    box-shadow: 8px 0 28px rgba(0,0,0,0.10);
-  }
-
-  .content {
-    background:
-      radial-gradient(circle at 80% 15%, rgba(77,141,255,0.045), transparent 28%),
-      var(--sk-bg);
-  }
-}
-
-
-/* FINAL VISIBILITY FIX
-   Login and main application can never be visible simultaneously.
-   JS only changes the inline display value.
-*/
-#loginScreen[style*="display: none"] { display: none !important; }
-#mainScreen[style*="display: none"] { display: none !important; }
-
-/* Login is a real full-screen layout, not a normal app view. */
-#loginScreen.screen {
-  min-height: 100vh;
+.nickname-container {
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 5px;
+
+  margin-top: 6px;
 }
 
-/* Main app is the only thing shown after successful authentication. */
-#mainScreen.screen {
-  min-height: 100vh;
+#nickname {
+  max-width: 150px;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
 }
 
-/* Never let the mode selector leak into the authentication card. */
-#loginScreen #playView,
-#loginScreen .modes-container,
-#loginScreen .mode-card,
-#loginScreen .queue-mode-btn {
-  display: none !important;
-}
-/* =====================================================
-   LEGEND PL — О ПРОЕКТЕ
-   ===================================================== */
+.info-icon {
+  border: 0;
+  background: transparent;
+  color: #94a3b8;
 
-.about-card {
-  background: #1e293b;
+  padding: 2px;
+}
+
+.streak-container {
+  display: inline-block;
+
+  padding: 3px 9px;
+
+  border-radius: 20px;
+
+  background: #0f1a2c;
+
+  color: #fbbf24;
+}
+
+.logout-btn {
+  width: 100%;
+
+  margin-top: 14px;
+
+  padding: 9px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: #26364e;
+  color: white;
+}
+
+/* =========================================================
+   NAV
+========================================================= */
+
+nav {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.nav-btn {
+  width: 100%;
+
+  padding: 12px 15px;
+
+  border: 0;
+  border-radius: 10px;
+
+  background: transparent;
+
+  color: #aab7ca;
+
+  text-align: left;
+}
+
+.nav-btn:hover {
+  background: #162238;
+  color: white;
+}
+
+.nav-btn.active {
+  background: #172b49;
+  color: #60a5fa;
+
+  border-left: 3px solid #3b82f6;
+}
+
+/* =========================================================
+   PARTY
+========================================================= */
+
+.party-controls {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+
+  margin-bottom: 20px;
+}
+
+.party-controls input {
+  min-width: 170px;
+  flex: 1;
+
+  padding: 10px;
+
   border: 1px solid #334155;
-  border-radius: 18px;
-  padding: 24px;
-  max-width: 700px;
+  border-radius: 9px;
+
+  background: #111c2e;
+  color: white;
 }
 
-.about-card h3 {
-  color: #3b82f6;
-  font-size: 20px;
+.party-controls button,
+.party-status button {
+  padding: 10px 14px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: #1e3a63;
+  color: white;
+}
+
+.party-status {
   margin-bottom: 12px;
 }
 
-.about-card p {
-  color: #cbd5e1;
-  line-height: 1.6;
-  margin-bottom: 16px;
+.party-members {
+  margin-bottom: 20px;
+
+  padding: 15px;
+
+  border-radius: 14px;
+
+  background: #111c2e;
+
+  border: 1px solid #263750;
 }
 
-.about-divider {
-  height: 1px;
-  background: #334155;
-  margin: 24px 0;
+.party-members h3 {
+  margin-bottom: 12px;
 }
 
-.telegram-link {
-  display: inline-flex;
+.party-member {
+  display: flex;
+
   align-items: center;
-  justify-content: center;
-  padding: 11px 18px;
-  border-radius: 10px;
-  background: #3b82f6;
-  color: white;
-  text-decoration: none;
-  font-weight: 600;
-  transition: .2s ease;
+
+  gap: 10px;
+
+  padding: 8px;
+
+  border-bottom: 1px solid #243147;
 }
 
-.telegram-link:hover {
+.party-member:last-child {
+  border-bottom: 0;
+}
+
+.mini-avatar {
+  width: 36px;
+  height: 36px;
+
+  object-fit: cover;
+
+  border-radius: 50%;
+
+  border: 1px solid #3b82f6;
+}
+
+/* =========================================================
+   MODES
+========================================================= */
+
+.modes-container {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(270px, 1fr)
+    );
+
+  gap: 18px;
+}
+
+.mode-card {
+  padding: 20px;
+
+  border-radius: 17px;
+
+  background: #111c2e;
+
+  border: 1px solid #263750;
+}
+
+.mode-card h3 {
+  margin-bottom: 16px;
+
+  color: #60a5fa;
+}
+
+.mode-buttons {
+  display: grid;
+
+  grid-template-columns: 1fr 1fr;
+
+  gap: 8px;
+
+  margin-bottom: 15px;
+}
+
+.mode-buttons button {
+  padding: 10px 5px;
+
+  border: 0;
+  border-radius: 9px;
+
+  background: #1d2b42;
+  color: white;
+}
+
+.mode-buttons button:hover {
   background: #2563eb;
-  transform: translateY(-1px);
+}
+
+.queue-row {
+  display: grid;
+
+  grid-template-columns: 50px 1fr auto;
+
+  align-items: center;
+
+  gap: 7px;
+
+  margin-top: 8px;
+
+  padding: 9px;
+
+  border-radius: 9px;
+
+  background: #0a1424;
+
+  font-size: 13px;
+}
+
+.queue-row b {
+  color: #60a5fa;
+}
+
+.leave-queue-btn {
+  display: none;
+
+  padding: 4px 7px;
+
+  border: 0;
+  border-radius: 6px;
+
+  background: #7f1d1d;
+  color: white;
+
+  font-size: 11px;
+}
+
+/* =========================================================
+   STATS
+========================================================= */
+
+.stats-grid {
+  display: grid;
+
+  grid-template-columns:
+    repeat(
+      auto-fit,
+      minmax(270px, 1fr)
+    );
+
+  gap: 15px;
+}
+
+.stat-card {
+  padding: 18px;
+
+  border-radius: 15px;
+
+  background: #111c2e;
+
+  border: 1px solid #263750;
+}
+
+.stat-card h3 {
+  margin-bottom: 15px;
+
+  color: #60a5fa;
+}
+
+.stat-row {
+  display: flex;
+
+  justify-content: space-between;
+
+  padding: 8px 0;
+
+  border-bottom: 1px solid #263750;
+}
+
+.change-nick-box {
+  margin-top: 20px;
+
+  padding: 18px;
+
+  border-radius: 15px;
+
+  background: #111c2e;
+
+  border: 1px solid #263750;
+}
+
+.change-nick-box input {
+  margin-top: 12px;
+
+  padding: 11px;
+
+  border: 1px solid #334155;
+
+  border-radius: 8px;
+
+  background: #0b1424;
+
+  color: white;
+}
+
+.change-nick-box button {
+  padding: 11px;
+
+  border: 0;
+
+  border-radius: 8px;
+
+  background: #2563eb;
+
+  color: white;
+}
+
+/* =========================================================
+   FRIENDS
+========================================================= */
+
+.friends-tabs {
+  display: flex;
+
+  gap: 7px;
+
+  margin-bottom: 18px;
+}
+
+.friends-tab {
+  padding: 9px 13px;
+
+  border: 0;
+
+  border-radius: 8px;
+
+  background: #162238;
+
+  color: #aab7ca;
+}
+
+.friends-tab.active {
+  background: #2563eb;
+  color: white;
+}
+
+.friend-item {
+  display: flex;
+
+  align-items: center;
+
+  gap: 12px;
+
+  padding: 12px;
+
+  margin-bottom: 8px;
+
+  border-radius: 12px;
+
+  background: #111c2e;
+
+  border: 1px solid #263750;
+}
+
+.friend-avatar {
+  width: 44px;
+  height: 44px;
+
+  object-fit: cover;
+
+  border-radius: 50%;
+
+  border: 1px solid #3b82f6;
+}
+
+.friend-info {
+  flex: 1;
+
+  min-width: 0;
+}
+
+.friend-info strong {
+  display: block;
+
+  overflow: hidden;
+
+  text-overflow: ellipsis;
+
+  white-space: nowrap;
+}
+
+.friend-actions {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 5px;
+}
+
+.friend-actions button {
+  padding: 7px 9px;
+
+  border: 0;
+
+  border-radius: 7px;
+
+  background: #26364e;
+
+  color: white;
+}
+
+.search-row {
+  display: flex;
+
+  gap: 8px;
+
+  margin-bottom: 12px;
+}
+
+.search-row input {
+  flex: 1;
+
+  padding: 11px;
+
+  border: 1px solid #334155;
+
+  border-radius: 9px;
+
+  background: #111c2e;
+
+  color: white;
+}
+
+/* =========================================================
+   CHAT
+========================================================= */
+
+.chat-messages {
+  height: 55vh;
+
+  min-height: 300px;
+
+  padding: 15px;
+
+  margin-bottom: 12px;
+
+  overflow-y: auto;
+
+  border-radius: 15px;
+
+  background: #0b1424;
+
+  border: 1px solid #263750;
+}
+
+.chat-message {
+  display: flex;
+
+  align-items: flex-start;
+
+  gap: 9px;
+
+  padding: 8px 0;
+
+  border-bottom: 1px solid #1d2a3e;
+}
+
+.chat-avatar {
+  width: 34px;
+  height: 34px;
+
+  flex: 0 0 34px;
+
+  object-fit: cover;
+
+  border-radius: 50%;
+
+  border: 1px solid #3b82f6;
+}
+
+.chat-text {
+  flex: 1;
+
+  min-width: 0;
+
+  word-break: break-word;
+}
+
+.chat-name {
+  color: #60a5fa;
+
+  font-weight: 700;
+}
+
+.chat-date {
+  display: block;
+
+  color: #64748b;
+
+  font-size: 11px;
+}
+
+.chat-input {
+  display: flex;
+
+  gap: 8px;
+}
+
+.chat-input input {
+  flex: 1;
+
+  padding: 13px;
+
+  border: 1px solid #334155;
+
+  border-radius: 10px;
+
+  background: #111c2e;
+
+  color: white;
+}
+
+.chat-input button {
+  padding: 0 18px;
+
+  border: 0;
+
+  border-radius: 10px;
+
+  background: #2563eb;
+
+  color: white;
+}
+
+/* =========================================================
+   TOP
+========================================================= */
+
+.top-table {
+  width: 100%;
+
+  border-collapse: collapse;
+
+  overflow: hidden;
+
+  border-radius: 12px;
+}
+
+.top-table th,
+.top-table td {
+  padding: 12px;
+
+  text-align: left;
+
+  border-bottom: 1px solid #263750;
+}
+
+.top-table th {
+  background: #162238;
+}
+
+.top-player {
+  display: flex;
+
+  align-items: center;
+
+  gap: 9px;
+}
+
+.top-avatar {
+  width: 38px;
+  height: 38px;
+
+  object-fit: cover;
+
+  border-radius: 50%;
+}
+
+/* =========================================================
+   CLAN
+========================================================= */
+
+.clan-card,
+.about-card {
+  padding: 22px;
+
+  border-radius: 16px;
+
+  background: #111c2e;
+
+  border: 1px solid #263750;
+}
+
+.clan-member {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 9px 0;
+
+  border-bottom: 1px solid #263750;
+}
+
+.clan-actions {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 8px;
+
+  margin-top: 18px;
+}
+
+.clan-actions input {
+  padding: 10px;
+
+  border: 1px solid #334155;
+
+  border-radius: 8px;
+
+  background: #0b1424;
+
+  color: white;
+}
+
+.clan-actions button {
+  padding: 10px 13px;
+
+  border: 0;
+
+  border-radius: 8px;
+
+  background: #2563eb;
+
+  color: white;
+}
+
+/* =========================================================
+   ABOUT
+========================================================= */
+
+.about-card p {
+  margin-top: 12px;
+
+  color: #aab7ca;
+}
+
+.creator-card {
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 9px;
+
+  margin-top: 25px;
+
+  padding: 18px;
+
+  border-radius: 12px;
+
+  background: #0b1424;
+}
+
+/* =========================================================
+   MODALS
+========================================================= */
+
+.modal {
+  position: fixed;
+
+  inset: 0;
+
+  z-index: 5000;
+
+  display: flex;
+
+  align-items: center;
+
+  justify-content: center;
+
+  padding: 15px;
+
+  background: rgba(0, 0, 0, .78);
+
+  backdrop-filter: blur(5px);
+}
+
+.modal-content {
+  width: min(650px, 100%);
+
+  max-height: 90vh;
+
+  overflow-y: auto;
+
+  padding: 25px;
+
+  border-radius: 18px;
+
+  background: #162238;
+
+  border: 1px solid #334155;
+}
+
+.modal-content h2,
+.modal-content h3 {
+  margin-bottom: 15px;
+}
+
+.modal-close {
+  margin-top: 15px;
+
+  padding: 10px 15px;
+
+  border: 0;
+
+  border-radius: 8px;
+
+  background: #334155;
+
+  color: white;
+}
+
+.match-participant {
+  display: flex;
+
+  align-items: center;
+
+  gap: 10px;
+
+  padding: 9px;
+
+  margin-top: 7px;
+
+  border-radius: 10px;
+
+  background: #0b1424;
+}
+
+.match-avatar {
+  width: 42px;
+  height: 42px;
+
+  object-fit: cover;
+
+  border-radius: 50%;
+
+  border: 1px solid #3b82f6;
+}
+
+.match-timer {
+  margin: 20px 0;
+
+  text-align: center;
+
+  font-size: 30px;
+
+  font-weight: 800;
+
+  color: #60a5fa;
+}
+
+.match-buttons {
+  display: flex;
+
+  gap: 8px;
+}
+
+.match-buttons button {
+  flex: 1;
+
+  padding: 12px;
+
+  border: 0;
+
+  border-radius: 9px;
+
+  color: white;
+}
+
+.accept-btn {
+  background: #16a34a;
+}
+
+.decline-btn {
+  background: #dc2626;
+}
+
+.team-box {
+  padding: 14px;
+
+  margin-top: 10px;
+
+  border-radius: 12px;
+
+  background: #0b1424;
+}
+
+.team-box h4 {
+  margin-bottom: 8px;
+
+  color: #60a5fa;
+}
+
+/* =========================================================
+   ADMIN
+========================================================= */
+
+.admin-user {
+  display: grid;
+
+  grid-template-columns: 1fr auto;
+
+  gap: 10px;
+
+  align-items: center;
+
+  padding: 10px 0;
+
+  border-bottom: 1px solid #263750;
+}
+
+.admin-actions {
+  display: flex;
+
+  flex-wrap: wrap;
+
+  gap: 5px;
+}
+
+.admin-actions button {
+  padding: 6px 8px;
+
+  border: 0;
+
+  border-radius: 6px;
+
+  background: #26364e;
+
+  color: white;
+}
+
+/* =========================================================
+   NOTIFICATIONS
+========================================================= */
+
+#notifications {
+  position: fixed;
+
+  right: 15px;
+  top: 15px;
+
+  z-index: 10000;
+
+  display: flex;
+
+  flex-direction: column;
+
+  gap: 8px;
+
+  width: min(350px, calc(100vw - 30px));
+}
+
+.notification {
+  padding: 12px 15px;
+
+  border-radius: 10px;
+
+  background: #162238;
+
+  border-left: 4px solid #3b82f6;
+
+  box-shadow:
+    0 10px 30px rgba(0,0,0,.35);
+}
+
+.notification.success {
+  border-left-color: #22c55e;
+}
+
+.notification.error {
+  border-left-color: #ef4444;
+}
+
+/* =========================================================
+   MOBILE
+========================================================= */
+
+.mobile-menu-btn {
+  display: none;
+}
+
+@media (max-width: 800px) {
+
+  #mainScreen {
+    display: block;
+  }
+
+  .sidebar {
+    position: fixed;
+
+    z-index: 4000;
+
+    top: 0;
+    left: 0;
+    bottom: 0;
+
+    width: min(300px, 85vw);
+
+    transform: translateX(-105%);
+
+    transition: .2s;
+
+    box-shadow:
+      15px 0 40px rgba(0,0,0,.45);
+  }
+
+  .sidebar.mobile-open {
+    transform: translateX(0);
+  }
+
+  .content {
+    padding: 70px 12px 20px;
+  }
+
+  .mobile-menu-btn {
+    display: flex;
+
+    position: fixed;
+
+    z-index: 4500;
+
+    top: 12px;
+    left: 12px;
+
+    width: 45px;
+    height: 45px;
+
+    align-items: center;
+    justify-content: center;
+
+    border: 1px solid #334155;
+
+    border-radius: 12px;
+
+    background: #162238;
+
+    color: white;
+
+    font-size: 20px;
+  }
+
+  .login-container {
+    padding: 25px 18px;
+  }
+
+  .login-container h1 {
+    font-size: 34px;
+  }
+
+  .party-controls {
+    flex-direction: column;
+  }
+
+  .party-controls input {
+    width: 100%;
+  }
+
+  .queue-row {
+    grid-template-columns: 55px 1fr;
+  }
+
+  .leave-queue-btn {
+    grid-column: 1 / -1;
+  }
+
+  .friend-item {
+    align-items: flex-start;
+    flex-wrap: wrap;
+  }
+
+  .friend-actions {
+    width: 100%;
+    padding-left: 56px;
+  }
+
+  .chat-input {
+    flex-direction: column;
+  }
+
+  .chat-input button {
+    padding: 12px;
+  }
+
+  .match-buttons {
+    flex-direction: column;
+  }
+
+  .search-row {
+    flex-direction: column;
+  }
 }
