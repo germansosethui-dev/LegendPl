@@ -2,370 +2,855 @@
 <html lang="ru">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <meta
+    name="viewport"
+    content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes"
+  >
+
   <title>StandKnife | Satoshi</title>
+
   <link rel="stylesheet" href="/styles.css">
 </head>
+
 <body>
-  <div id="app">
-    <!-- Экран входа / регистрации -->
-    <div id="loginScreen" class="screen">
-      <div class="login-container">
-        <h1>StandKnife | Satoshi</h1>
-        <h2>Faceit-подобная платформа</h2>
 
-        <div id="loginForm">
-          <input type="text" id="loginUsername" placeholder="Логин" autocomplete="off">
-          <input type="password" id="loginPassword" placeholder="Пароль">
-          <button id="doLoginBtn">Войти</button>
+<div id="app">
 
-          <p class="switch-link">
-            Нет аккаунта?
-            <a href="#" id="showRegisterLink">Зарегистрироваться</a>
-          </p>
-        </div>
+  <!-- =====================================================
+       LOGIN
+  ====================================================== -->
 
-        <div id="registerForm" style="display: none;">
-          <input type="text" id="regUsername" placeholder="Логин">
-          <input type="password" id="regPassword" placeholder="Пароль">
-          <input type="password" id="regPasswordConfirm" placeholder="Подтвердите пароль">
+  <div id="loginScreen" class="screen">
 
-          <input type="text" id="regInGameNick" placeholder="Ник в StandKnife">
-          <input type="text" id="regInGameId" placeholder="ID в StandKnife">
+    <div class="login-container">
 
-          <button id="doRegisterBtn">Зарегистрироваться</button>
+      <h1>StandKnife | Satoshi</h1>
 
-          <p class="switch-link">
-            Уже есть аккаунт?
-            <a href="#" id="showLoginLink">Войти</a>
-          </p>
-        </div>
+      <h2>Faceit-подобная платформа</h2>
 
-        <p class="info" id="authMessage"></p>
+      <!-- LOGIN -->
+
+      <div id="loginForm">
+
+        <input
+          type="text"
+          id="loginUsername"
+          placeholder="Логин"
+          autocomplete="username"
+        >
+
+        <input
+          type="password"
+          id="loginPassword"
+          placeholder="Пароль"
+          autocomplete="current-password"
+        >
+
+        <button id="doLoginBtn">
+          Войти
+        </button>
+
+        <p class="switch-link">
+          Нет аккаунта?
+          <a href="#" id="showRegisterLink">
+            Зарегистрироваться
+          </a>
+        </p>
+
       </div>
+
+      <!-- REGISTER -->
+
+      <div
+        id="registerForm"
+        style="display:none;"
+      >
+
+        <input
+          type="text"
+          id="regUsername"
+          placeholder="Логин"
+          autocomplete="username"
+        >
+
+        <input
+          type="password"
+          id="regPassword"
+          placeholder="Пароль"
+          autocomplete="new-password"
+        >
+
+        <input
+          type="password"
+          id="regPasswordConfirm"
+          placeholder="Подтвердите пароль"
+          autocomplete="new-password"
+        >
+
+        <input
+          type="text"
+          id="regInGameNick"
+          placeholder="Ник в StandKnife"
+        >
+
+        <input
+          type="text"
+          id="regInGameId"
+          placeholder="ID в StandKnife"
+        >
+
+        <button id="doRegisterBtn">
+          Зарегистрироваться
+        </button>
+
+        <p class="switch-link">
+          Уже есть аккаунт?
+          <a href="#" id="showLoginLink">
+            Войти
+          </a>
+        </p>
+
+      </div>
+
+      <p
+        class="info"
+        id="authMessage"
+      ></p>
+
     </div>
 
-    <!-- Главный экран -->
-    <div id="mainScreen" class="screen" style="display: none;">
-      <div class="sidebar">
+  </div>
 
-        <div class="profile-card">
-          <div class="profile-header">
 
-            <div class="avatar-container">
-              <img id="avatar" src="https://via.placeholder.com/80" alt="аватар">
+  <!-- =====================================================
+       MAIN
+  ====================================================== -->
 
-              <input
-                type="file"
-                id="avatarUpload"
-                accept="image/*"
-                style="display: none;"
-              >
+  <div
+    id="mainScreen"
+    class="screen"
+    style="display:none;"
+  >
+
+    <!-- MOBILE MENU -->
+
+    <button
+      id="mobileMenuBtn"
+      class="mobile-menu-btn"
+    >
+      ☰
+    </button>
+
+    <div
+      id="mobileOverlay"
+      class="mobile-overlay"
+    ></div>
+
+
+    <!-- =====================================================
+         SIDEBAR
+    ====================================================== -->
+
+    <aside class="sidebar" id="sidebar">
+
+      <div class="profile-card">
+
+        <div class="profile-header">
+
+          <div class="avatar-container">
+
+            <img
+              id="avatar"
+              src="https://via.placeholder.com/80"
+              alt="Аватар"
+            >
+
+            <input
+              type="file"
+              id="avatarUpload"
+              accept="image/*"
+              style="display:none;"
+            >
+
+            <button
+              id="changeAvatarBtn"
+              class="avatar-upload-btn"
+              title="Изменить аватар"
+            >
+              📷
+            </button>
+
+          </div>
+
+          <div class="profile-info">
+
+            <div
+              class="streak-container"
+              title="Стрик непрерывных игр"
+            >
+              🔥
+              <span id="streakCount">
+                0
+              </span>
+            </div>
+
+            <div class="nickname-container">
+
+              <h3 id="nickname">
+                Игрок
+              </h3>
 
               <button
-                id="changeAvatarBtn"
-                class="avatar-upload-btn"
-              >📸</button>
-            </div>
-
-            <div class="profile-info">
-
-              <div
-                class="streak-container"
-                title="Стрик непрерывных игр"
+                id="profileInfoIcon"
+                class="info-icon"
               >
-                <span id="streakCount">0</span>
-              </div>
+                ℹ️
+              </button>
 
-              <div class="nickname-container">
-                <h3 id="nickname">Игрок</h3>
-
-                <span
-                  class="info-icon"
-                  id="profileInfoIcon"
-                >ℹ️</span>
-
-                <div
-                  class="info-tooltip"
-                  id="profileTooltip"
-                  style="display: none;"
-                >
-                  <div>
-                    <strong>ID на сайте:</strong>
-                    <span id="tooltipSiteId">—</span>
-                  </div>
-
-                  <div>
-                    <strong>Ник на сайте:</strong>
-                    <span id="tooltipSiteNick">—</span>
-                  </div>
-
-                  <div>
-                    <strong>ID в игре:</strong>
-                    <span id="tooltipGameId">—</span>
-                  </div>
-
-                  <div>
-                    <strong>Ник в игре:</strong>
-                    <span id="tooltipGameNick">—</span>
-                  </div>
-                </div>
-              </div>
             </div>
+
+            <div
+              id="profileTooltip"
+              class="info-tooltip"
+              style="display:none;"
+            >
+
+              <div>
+                <strong>ID сайта:</strong>
+                <span id="tooltipSiteId">—</span>
+              </div>
+
+              <div>
+                <strong>Ник сайта:</strong>
+                <span id="tooltipSiteNick">—</span>
+              </div>
+
+              <div>
+                <strong>ID игры:</strong>
+                <span id="tooltipGameId">—</span>
+              </div>
+
+              <div>
+                <strong>Ник игры:</strong>
+                <span id="tooltipGameNick">—</span>
+              </div>
+
+            </div>
+
           </div>
 
-          <button id="logoutBtn">Выйти</button>
         </div>
 
-        <nav>
-          <button class="nav-btn active" data-view="play">Играть</button>
-          <button class="nav-btn" data-view="profile">Профиль</button>
-          <button class="nav-btn" data-view="history">История</button>
-          <button class="nav-btn" data-view="friends">Друзья</button>
-          <button class="nav-btn" data-view="chat">Чат</button>
-          <button class="nav-btn" data-view="top">Топ</button>
-          <button class="nav-btn" data-view="clan">Клан</button>
-        </nav>
+        <button id="logoutBtn">
+          Выйти
+        </button>
+
       </div>
 
-      <div class="content">
 
-        <!-- Вкладка "Играть" -->
-        <div id="playView" class="view active">
-          <h2>Выбор режима</h2>
+      <!-- NAVIGATION -->
 
-          <div
-            id="partyStatus"
-            style="margin-bottom: 10px;"
-          ></div>
+      <nav id="mainNavigation">
 
-          <div
-            id="partyMembers"
-            style="
-              margin-bottom: 15px;
-              background: #1e293b;
-              border-radius: 12px;
-              padding: 10px;
-              display: none;
-            "
-          >
-            <h4>Участники пати:</h4>
-            <div id="partyMembersList"></div>
+        <button
+          class="nav-btn active"
+          data-view="play"
+        >
+          🎮 Играть
+        </button>
+
+        <button
+          class="nav-btn"
+          data-view="profile"
+        >
+          👤 Профиль
+        </button>
+
+        <button
+          class="nav-btn"
+          data-view="history"
+        >
+          📜 История
+        </button>
+
+        <button
+          class="nav-btn"
+          data-view="friends"
+        >
+          👥 Друзья
+        </button>
+
+        <button
+          class="nav-btn"
+          data-view="chat"
+        >
+          💬 Чат
+        </button>
+
+        <button
+          class="nav-btn"
+          data-view="top"
+        >
+          🏆 Топ
+        </button>
+
+        <button
+          class="nav-btn"
+          data-view="clan"
+        >
+          🛡️ Клан
+        </button>
+
+        <button
+          class="nav-btn admin-nav-btn"
+          id="adminPanelBtn"
+          data-view="admin"
+          style="display:none;"
+        >
+          ⚙️ Админ-панель
+        </button>
+
+      </nav>
+
+    </aside>
+
+
+    <!-- =====================================================
+         CONTENT
+    ====================================================== -->
+
+    <main class="content">
+
+      <!-- PLAY -->
+
+      <section
+        id="playView"
+        class="view active"
+      >
+
+        <div class="page-header">
+
+          <div>
+
+            <h2>
+              Играть
+            </h2>
+
+            <p class="page-subtitle">
+              Выберите режим игры
+            </p>
+
           </div>
 
-          <div style="margin-bottom: 15px;">
-            <button id="createPartyBtn">
+        </div>
+
+
+        <!-- PARTY -->
+
+        <div
+          id="partyPanel"
+          class="party-panel"
+        >
+
+          <div class="party-header">
+
+            <div>
+
+              <h3>
+                👥 Пати
+              </h3>
+
+              <div
+                id="partyStatus"
+                class="party-status"
+              >
+                Вы не состоите в пати
+              </div>
+
+            </div>
+
+            <button
+              id="createPartyBtn"
+              class="primary-btn"
+            >
               Создать пати
             </button>
+
+          </div>
+
+
+          <div
+            id="partyJoinArea"
+            class="party-join-area"
+          >
 
             <input
               type="text"
               id="joinPartyCode"
               placeholder="Код пати"
-              style="width: 150px;"
+              maxlength="12"
             >
 
-            <button id="joinPartyBtn">
+            <button
+              id="joinPartyBtn"
+              class="secondary-btn"
+            >
               Присоединиться
             </button>
-          </div>
-
-          <div class="modes-container">
-
-            <!-- 1x1 -->
-            <div class="mode-card">
-              <h3>1x1 Дуэль</h3>
-
-              <div class="mode-buttons">
-                <button
-                  class="queue-mode-btn"
-                  data-mode="1v1"
-                  data-ranked="false"
-                >Обычный</button>
-
-                <button
-                  class="queue-mode-btn"
-                  data-mode="1v1"
-                  data-ranked="true"
-                >Ранговый</button>
-              </div>
-
-              <div class="queue-stats">
-                <span
-                  class="queue-count"
-                  id="queue-count-1v1-unranked"
-                >0/2</span>
-
-                <span
-                  class="queue-status-text"
-                  id="queue-status-1v1-unranked"
-                >Не в очереди</span>
-
-                <button
-                  class="leave-queue-btn"
-                  data-mode="1v1"
-                  data-ranked="false"
-                  style="display: none;"
-                >Выйти</button>
-              </div>
-
-              <div class="queue-stats">
-                <span
-                  class="queue-count"
-                  id="queue-count-1v1-ranked"
-                >0/2</span>
-
-                <span
-                  class="queue-status-text"
-                  id="queue-status-1v1-ranked"
-                >Не в очереди</span>
-
-                <button
-                  class="leave-queue-btn"
-                  data-mode="1v1"
-                  data-ranked="true"
-                  style="display: none;"
-                >Выйти</button>
-              </div>
-            </div>
-
-            <!-- 2x2 -->
-            <div class="mode-card">
-              <h3>2x2 Напарники</h3>
-
-              <div class="mode-buttons">
-                <button
-                  class="queue-mode-btn"
-                  data-mode="2v2"
-                  data-ranked="false"
-                >Обычный</button>
-
-                <button
-                  class="queue-mode-btn"
-                  data-mode="2v2"
-                  data-ranked="true"
-                >Ранговый</button>
-              </div>
-
-              <div class="queue-stats">
-                <span
-                  class="queue-count"
-                  id="queue-count-2v2-unranked"
-                >0/4</span>
-
-                <span
-                  class="queue-status-text"
-                  id="queue-status-2v2-unranked"
-                >Не в очереди</span>
-
-                <button
-                  class="leave-queue-btn"
-                  data-mode="2v2"
-                  data-ranked="false"
-                  style="display: none;"
-                >Выйти</button>
-              </div>
-
-              <div class="queue-stats">
-                <span
-                  class="queue-count"
-                  id="queue-count-2v2-ranked"
-                >0/4</span>
-
-                <span
-                  class="queue-status-text"
-                  id="queue-status-2v2-ranked"
-                >Не в очереди</span>
-
-                <button
-                  class="leave-queue-btn"
-                  data-mode="2v2"
-                  data-ranked="true"
-                  style="display: none;"
-                >Выйти</button>
-              </div>
-            </div>
-
-            <!-- 5x5 -->
-            <div class="mode-card">
-              <h3>5x5 Соревновательный</h3>
-
-              <div class="mode-buttons">
-                <button
-                  class="queue-mode-btn"
-                  data-mode="5v5"
-                  data-ranked="false"
-                >Обычный</button>
-
-                <button
-                  class="queue-mode-btn"
-                  data-mode="5v5"
-                  data-ranked="true"
-                >Ранговый</button>
-              </div>
-
-              <div class="queue-stats">
-                <span
-                  class="queue-count"
-                  id="queue-count-5v5-unranked"
-                >0/10</span>
-
-                <span
-                  class="queue-status-text"
-                  id="queue-status-5v5-unranked"
-                >Не в очереди</span>
-
-                <button
-                  class="leave-queue-btn"
-                  data-mode="5v5"
-                  data-ranked="false"
-                  style="display: none;"
-                >Выйти</button>
-              </div>
-
-              <div class="queue-stats">
-                <span
-                  class="queue-count"
-                  id="queue-count-5v5-ranked"
-                >0/10</span>
-
-                <span
-                  class="queue-status-text"
-                  id="queue-status-5v5-ranked"
-                >Не в очереди</span>
-
-                <button
-                  class="leave-queue-btn"
-                  data-mode="5v5"
-                  data-ranked="true"
-                  style="display: none;"
-                >Выйти</button>
-              </div>
-            </div>
 
           </div>
+
 
           <div
-            id="activeMatchInfo"
-            style="display: none;"
-          ></div>
+            id="partyMembers"
+            class="party-members"
+            style="display:none;"
+          >
+
+            <div class="party-code-row">
+
+              <span>
+                Код пати:
+              </span>
+
+              <strong id="partyCode">
+                —
+              </strong>
+
+              <button
+                id="copyPartyCodeBtn"
+                class="small-btn"
+              >
+                Копировать
+              </button>
+
+            </div>
+
+            <h4>
+              Участники
+            </h4>
+
+            <div id="partyMembersList"></div>
+
+            <button
+              id="leavePartyBtn"
+              class="danger-btn"
+            >
+              Покинуть пати
+            </button>
+
+          </div>
+
         </div>
 
-        <!-- Профиль -->
+
+        <!-- QUEUE -->
+
+        <div class="queue-header">
+
+          <div>
+
+            <h3>
+              Режимы
+            </h3>
+
+            <p>
+              Количество игроков обновляется в реальном времени
+            </p>
+
+          </div>
+
+        </div>
+
+
+        <div class="modes-container">
+
+
+          <!-- 1x1 -->
+
+          <div class="mode-card">
+
+            <div class="mode-title">
+
+              <div class="mode-icon">
+                ⚔️
+              </div>
+
+              <div>
+
+                <h3>
+                  1x1 Дуэль
+                </h3>
+
+                <span>
+                  2 игрока
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <div class="mode-buttons">
+
+              <button
+                class="queue-mode-btn"
+                data-mode="1v1"
+                data-ranked="false"
+              >
+                Обычный
+              </button>
+
+              <button
+                class="queue-mode-btn ranked"
+                data-mode="1v1"
+                data-ranked="true"
+              >
+                Ранговый
+              </button>
+
+            </div>
+
+
+            <div class="queue-stats">
+
+              <div>
+
+                <span class="queue-label">
+                  Обычный
+                </span>
+
+                <strong id="queue-count-1v1-unranked">
+                  0/2
+                </strong>
+
+                <span
+                  id="queue-status-1v1-unranked"
+                  class="queue-status-text"
+                >
+                  Не в очереди
+                </span>
+
+              </div>
+
+              <button
+                class="leave-queue-btn"
+                data-mode="1v1"
+                data-ranked="false"
+                style="display:none;"
+              >
+                Выйти
+              </button>
+
+            </div>
+
+
+            <div class="queue-stats">
+
+              <div>
+
+                <span class="queue-label">
+                  Ранговый
+                </span>
+
+                <strong id="queue-count-1v1-ranked">
+                  0/2
+                </strong>
+
+                <span
+                  id="queue-status-1v1-ranked"
+                  class="queue-status-text"
+                >
+                  Не в очереди
+                </span>
+
+              </div>
+
+              <button
+                class="leave-queue-btn"
+                data-mode="1v1"
+                data-ranked="true"
+                style="display:none;"
+              >
+                Выйти
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <!-- 2x2 -->
+
+          <div class="mode-card">
+
+            <div class="mode-title">
+
+              <div class="mode-icon">
+                👥
+              </div>
+
+              <div>
+
+                <h3>
+                  2x2 Напарники
+                </h3>
+
+                <span>
+                  4 игрока
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <div class="mode-buttons">
+
+              <button
+                class="queue-mode-btn"
+                data-mode="2v2"
+                data-ranked="false"
+              >
+                Обычный
+              </button>
+
+              <button
+                class="queue-mode-btn ranked"
+                data-mode="2v2"
+                data-ranked="true"
+              >
+                Ранговый
+              </button>
+
+            </div>
+
+
+            <div class="queue-stats">
+
+              <div>
+
+                <span class="queue-label">
+                  Обычный
+                </span>
+
+                <strong id="queue-count-2v2-unranked">
+                  0/4
+                </strong>
+
+                <span
+                  id="queue-status-2v2-unranked"
+                  class="queue-status-text"
+                >
+                  Не в очереди
+                </span>
+
+              </div>
+
+              <button
+                class="leave-queue-btn"
+                data-mode="2v2"
+                data-ranked="false"
+                style="display:none;"
+              >
+                Выйти
+              </button>
+
+            </div>
+
+
+            <div class="queue-stats">
+
+              <div>
+
+                <span class="queue-label">
+                  Ранговый
+                </span>
+
+                <strong id="queue-count-2v2-ranked">
+                  0/4
+                </strong>
+
+                <span
+                  id="queue-status-2v2-ranked"
+                  class="queue-status-text"
+                >
+                  Не в очереди
+                </span>
+
+              </div>
+
+              <button
+                class="leave-queue-btn"
+                data-mode="2v2"
+                data-ranked="true"
+                style="display:none;"
+              >
+                Выйти
+              </button>
+
+            </div>
+
+          </div>
+
+
+          <!-- 5x5 -->
+
+          <div class="mode-card">
+
+            <div class="mode-title">
+
+              <div class="mode-icon">
+                🏆
+              </div>
+
+              <div>
+
+                <h3>
+                  5x5 Соревновательный
+                </h3>
+
+                <span>
+                  10 игроков
+                </span>
+
+              </div>
+
+            </div>
+
+
+            <div class="mode-buttons">
+
+              <button
+                class="queue-mode-btn"
+                data-mode="5v5"
+                data-ranked="false"
+              >
+                Обычный
+              </button>
+
+              <button
+                class="queue-mode-btn ranked"
+                data-mode="5v5"
+                data-ranked="true"
+              >
+                Ранговый
+              </button>
+
+            </div>
+
+
+            <div class="queue-stats">
+
+              <div>
+
+                <span class="queue-label">
+                  Обычный
+                </span>
+
+                <strong id="queue-count-5v5-unranked">
+                  0/10
+                </strong>
+
+                <span
+                  id="queue-status-5v5-unranked"
+                  class="queue-status-text"
+                >
+                  Не в очереди
+                </span>
+
+              </div>
+
+              <button
+                class="leave-queue-btn"
+                data-mode="5v5"
+                data-ranked="false"
+                style="display:none;"
+              >
+                Выйти
+              </button>
+
+            </div>
+
+
+            <div class="queue-stats">
+
+              <div>
+
+                <span class="queue-label">
+                  Ранговый
+                </span>
+
+                <strong id="queue-count-5v5-ranked">
+                  0/10
+                </strong>
+
+                <span
+                  id="queue-status-5v5-ranked"
+                  class="queue-status-text"
+                >
+                  Не в очереди
+                </span>
+
+              </div>
+
+              <button
+                class="leave-queue-btn"
+                data-mode="5v5"
+                data-ranked="true"
+                style="display:none;"
+              >
+                Выйти
+              </button>
+
+            </div>
+
+          </div>
+
+        </div>
+
+
+        <!-- MATCH STATUS -->
+
         <div
-          id="profileView"
-          class="view"
-          style="display: none;"
-        >
-          <h2>Мой профиль</h2>
+          id="activeMatchInfo"
+          class="active-match-info"
+          style="display:none;"
+        ></div>
 
-          <div
-            class="stats-grid"
-            id="profileStats"
-          ></div>
+      </section>
 
-          <div style="margin-top: 20px;">
-            <h3>Смена ника в игре</h3>
+
+      <!-- =====================================================
+           PROFILE
+      ====================================================== -->
+
+      <section
+        id="profileView"
+        class="view"
+        style="display:none;"
+      >
+
+        <h2>
+          Мой профиль
+        </h2>
+
+        <div
+          id="profileStats"
+          class="stats-grid"
+        ></div>
+
+        <div class="profile-edit-card">
+
+          <h3>
+            Игровой профиль
+          </h3>
+
+          <label>
+            Ник в игре
+          </label>
+
+          <div class="inline-form">
 
             <input
               type="text"
@@ -373,133 +858,446 @@
               placeholder="Новый ник"
             >
 
-            <button id="changeNickBtn">
+            <button
+              id="changeNickBtn"
+              class="primary-btn"
+            >
               Сменить ник
             </button>
-          </div>
-        </div>
 
-        <!-- История -->
-        <div
-          id="historyView"
-          class="view"
-          style="display: none;"
-        >
-          <h2>История матчей</h2>
-          <ul id="matchList"></ul>
-        </div>
-
-        <!-- Друзья -->
-        <div
-          id="friendsView"
-          class="view"
-          style="display: none;"
-        >
-          <h2>Друзья</h2>
-
-          <div class="friends-tabs">
-            <button
-              class="friends-tab active"
-              data-tab="friends"
-            >Мои друзья</button>
-
-            <button
-              class="friends-tab"
-              data-tab="requests"
-            >Заявки в друзья</button>
           </div>
 
-          <div
-            id="friendsList"
-            class="friends-list"
-          ></div>
-
-          <div
-            id="friendRequests"
-            class="friends-list"
-            style="display: none;"
-          ></div>
         </div>
 
-        <!-- Чат -->
+      </section>
+
+
+      <!-- =====================================================
+           HISTORY
+      ====================================================== -->
+
+      <section
+        id="historyView"
+        class="view"
+        style="display:none;"
+      >
+
+        <h2>
+          История матчей
+        </h2>
+
         <div
-          id="chatView"
-          class="view"
-          style="display: none;"
+          id="matchList"
+          class="match-list"
+        ></div>
+
+      </section>
+
+
+      <!-- =====================================================
+           FRIENDS
+      ====================================================== -->
+
+      <section
+        id="friendsView"
+        class="view"
+        style="display:none;"
+      >
+
+        <h2>
+          Друзья
+        </h2>
+
+
+        <div class="friends-tabs">
+
+          <button
+            class="friends-tab active"
+            data-tab="friends"
+          >
+            Мои друзья
+          </button>
+
+          <button
+            class="friends-tab"
+            data-tab="requests"
+          >
+            Заявки
+            <span
+              id="friendRequestsCount"
+              class="tab-count"
+            >
+              0
+            </span>
+          </button>
+
+          <button
+            class="friends-tab"
+            data-tab="search"
+          >
+            Добавить
+          </button>
+
+        </div>
+
+
+        <div
+          id="friendsList"
+          class="friends-list"
+        ></div>
+
+
+        <div
+          id="friendRequests"
+          class="friends-list"
+          style="display:none;"
+        ></div>
+
+
+        <div
+          id="addFriends"
+          class="friends-list"
+          style="display:none;"
         >
-          <h2>Глобальный чат</h2>
 
-          <div
-            id="chatMessages"
-            class="chat-messages"
-          ></div>
+          <div class="friend-search-box">
 
-          <div class="chat-input">
             <input
               type="text"
-              id="chatInput"
-              placeholder="Введите сообщение..."
+              id="friendSearchInput"
+              placeholder="Ник или ID игрока"
             >
 
-            <button id="chatSendBtn">
-              Отправить
+            <button
+              id="searchBtn"
+              class="primary-btn"
+            >
+              Найти
             </button>
+
           </div>
 
-          <div
-            id="privateChatArea"
-            style="margin-top: 20px;"
-          ></div>
+          <div id="friendSearchResults"></div>
+
         </div>
 
-        <!-- Топ -->
+      </section>
+
+
+      <!-- =====================================================
+           CHAT
+      ====================================================== -->
+
+      <section
+        id="chatView"
+        class="view"
+        style="display:none;"
+      >
+
+        <h2>
+          Глобальный чат
+        </h2>
+
         <div
-          id="topView"
-          class="view"
-          style="display: none;"
-        >
-          <!-- сюда будет вставлен топ -->
-        </div>
+          id="chatMessages"
+          class="chat-messages"
+        ></div>
 
-        <!-- Клан -->
+        <form
+          id="chatForm"
+          class="chat-input"
+        >
+
+          <input
+            type="text"
+            id="chatInput"
+            placeholder="Введите сообщение..."
+            maxlength="500"
+            autocomplete="off"
+          >
+
+          <button
+            type="submit"
+            id="chatSendBtn"
+            class="primary-btn"
+          >
+            Отправить
+          </button>
+
+        </form>
+
+      </section>
+
+
+      <!-- =====================================================
+           TOP
+      ====================================================== -->
+
+      <section
+        id="topView"
+        class="view"
+        style="display:none;"
+      >
+
+        <h2>
+          Топ игроков
+        </h2>
+
         <div
-          id="clanView"
-          class="view"
-          style="display: none;"
-        >
-          <!-- сюда будет вставлена информация о клане -->
+          id="topContent"
+          class="top-content"
+        ></div>
+
+      </section>
+
+
+      <!-- =====================================================
+           CLAN
+      ====================================================== -->
+
+      <section
+        id="clanView"
+        class="view"
+        style="display:none;"
+      >
+
+        <h2>
+          Клан
+        </h2>
+
+        <div
+          id="clanContent"
+          class="clan-content"
+        ></div>
+
+      </section>
+
+
+      <!-- =====================================================
+           ADMIN
+      ====================================================== -->
+
+      <section
+        id="adminView"
+        class="view"
+        style="display:none;"
+      >
+
+        <h2>
+          Админ-панель
+        </h2>
+
+        <div class="admin-grid">
+
+          <div class="admin-card">
+
+            <h3>
+              Сервер
+            </h3>
+
+            <div id="adminServerStats">
+              Загрузка...
+            </div>
+
+          </div>
+
+
+          <div class="admin-card">
+
+            <h3>
+              Очереди
+            </h3>
+
+            <div id="adminQueues">
+              Загрузка...
+            </div>
+
+          </div>
+
+
+          <div class="admin-card">
+
+            <h3>
+              Пользователи
+            </h3>
+
+            <div id="adminUsers">
+              Загрузка...
+            </div>
+
+          </div>
+
         </div>
 
-      </div>
-    </div>
+      </section>
+
+    </main>
+
   </div>
 
-  <script src="/socket.io/socket.io.js"></script>
-  <script src="/client.js"></script>
+</div>
 
-  <script>
-    // Переключение вкладок внутри раздела "Друзья"
-    document.querySelectorAll('.friends-tab').forEach(tab => {
-      tab.addEventListener('click', () => {
 
-        const target = tab.getAttribute('data-tab');
+<!-- =====================================================
+     PROFILE MODAL
+====================================================== -->
 
-        document
-          .querySelectorAll('.friends-tab')
-          .forEach(t => t.classList.remove('active'));
+<div
+  id="profileModal"
+  class="modal"
+  style="display:none;"
+>
 
-        tab.classList.add('active');
+  <div class="modal-content profile-modal">
 
-        if (target === 'friends') {
-          document.getElementById('friendsList').style.display = 'block';
-          document.getElementById('friendRequests').style.display = 'none';
-        } else {
-          document.getElementById('friendsList').style.display = 'none';
-          document.getElementById('friendRequests').style.display = 'block';
-        }
-      });
-    });
-  </script>
+    <button
+      class="modal-close"
+      id="closeProfileModal"
+    >
+      ×
+    </button>
+
+    <div
+      id="playerProfileContent"
+      class="player-profile-content"
+    ></div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     MATCH FOUND MODAL
+====================================================== -->
+
+<div
+  id="matchFoundModal"
+  class="match-found-modal"
+  style="display:none;"
+>
+
+  <div class="match-found-content">
+
+    <div class="match-icon">
+      ⚔️
+    </div>
+
+    <h2>
+      Матч найден!
+    </h2>
+
+    <p id="matchFoundMode">
+      Режим
+    </p>
+
+    <div
+      id="participantsList"
+      class="participants-list"
+    ></div>
+
+    <div class="match-accept-area">
+
+      <div class="accept-timer">
+
+        <span>
+          Осталось
+        </span>
+
+        <strong id="matchTimer">
+          20
+        </strong>
+
+        <span>
+          сек.
+        </span>
+
+      </div>
+
+      <div class="match-accept-progress">
+        <div id="matchProgress"></div>
+      </div>
+
+      <p id="matchAcceptedText">
+        Подтвердите готовность
+      </p>
+
+      <button
+        id="acceptMatchBtn"
+        class="accept-match-btn"
+      >
+        ПРИНЯТЬ МАТЧ
+      </button>
+
+    </div>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     LOBBY MODAL
+====================================================== -->
+
+<div
+  id="lobbyModal"
+  class="modal"
+  style="display:none;"
+>
+
+  <div class="modal-content lobby-content">
+
+    <button
+      id="closeLobbyBtn"
+      class="modal-close"
+    >
+      ×
+    </button>
+
+    <h2>
+      Лобби матча
+    </h2>
+
+    <div id="lobbyPlayers"></div>
+
+    <div
+      id="lobbyChat"
+      class="lobby-chat"
+    ></div>
+
+    <form
+      id="lobbyChatForm"
+      class="lobby-input"
+    >
+
+      <input
+        type="text"
+        id="lobbyChatInput"
+        placeholder="Сообщение..."
+      >
+
+      <button
+        type="submit"
+        class="primary-btn"
+      >
+        Отправить
+      </button>
+
+    </form>
+
+  </div>
+
+</div>
+
+
+<!-- =====================================================
+     SOCKET.IO
+====================================================== -->
+
+<script src="/socket.io/socket.io.js"></script>
+
+<script src="/client.js"></script>
 
 </body>
 </html>
