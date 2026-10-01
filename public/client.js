@@ -6,3761 +6,3740 @@ let currentMatch = null;
 let matchTimerInterval = null;
 let activeModal = null;
 let activeTooltip = null;
-let adminButton = null;
 let queueState = {};
 let privateHistory = [];
-let topPlayersData = null;
-let users = {};
+let adminButton = null;
 
-// ------------------ DOM ------------------
+// ============================================================
+// DOM
+// ============================================================
 
 const loginScreen = document.getElementById('loginScreen');
 const mainScreen = document.getElementById('mainScreen');
 const authMessage = document.getElementById('authMessage');
+
 const nicknameSpan = document.getElementById('nickname');
 const profileStatsDiv = document.getElementById('profileStats');
 const matchListUl = document.getElementById('matchList');
+
 const friendsListDiv = document.getElementById('friendsList');
 const friendRequestsDiv = document.getElementById('friendRequests');
+
 const chatMessagesDiv = document.getElementById('chatMessages');
 const privateChatArea = document.getElementById('privateChatArea');
+
 const partyStatusDiv = document.getElementById('partyStatus');
 const partyMembersDiv = document.getElementById('partyMembers');
 const partyMembersList = document.getElementById('partyMembersList');
+
 const activeMatchInfoDiv = document.getElementById('activeMatchInfo');
+
 const avatarImg = document.getElementById('avatar');
 const streakCountSpan = document.getElementById('streakCount');
+
 const tooltip = document.getElementById('profileTooltip');
 const profileInfoIcon = document.getElementById('profileInfoIcon');
+
 const tooltipSiteId = document.getElementById('tooltipSiteId');
 const tooltipSiteNick = document.getElementById('tooltipSiteNick');
 const tooltipGameId = document.getElementById('tooltipGameId');
 const tooltipGameNick = document.getElementById('tooltipGameNick');
 
-// ------------------ HELPERS ------------------
 
-function escapeHtml(str) {
-    return String(str ?? '').replace(/[&<>"']/g, m => ({
-        '&': '&amp;',
-        '<': '&lt;',
-        '>': '&gt;',
-        '"': '&quot;',
-        "'": '&#039;'
-    }[m]));
+// ============================================================
+// HELPERS
+// ============================================================
+
+function escapeHtml(value) {
+  if (value === null || value === undefined) return '';
+
+  return String(value)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#039;');
 }
+
 
 async function apiCall(url, method = 'GET', body = undefined) {
-    try {
-        const options = {
-            method,
-            headers: {}
-        };
+  try {
+    const options = {
+      method,
+      headers: {
+        'Content-Type': 'application/json'
+      }
+    };
 
-        if (body !== undefined) {
-            options.headers['Content-Type'] = 'application/json';
-            options.body = JSON.stringify(body);
-        }
-
-        const res = await fetch(url, options);
-        const text = await res.text();
-
-        try {
-            return JSON.parse(text);
-        } catch {
-            return {
-                success: false,
-                message: text || `HTTP ${res.status}`
-            };
-        }
-    } catch (error) {
-        console.error('API error:', error);
-        return {
-            success: false,
-            message: 'Ошибка соединения с сервером'
-        };
+    if (body !== undefined && method !== 'GET') {
+      options.body = JSON.stringify(body);
     }
+
+    const response = await fetch(url, options);
+
+    let data;
+
+    try {
+      data = await response.json();
+    } catch {
+      data = {
+        success: false,
+        message: `Сервер вернул HTTP ${response.status}`
+      };
+    }
+
+    if (!response.ok && data.success === undefined) {
+      data.success = false;
+    }
+
+    return data;
+  } catch (error) {
+    console.error('API error:', error);
+
+    return {
+      success: false,
+      message: 'Ошибка соединения с сервером'
+    };
+  }
 }
+
 
 function getUserAvatar(user) {
-    if (user?.avatar) return user.avatar;
+  if (user && user.avatar) {
+    return user.avatar;
+  }
 
-    return 'data:image/svg+xml;charset=UTF-8,' +
-        encodeURIComponent(`
-            <svg xmlns="http://www.w3.org/2000/svg"
-                 width="80"
-                 height="80"
-                 viewBox="0 0 80 80">
-                <rect width="80" height="80" rx="40" fill="#1e293b"/>
-                <circle cx="40" cy="31" r="13" fill="#64748b"/>
-                <path d="M17 68c3-14 13-22 23-22s20 8 23 22"
-                      fill="#64748b"/>
-            </svg>
-        `);
+  return 'https://via.placeholder.com/80?text=Avatar';
 }
+
 
 function getLevelIcon(level) {
-    return `
-        <img
-            src="/images/${level}lvl.png"
-            style="width:24px;height:24px;vertical-align:middle;"
-            alt="lvl ${level}"
-        >
-    `;
+  return `
+    <img
+      src="/images/${level}lvl.png"
+      style="width:24px;height:24px;vertical-align:middle;"
+      alt="Уровень ${level}"
+      onerror="this.style.display='none'"
+    >
+  `;
 }
 
-function getLevelByMmr(mmr = 0) {
-    mmr = Number(mmr) || 0;
 
-    if (mmr >= 2001) return 10;
-    if (mmr >= 1751) return 9;
-    if (mmr >= 1531) return 8;
-    if (mmr >= 1351) return 7;
-    if (mmr >= 1201) return 6;
-    if (mmr >= 1051) return 5;
-    if (mmr >= 901) return 4;
-    if (mmr >= 751) return 3;
-    if (mmr >= 501) return 2;
+function getLevelByMmr(mmr) {
+  mmr = Number(mmr) || 0;
 
-    return 1;
+  if (mmr >= 2001) return 10;
+  if (mmr >= 1751) return 9;
+  if (mmr >= 1531) return 8;
+  if (mmr >= 1351) return 7;
+  if (mmr >= 1201) return 6;
+  if (mmr >= 1051) return 5;
+  if (mmr >= 901) return 4;
+  if (mmr >= 751) return 3;
+  if (mmr >= 501) return 2;
+
+  return 1;
 }
+
 
 function showNotification(message, type = 'info') {
-    let container = document.getElementById('notificationContainer');
+  let container = document.getElementById('notificationContainer');
 
-    if (!container) {
-        container = document.createElement('div');
-        container.id = 'notificationContainer';
+  if (!container) {
+    container = document.createElement('div');
+    container.id = 'notificationContainer';
 
-        container.style.cssText = `
-            position:fixed;
-            top:20px;
-            right:20px;
-            z-index:99999;
-            display:flex;
-            flex-direction:column;
-            gap:10px;
-        `;
-
-        document.body.appendChild(container);
-    }
-
-    const notif = document.createElement('div');
-
-    notif.className = `notification ${type}`;
-
-    const borderColor =
-        type === 'success'
-            ? '#22c55e'
-            : type === 'error'
-                ? '#ef4444'
-                : '#3b82f6';
-
-    notif.style.cssText = `
-        background:#1e293b;
-        border-left:4px solid ${borderColor};
-        padding:12px 20px;
-        border-radius:8px;
-        box-shadow:0 2px 8px rgba(0,0,0,.3);
-        color:white;
-        font-size:14px;
-        animation:slideIn .3s ease;
+    container.style.cssText = `
+      position: fixed;
+      top: 20px;
+      right: 20px;
+      z-index: 99999;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      max-width: min(400px, calc(100vw - 30px));
     `;
 
-    notif.textContent = String(message ?? '');
+    document.body.appendChild(container);
+  }
 
-    container.appendChild(notif);
+  const notification = document.createElement('div');
+
+  notification.className = `notification ${type}`;
+
+  let borderColor = '#3b82f6';
+
+  if (type === 'success') {
+    borderColor = '#22c55e';
+  }
+
+  if (type === 'error') {
+    borderColor = '#ef4444';
+  }
+
+  notification.innerHTML = escapeHtml(message);
+
+  notification.style.cssText = `
+    background: #1e293b;
+    border-left: 4px solid ${borderColor};
+    padding: 12px 18px;
+    border-radius: 8px;
+    box-shadow: 0 5px 20px rgba(0,0,0,.35);
+    color: #fff;
+    font-size: 14px;
+    animation: slideIn .3s ease;
+    word-break: break-word;
+  `;
+
+  container.appendChild(notification);
+
+  setTimeout(() => {
+    notification.style.animation = 'slideOut .3s ease';
 
     setTimeout(() => {
-        notif.style.animation = 'slideOut .3s ease';
-
-        setTimeout(() => {
-            notif.remove();
-        }, 300);
-    }, 5000);
+      notification.remove();
+    }, 300);
+  }, 5000);
 }
 
-function createParticles(x, y) {
-    for (let i = 0; i < 12; i++) {
-        const particle = document.createElement('div');
 
-        particle.className = 'particle';
+function setAuthenticatedUI(authenticated) {
+  if (!loginScreen || !mainScreen) return;
 
-        const angle = Math.random() * Math.PI * 2;
-        const speed = 3 + Math.random() * 5;
-
-        const dx = Math.cos(angle) * speed;
-        const dy = Math.sin(angle) * speed;
-
-        particle.style.setProperty('--dx', `${dx}px`);
-        particle.style.setProperty('--dy', `${dy}px`);
-
-        particle.style.left = `${x}px`;
-        particle.style.top = `${y}px`;
-
-        document.body.appendChild(particle);
-
-        setTimeout(() => particle.remove(), 600);
-    }
+  if (authenticated) {
+    loginScreen.style.display = 'none';
+    mainScreen.style.display = 'flex';
+  } else {
+    loginScreen.style.display = 'flex';
+    mainScreen.style.display = 'none';
+  }
 }
 
-// ------------------ QUEUES ------------------
 
-function leaveAllQueues() {
-    const modes = ['1v1', '2v2', '5v5'];
+function resetApplicationState() {
+  currentUser = null;
+  currentParty = null;
+  currentMatch = null;
+  queueState = {};
+  privateHistory = [];
 
-    for (const mode of modes) {
-        leaveQueue(mode, true);
-        leaveQueue(mode, false);
-    }
+  if (matchTimerInterval) {
+    clearInterval(matchTimerInterval);
+    matchTimerInterval = null;
+  }
+
+  if (adminButton) {
+    adminButton.remove();
+    adminButton = null;
+  }
 }
 
-function joinQueue(mode, ranked) {
-    if (!currentUser) return;
 
-    socket.emit('joinQueue', {
-        mode,
-        ranked,
-        partyId: currentParty?.id || null
-    });
-}
-
-function leaveQueue(mode, ranked) {
-    if (!currentUser) return;
-
-    socket.emit('leaveQueue', {
-        mode,
-        ranked
-    });
-}
-
-function updateQueueDisplay() {
-    if (!currentUser) return;
-
-    const modes = ['1v1', '2v2', '5v5'];
-
-    for (const mode of modes) {
-        for (const ranked of [true, false]) {
-            const type = ranked ? 'ranked' : 'unranked';
-            const key = `${mode}_${type}`;
-
-            const queue = queueState[key] || [];
-
-            const needed =
-                mode === '1v1'
-                    ? 2
-                    : mode === '2v2'
-                        ? 4
-                        : 10;
-
-            const countSpan = document.getElementById(
-                `queue-count-${mode}-${type}`
-            );
-
-            if (countSpan) {
-                countSpan.textContent = `${queue.length}/${needed}`;
-            }
-
-            const statusSpan = document.getElementById(
-                `queue-status-${mode}-${type}`
-            );
-
-            const inQueue = queue.some(
-                entry => String(entry.userId) === String(currentUser.id)
-            );
-
-            if (statusSpan) {
-                statusSpan.textContent = inQueue
-                    ? 'В очереди'
-                    : 'Не в очереди';
-            }
-
-            const leaveBtn = document.querySelector(
-                `.leave-queue-btn[data-mode="${mode}"][data-ranked="${ranked}"]`
-            );
-
-            if (leaveBtn) {
-                leaveBtn.style.display =
-                    inQueue ? 'inline-block' : 'none';
-            }
-        }
-    }
-}
-
-// ------------------ USER UI ------------------
+// ============================================================
+// PROFILE / UI
+// ============================================================
 
 function updateUI() {
-    if (!currentUser) return;
+  if (!currentUser) return;
 
-    currentUser.stats = currentUser.stats || {};
+  nicknameSpan.textContent =
+    currentUser.username ||
+    currentUser.inGameNick ||
+    'Игрок';
 
-    if (nicknameSpan) {
-        nicknameSpan.textContent =
-            currentUser.inGameNick || 'Игрок';
-    }
+  if (avatarImg) {
+    avatarImg.src = getUserAvatar(currentUser);
+  }
 
-    if (avatarImg) {
-        avatarImg.src = getUserAvatar(currentUser);
-    }
+  if (streakCountSpan) {
+    streakCountSpan.textContent =
+      currentUser.stats?.streak || 0;
+  }
 
-    if (streakCountSpan) {
-        streakCountSpan.textContent =
-            currentUser.stats.streak || 0;
-    }
+  if (tooltipSiteId) {
+    tooltipSiteId.textContent = currentUser.id ?? '—';
+  }
 
-    if (tooltipSiteId) {
-        tooltipSiteId.textContent = currentUser.id || '—';
-    }
+  if (tooltipSiteNick) {
+    tooltipSiteNick.textContent =
+      currentUser.username || '—';
+  }
 
-    if (tooltipSiteNick) {
-        tooltipSiteNick.textContent = 'скрыт';
-    }
+  if (tooltipGameId) {
+    tooltipGameId.textContent =
+      currentUser.inGameId || '—';
+  }
 
-    if (tooltipGameId) {
-        tooltipGameId.textContent =
-            currentUser.inGameId || '—';
-    }
+  if (tooltipGameNick) {
+    tooltipGameNick.textContent =
+      currentUser.inGameNick || '—';
+  }
 
-    if (tooltipGameNick) {
-        tooltipGameNick.textContent =
-            currentUser.inGameNick || '—';
-    }
+  renderProfileStats();
+  renderMatchHistory();
 
-    const stats = currentUser.stats;
-
-    const mmr1 = Number(stats.mmr_1v1) || 0;
-    const mmr2 = Number(stats.mmr_2v2) || 0;
-    const mmr5 = Number(stats.mmr_5v5) || 0;
-
-    const level1 = getLevelByMmr(mmr1);
-    const level2 = getLevelByMmr(mmr2);
-    const level5 = getLevelByMmr(mmr5);
-
-    if (profileStatsDiv) {
-        profileStatsDiv.innerHTML = `
-            <div class="stats-grid">
-
-                <div class="stat-card">
-                    <h3>1x1 Дуэль</h3>
-
-                    <div class="stat-row">
-                        <span>MMR:</span>
-                        <strong>${mmr1}</strong>
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Уровень:</span>
-                        ${getLevelIcon(level1)}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Матчи:</span>
-                        ${stats.matches_1v1 || 0}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Победы:</span>
-                        ${stats.wins_1v1 || 0}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Поражения:</span>
-                        ${stats.losses_1v1 || 0}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Винрейт:</span>
-                        ${stats.matches_1v1
-                            ? Math.round(
-                                stats.wins_1v1 /
-                                stats.matches_1v1 *
-                                100
-                            )
-                            : 0
-                        }%
-                    </div>
-
-                    ${currentUser.isAdmin
-                        ? '<div class="admin-badge">Admin</div>'
-                        : ''
-                    }
-                </div>
-
-                <div class="stat-card">
-                    <h3>2x2 Напарники</h3>
-
-                    <div class="stat-row">
-                        <span>MMR:</span>
-                        <strong>${mmr2}</strong>
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Уровень:</span>
-                        ${getLevelIcon(level2)}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Матчи:</span>
-                        ${stats.matches_2v2 || 0}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Победы:</span>
-                        ${stats.wins_2v2 || 0}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Поражения:</span>
-                        ${stats.losses_2v2 || 0}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Винрейт:</span>
-                        ${stats.matches_2v2
-                            ? Math.round(
-                                stats.wins_2v2 /
-                                stats.matches_2v2 *
-                                100
-                            )
-                            : 0
-                        }%
-                    </div>
-                </div>
-
-                <div class="stat-card">
-                    <h3>5x5 Соревновательный</h3>
-
-                    <div class="stat-row">
-                        <span>MMR:</span>
-                        <strong>${mmr5}</strong>
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Уровень:</span>
-                        ${getLevelIcon(level5)}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Матчи:</span>
-                        ${stats.matches_5v5 || 0}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Победы:</span>
-                        ${stats.wins_5v5 || 0}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Поражения:</span>
-                        ${stats.losses_5v5 || 0}
-                    </div>
-
-                    <div class="stat-row">
-                        <span>Винрейт:</span>
-                        ${stats.matches_5v5
-                            ? Math.round(
-                                stats.wins_5v5 /
-                                stats.matches_5v5 *
-                                100
-                            )
-                            : 0
-                        }%
-                    </div>
-                </div>
-
-            </div>
-        `;
-    }
-
-    if (matchListUl) {
-        matchListUl.innerHTML = '';
-
-        const history = stats.matchHistory || [];
-
-        if (!history.length) {
-            matchListUl.innerHTML = '<li>Нет матчей</li>';
-        } else {
-            history.forEach(match => {
-                const li = document.createElement('li');
-
-                li.textContent =
-                    `${match.mode} (${match.ranked}) | ` +
-                    `${match.map} | ` +
-                    `${match.result} | ` +
-                    `${match.date}`;
-
-                matchListUl.appendChild(li);
-            });
-        }
-    }
-
-    if (currentUser.isAdmin && !adminButton) {
-        adminButton = document.createElement('button');
-
-        adminButton.textContent = '⚙️ Админ-панель';
-
-        adminButton.style.cssText = `
-            position:fixed;
-            bottom:20px;
-            right:20px;
-            background:#3b82f6;
-            color:white;
-            border:none;
-            padding:10px 16px;
-            border-radius:8px;
-            cursor:pointer;
-            z-index:10000;
-            font-weight:bold;
-        `;
-
-        adminButton.addEventListener('click', () => {
-            window.open('/admin.html', '_blank');
-        });
-
-        document.body.appendChild(adminButton);
-
-    } else if (!currentUser.isAdmin && adminButton) {
-        adminButton.remove();
-        adminButton = null;
-    }
+  if (currentUser.isAdmin) {
+    createAdminButton();
+  } else if (adminButton) {
+    adminButton.remove();
+    adminButton = null;
+  }
 }
 
-// ------------------ AUTH ------------------
 
-async function tryAutoLogin() {
-    const savedUserId =
-        localStorage.getItem('userId');
+function renderProfileStats() {
+  if (!profileStatsDiv || !currentUser) return;
 
-    if (!savedUserId) return;
+  const stats = currentUser.stats || {};
 
-    const res =
-        await apiCall(`/api/user/${savedUserId}`);
+  const mmr1v1 = Number(stats.mmr_1v1) || 0;
+  const mmr2v2 = Number(stats.mmr_2v2) || 0;
+  const mmr5v5 = Number(stats.mmr_5v5) || 0;
 
-    if (!res.success) {
-        localStorage.removeItem('userId');
-        localStorage.removeItem('loginTime');
-        return;
+  const matches1v1 = Number(stats.matches_1v1) || 0;
+  const matches2v2 = Number(stats.matches_2v2) || 0;
+  const matches5v5 = Number(stats.matches_5v5) || 0;
+
+  const wins1v1 = Number(stats.wins_1v1) || 0;
+  const wins2v2 = Number(stats.wins_2v2) || 0;
+  const wins5v5 = Number(stats.wins_5v5) || 0;
+
+  const losses1v1 = Number(stats.losses_1v1) || 0;
+  const losses2v2 = Number(stats.losses_2v2) || 0;
+  const losses5v5 = Number(stats.losses_5v5) || 0;
+
+  const level1v1 = getLevelByMmr(mmr1v1);
+  const level2v2 = getLevelByMmr(mmr2v2);
+  const level5v5 = getLevelByMmr(mmr5v5);
+
+  const winrate1v1 =
+    matches1v1
+      ? Math.round((wins1v1 / matches1v1) * 100)
+      : 0;
+
+  const winrate2v2 =
+    matches2v2
+      ? Math.round((wins2v2 / matches2v2) * 100)
+      : 0;
+
+  const winrate5v5 =
+    matches5v5
+      ? Math.round((wins5v5 / matches5v5) * 100)
+      : 0;
+
+  profileStatsDiv.innerHTML = `
+    <div class="stat-card">
+      <h3>1x1 Дуэль</h3>
+
+      <div class="stat-row">
+        <span>MMR:</span>
+        <strong>${mmr1v1}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Уровень:</span>
+        ${getLevelIcon(level1v1)}
+      </div>
+
+      <div class="stat-row">
+        <span>Матчи:</span>
+        <strong>${matches1v1}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Победы:</span>
+        <strong>${wins1v1}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Поражения:</span>
+        <strong>${losses1v1}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Винрейт:</span>
+        <strong>${winrate1v1}%</strong>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <h3>2x2 Напарники</h3>
+
+      <div class="stat-row">
+        <span>MMR:</span>
+        <strong>${mmr2v2}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Уровень:</span>
+        ${getLevelIcon(level2v2)}
+      </div>
+
+      <div class="stat-row">
+        <span>Матчи:</span>
+        <strong>${matches2v2}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Победы:</span>
+        <strong>${wins2v2}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Поражения:</span>
+        <strong>${losses2v2}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Винрейт:</span>
+        <strong>${winrate2v2}%</strong>
+      </div>
+    </div>
+
+    <div class="stat-card">
+      <h3>5x5 Соревновательный</h3>
+
+      <div class="stat-row">
+        <span>MMR:</span>
+        <strong>${mmr5v5}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Уровень:</span>
+        ${getLevelIcon(level5v5)}
+      </div>
+
+      <div class="stat-row">
+        <span>Матчи:</span>
+        <strong>${matches5v5}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Победы:</span>
+        <strong>${wins5v5}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Поражения:</span>
+        <strong>${losses5v5}</strong>
+      </div>
+
+      <div class="stat-row">
+        <span>Винрейт:</span>
+        <strong>${winrate5v5}%</strong>
+      </div>
+    </div>
+
+    ${
+      currentUser.isAdmin
+        ? '<div class="admin-badge">Admin</div>'
+        : ''
     }
-
-    currentUser = res.userData;
-
-    if (currentUser.stats?.avatar) {
-        currentUser.avatar =
-            currentUser.stats.avatar;
-    }
-
-    users[currentUser.id] = currentUser;
-
-    updateUI();
-
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainScreen) mainScreen.style.display = 'flex';
-
-    socket.emit('auth', currentUser.id);
-
-    loadFriends();
-    loadTopLeaderboard();
-    loadClanInfo();
+  `;
 }
+
+
+function renderMatchHistory() {
+  if (!matchListUl || !currentUser) return;
+
+  const history =
+    currentUser.stats?.matchHistory || [];
+
+  matchListUl.innerHTML = '';
+
+  if (!history.length) {
+    matchListUl.innerHTML =
+      '<li>История матчей пока пуста</li>';
+
+    return;
+  }
+
+  history.forEach(match => {
+    const li = document.createElement('li');
+
+    const ranked =
+      match.ranked === true ||
+      match.ranked === 'true'
+        ? 'Ранговый'
+        : 'Обычный';
+
+    li.innerHTML = `
+      <strong>${escapeHtml(match.mode || 'Матч')}</strong>
+      <br>
+      ${escapeHtml(match.map || 'Карта не указана')}
+      <br>
+      ${ranked}
+      ·
+      ${escapeHtml(match.result || 'Результат неизвестен')}
+      <br>
+      <small>${escapeHtml(match.date || '')}</small>
+    `;
+
+    matchListUl.appendChild(li);
+  });
+}
+
+
+function createAdminButton() {
+  if (adminButton) return;
+
+  adminButton = document.createElement('button');
+
+  adminButton.textContent = '⚙️ Админ-панель';
+
+  adminButton.className = 'admin-button';
+
+  adminButton.style.cssText = `
+    position: fixed;
+    right: 20px;
+    bottom: 20px;
+    z-index: 10000;
+    background: #3b82f6;
+    color: #fff;
+    border: none;
+    padding: 10px 16px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+  `;
+
+  adminButton.addEventListener('click', () => {
+    window.open('/admin.html', '_blank');
+  });
+
+  document.body.appendChild(adminButton);
+}
+
+
+// ============================================================
+// AUTH
+// ============================================================
+
+function showLoginForm() {
+  const loginForm =
+    document.getElementById('loginForm');
+
+  const registerForm =
+    document.getElementById('registerForm');
+
+  if (loginForm) {
+    loginForm.style.display = 'block';
+  }
+
+  if (registerForm) {
+    registerForm.style.display = 'none';
+  }
+
+  if (authMessage) {
+    authMessage.textContent = '';
+  }
+}
+
+
+function showRegisterForm() {
+  const loginForm =
+    document.getElementById('loginForm');
+
+  const registerForm =
+    document.getElementById('registerForm');
+
+  if (loginForm) {
+    loginForm.style.display = 'none';
+  }
+
+  if (registerForm) {
+    registerForm.style.display = 'block';
+  }
+
+  if (authMessage) {
+    authMessage.textContent = '';
+  }
+}
+
 
 async function register(
-    username,
-    password,
-    inGameNick,
-    inGameId
+  username,
+  password,
+  inGameNick,
+  inGameId
 ) {
-    const result = await apiCall(
-        '/api/register',
-        'POST',
-        {
-            username,
-            password,
-            inGameNick,
-            inGameId
-        }
+  if (!username || !password || !inGameNick || !inGameId) {
+    authMessage.textContent =
+      'Заполните все поля';
+
+    return;
+  }
+
+  const result = await apiCall(
+    '/api/register',
+    'POST',
+    {
+      username,
+      password,
+      inGameNick,
+      inGameId
+    }
+  );
+
+  if (result.success) {
+    authMessage.textContent =
+      result.message || 'Регистрация успешна';
+
+    showNotification(
+      'Регистрация выполнена',
+      'success'
     );
 
-    if (result.success) {
-        authMessage.textContent =
-            result.message || 'Регистрация успешна';
+    showLoginForm();
 
-        showLoginForm();
-    } else {
-        authMessage.textContent =
-            result.message || 'Ошибка регистрации';
+    const loginUsername =
+      document.getElementById('loginUsername');
+
+    if (loginUsername) {
+      loginUsername.value = username;
     }
+  } else {
+    authMessage.textContent =
+      result.message || 'Ошибка регистрации';
+  }
 }
+
 
 async function login(username, password) {
-    const result = await apiCall(
-        '/api/login',
-        'POST',
-        {
-            username,
-            password
-        }
-    );
+  if (!username || !password) {
+    authMessage.textContent =
+      'Введите логин и пароль';
 
-    if (!result.success) {
-        authMessage.textContent =
-            result.message || 'Ошибка входа';
-        return;
+    return;
+  }
+
+  const result = await apiCall(
+    '/api/login',
+    'POST',
+    {
+      username,
+      password
     }
+  );
 
-    currentUser = result.userData;
+  if (!result.success) {
+    authMessage.textContent =
+      result.message || 'Неверный логин или пароль';
 
-    if (currentUser.stats?.avatar) {
-        currentUser.avatar =
-            currentUser.stats.avatar;
-    }
+    return;
+  }
 
-    users[currentUser.id] = currentUser;
+  currentUser = result.userData;
 
-    updateUI();
+  if (
+    currentUser.stats &&
+    currentUser.stats.avatar
+  ) {
+    currentUser.avatar =
+      currentUser.stats.avatar;
+  }
 
-    if (loginScreen) loginScreen.style.display = 'none';
-    if (mainScreen) mainScreen.style.display = 'flex';
+  localStorage.setItem(
+    'userId',
+    currentUser.id
+  );
 
-    socket.emit('auth', currentUser.id);
+  localStorage.setItem(
+    'loginTime',
+    String(Date.now())
+  );
 
-    loadFriends();
-    loadTopLeaderboard();
-    loadClanInfo();
+  setAuthenticatedUI(true);
 
-    localStorage.setItem(
-        'userId',
-        currentUser.id
-    );
+  updateUI();
 
-    localStorage.setItem(
-        'loginTime',
-        Date.now()
-    );
+  socket.emit(
+    'auth',
+    currentUser.id
+  );
+
+  await loadFriends();
+  await loadTopLeaderboard();
+  await loadClanInfo();
+
+  showNotification(
+    `Добро пожаловать, ${currentUser.username}!`,
+    'success'
+  );
 }
 
-// ------------------ AVATAR ------------------
 
-async function uploadAvatar(file) {
-    if (!currentUser || !file) return;
+async function tryAutoLogin() {
+  const savedUserId =
+    localStorage.getItem('userId');
 
-    const formData = new FormData();
+  const loginTime =
+    localStorage.getItem('loginTime');
 
-    formData.append('avatar', file);
-    formData.append('userId', currentUser.id);
+  if (!savedUserId || !loginTime) {
+    setAuthenticatedUI(false);
+    return;
+  }
 
-    try {
-        const res = await fetch(
-            '/api/upload-avatar',
-            {
-                method: 'POST',
-                body: formData
-            }
-        );
+  const elapsed =
+    Date.now() - Number(loginTime);
 
-        const data = await res.json();
+  if (
+    Number.isNaN(elapsed) ||
+    elapsed >= 24 * 60 * 60 * 1000
+  ) {
+    localStorage.removeItem('userId');
+    localStorage.removeItem('loginTime');
 
-        if (!data.success) {
-            showNotification(
-                data.message || 'Ошибка загрузки аватарки',
-                'error'
-            );
-            return;
-        }
+    setAuthenticatedUI(false);
 
-        currentUser.avatar = data.avatarUrl;
+    return;
+  }
 
-        currentUser.stats =
-            currentUser.stats || {};
+  const result = await apiCall(
+    `/api/user/${encodeURIComponent(savedUserId)}`,
+    'GET'
+  );
 
-        currentUser.stats.avatar =
-            data.avatarUrl;
+  if (!result.success || !result.userData) {
+    localStorage.removeItem('userId');
+    localStorage.removeItem('loginTime');
 
-        updateUI();
+    setAuthenticatedUI(false);
 
-        await apiCall(
-            '/api/update-stats',
-            'POST',
-            {
-                userId: currentUser.id,
-                stats: currentUser.stats
-            }
-        );
+    return;
+  }
 
-        showNotification(
-            'Аватарка обновлена',
-            'success'
-        );
+  currentUser = result.userData;
 
-    } catch (error) {
-        console.error(error);
+  if (
+    currentUser.stats &&
+    currentUser.stats.avatar
+  ) {
+    currentUser.avatar =
+      currentUser.stats.avatar;
+  }
 
-        showNotification(
-            'Ошибка загрузки аватарки',
-            'error'
-        );
-    }
+  setAuthenticatedUI(true);
+
+  updateUI();
+
+  socket.emit(
+    'auth',
+    currentUser.id
+  );
+
+  await loadFriends();
+  await loadTopLeaderboard();
+  await loadClanInfo();
 }
 
-// ------------------ FRIENDS ------------------
 
-async function loadFriends() {
-    if (!currentUser) return;
+// ============================================================
+// QUEUES
+// ============================================================
 
-    currentUser.friends =
-        currentUser.friends || [];
-
-    currentUser.pendingRequests =
-        currentUser.pendingRequests || [];
-
-    if (friendsListDiv) {
-        friendsListDiv.innerHTML = '';
-    }
-
-    for (const friendId of currentUser.friends) {
-        const friend =
-            await apiCall(`/api/user/${friendId}`);
-
-        if (!friend.success) continue;
-
-        users[friendId] = friend.userData;
-
-        const div =
-            document.createElement('div');
-
-        div.className = 'friend-item';
-
-        div.innerHTML = `
-            <img
-                src="${getUserAvatar(friend.userData)}"
-                class="friend-avatar"
-                data-id="${escapeHtml(friendId)}"
-            >
-
-            <span>
-                ${escapeHtml(friend.userData.inGameNick)}
-                (${escapeHtml(friend.userData.inGameId)})
-            </span>
-
-            <div>
-                <button
-                    class="invite-friend"
-                    data-id="${escapeHtml(friendId)}"
-                >
-                    Пригласить в пати
-                </button>
-
-                <button
-                    class="pm-friend"
-                    data-id="${escapeHtml(friendId)}"
-                    data-nick="${escapeHtml(friend.userData.inGameNick)}"
-                >
-                    💬
-                </button>
-
-                <button
-                    class="remove-friend"
-                    data-id="${escapeHtml(friendId)}"
-                >
-                    Удалить
-                </button>
-            </div>
-        `;
-
-        friendsListDiv?.appendChild(div);
-    }
-
-    if (friendRequestsDiv) {
-        friendRequestsDiv.innerHTML = '';
-    }
-
-    for (const requestId of currentUser.pendingRequests) {
-        const req =
-            await apiCall(`/api/user/${requestId}`);
-
-        if (!req.success) continue;
-
-        users[requestId] = req.userData;
-
-        const div =
-            document.createElement('div');
-
-        div.className = 'friend-item';
-
-        div.innerHTML = `
-            <img
-                src="${getUserAvatar(req.userData)}"
-                class="friend-avatar"
-                data-id="${escapeHtml(requestId)}"
-            >
-
-            <span>
-                ${escapeHtml(req.userData.inGameNick)}
-                (${escapeHtml(req.userData.inGameId)})
-            </span>
-
-            <div>
-                <button
-                    class="accept-request"
-                    data-id="${escapeHtml(requestId)}"
-                >
-                    Принять
-                </button>
-
-                <button
-                    class="reject-request"
-                    data-id="${escapeHtml(requestId)}"
-                >
-                    Отклонить
-                </button>
-            </div>
-        `;
-
-        friendRequestsDiv?.appendChild(div);
-    }
-
-    document.querySelectorAll('.friend-avatar')
-        .forEach(img => {
-            img.addEventListener('click', () => {
-                showUserProfile(img.dataset.id);
-            });
-
-            addAvatarHoverTooltip(img);
-        });
-
-    document.querySelectorAll('.invite-friend')
-        .forEach(btn => {
-            btn.addEventListener('click', () => {
-                inviteToParty(btn.dataset.id);
-            });
-        });
-
-    document.querySelectorAll('.pm-friend')
-        .forEach(btn => {
-            btn.addEventListener('click', () => {
-                openPrivateChatModal(
-                    btn.dataset.id,
-                    btn.dataset.nick
-                );
-            });
-        });
-
-    document.querySelectorAll('.remove-friend')
-        .forEach(btn => {
-            btn.addEventListener('click', () => {
-                removeFriend(btn.dataset.id);
-            });
-        });
-
-    document.querySelectorAll('.accept-request')
-        .forEach(btn => {
-            btn.addEventListener('click', () => {
-                acceptFriendRequest(btn.dataset.id);
-            });
-        });
-
-    document.querySelectorAll('.reject-request')
-        .forEach(btn => {
-            btn.addEventListener('click', () => {
-                rejectFriendRequest(btn.dataset.id);
-            });
-        });
-}
-
-async function removeFriend(friendId) {
-    const res = await apiCall(
-        '/api/remove-friend',
-        'POST',
-        {
-            userId: currentUser.id,
-            friendId
-        }
-    );
-
-    if (!res.success) {
-        showNotification(
-            res.message || 'Ошибка удаления друга',
-            'error'
-        );
-        return;
-    }
-
-    currentUser.friends =
-        (currentUser.friends || [])
-            .filter(id => String(id) !== String(friendId));
-
-    await loadFriends();
-
+function joinQueue(mode, ranked) {
+  if (!currentUser) {
     showNotification(
-        'Друг удалён',
-        'success'
+      'Сначала войдите в аккаунт',
+      'error'
     );
+
+    return;
+  }
+
+  socket.emit(
+    'joinQueue',
+    {
+      mode,
+      ranked,
+      userId: currentUser.id,
+      partyId: currentParty?.id || null
+    }
+  );
+
+  updateQueueStatus(
+    mode,
+    ranked,
+    true
+  );
 }
 
-async function acceptFriendRequest(friendId) {
-    const res = await apiCall(
-        '/api/accept-friend',
-        'POST',
-        {
-            userId: currentUser.id,
-            friendId
+
+function leaveQueue(mode, ranked) {
+  if (!currentUser) return;
+
+  socket.emit(
+    'leaveQueue',
+    {
+      mode,
+      ranked,
+      userId: currentUser.id,
+      partyId: currentParty?.id || null
+    }
+  );
+
+  updateQueueStatus(
+    mode,
+    ranked,
+    false
+  );
+}
+
+
+function leaveAllQueues() {
+  const modes = [
+    '1v1',
+    '2v2',
+    '5v5'
+  ];
+
+  modes.forEach(mode => {
+    [true, false].forEach(ranked => {
+      leaveQueue(mode, ranked);
+    });
+  });
+}
+
+
+function updateQueueStatus(
+  mode,
+  ranked,
+  inQueue
+) {
+  const suffix =
+    ranked
+      ? 'ranked'
+      : 'unranked';
+
+  const status =
+    document.getElementById(
+      `queue-status-${mode}-${suffix}`
+    );
+
+  const leaveButton =
+    document.querySelector(
+      `.leave-queue-btn[data-mode="${mode}"][data-ranked="${ranked}"]`
+    );
+
+  if (status) {
+    status.textContent =
+      inQueue
+        ? 'В очереди'
+        : 'Не в очереди';
+  }
+
+  if (leaveButton) {
+    leaveButton.style.display =
+      inQueue
+        ? 'inline-block'
+        : 'none';
+  }
+}
+
+
+function updateQueueDisplay() {
+  if (!queueState) return;
+
+  const modes = [
+    ['1v1', 2],
+    ['2v2', 4],
+    ['5v5', 10]
+  ];
+
+  modes.forEach(([mode, max]) => {
+    [false, true].forEach(ranked => {
+      const suffix =
+        ranked
+          ? 'ranked'
+          : 'unranked';
+
+      const element =
+        document.getElementById(
+          `queue-count-${mode}-${suffix}`
+        );
+
+      if (!element) return;
+
+      let count = 0;
+
+      const possible =
+        queueState?.[mode];
+
+      if (typeof possible === 'number') {
+        count = possible;
+      } else if (
+        possible &&
+        typeof possible === 'object'
+      ) {
+        if (ranked) {
+          count =
+            Number(
+              possible.ranked
+            ) || 0;
+        } else {
+          count =
+            Number(
+              possible.unranked
+            ) || 0;
         }
-    );
+      }
 
-    if (!res.success) {
-        showNotification(
-            res.message || 'Ошибка',
-            'error'
-        );
-        return;
-    }
-
-    currentUser.friends =
-        currentUser.friends || [];
-
-    currentUser.pendingRequests =
-        currentUser.pendingRequests || [];
-
-    if (!currentUser.friends.some(
-        id => String(id) === String(friendId)
-    )) {
-        currentUser.friends.push(friendId);
-    }
-
-    currentUser.pendingRequests =
-        currentUser.pendingRequests.filter(
-            id => String(id) !== String(friendId)
-        );
-
-    await loadFriends();
-
-    showNotification(
-        'Заявка принята',
-        'success'
-    );
+      element.textContent =
+        `${count}/${max}`;
+    });
+  });
 }
 
-async function rejectFriendRequest(friendId) {
-    const res = await apiCall(
-        '/api/reject-friend',
-        'POST',
-        {
-            userId: currentUser.id,
-            friendId
-        }
-    );
 
-    if (!res.success) {
-        showNotification(
-            res.message || 'Ошибка',
-            'error'
-        );
-        return;
-    }
-
-    currentUser.pendingRequests =
-        (currentUser.pendingRequests || [])
-            .filter(id => String(id) !== String(friendId));
-
-    await loadFriends();
-
-    showNotification(
-        'Заявка отклонена',
-        'info'
-    );
-}
-
-async function sendFriendRequest(toUserId) {
-    const user =
-        await apiCall(`/api/user/${toUserId}`);
-
-    if (!user.success) {
-        showNotification(
-            'Пользователь не найден',
-            'error'
-        );
-        return;
-    }
-
-    const res = await apiCall(
-        '/api/send-friend-request',
-        'POST',
-        {
-            fromUserId: currentUser.id,
-            toInGameId: user.userData.inGameId
-        }
-    );
-
-    if (res.success) {
-        showNotification(
-            'Заявка отправлена',
-            'success'
-        );
-    } else {
-        showNotification(
-            res.message || 'Ошибка',
-            'error'
-        );
-    }
-}
-
-// ------------------ PROFILE ------------------
-
-async function showUserProfile(userId) {
-    const user =
-        await apiCall(`/api/user/${userId}`);
-
-    if (!user.success) return;
-
-    const data = user.userData;
-
-    users[userId] = data;
-
-    data.stats = data.stats || {};
-
-    const level1 =
-        getLevelByMmr(data.stats.mmr_1v1);
-
-    const level2 =
-        getLevelByMmr(data.stats.mmr_2v2);
-
-    const level5 =
-        getLevelByMmr(data.stats.mmr_5v5);
-
-    const modal =
-        document.createElement('div');
-
-    modal.className =
-        'modal profile-modal';
-
-    modal.innerHTML = `
-        <div class="modal-content">
-
-            <h3>Профиль игрока</h3>
-
-            <img
-                src="${getUserAvatar(data)}"
-                style="
-                    width:80px;
-                    height:80px;
-                    border-radius:50%;
-                    margin:0 auto;
-                    display:block;
-                "
-            >
-
-            <p>
-                <strong>Ник в игре:</strong>
-                ${escapeHtml(data.inGameNick)}
-            </p>
-
-            <p>
-                <strong>ID в игре:</strong>
-                ${escapeHtml(data.inGameId)}
-            </p>
-
-            <p>
-                <strong>1x1:</strong>
-                MMR ${data.stats.mmr_1v1 || 0}
-                ${getLevelIcon(level1)}
-            </p>
-
-            <p>
-                <strong>2x2:</strong>
-                MMR ${data.stats.mmr_2v2 || 0}
-                ${getLevelIcon(level2)}
-            </p>
-
-            <p>
-                <strong>5x5:</strong>
-                MMR ${data.stats.mmr_5v5 || 0}
-                ${getLevelIcon(level5)}
-            </p>
-
-            ${String(userId) !== String(currentUser.id)
-                ? `
-                    <button id="profileAddFriendBtn">
-                        Добавить в друзья
-                    </button>
-                `
-                : ''
-            }
-
-            ${data.isAdmin
-                ? '<p><strong>👑 Администратор</strong></p>'
-                : ''
-            }
-
-            <button class="close-modal">
-                Закрыть
-            </button>
-
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    if (String(userId) !== String(currentUser.id)) {
-        document
-            .getElementById('profileAddFriendBtn')
-            ?.addEventListener('click', async () => {
-                await sendFriendRequest(userId);
-                modal.remove();
-            });
-    }
-
-    modal
-        .querySelector('.close-modal')
-        ?.addEventListener('click', () => {
-            modal.remove();
-        });
-}
-
-function addAvatarHoverTooltip(element) {
-    let tooltipDiv = null;
-
-    const mouseenterHandler = async () => {
-        const userId =
-            element.getAttribute('data-id');
-
-        if (!userId) return;
-
-        const user =
-            await apiCall(`/api/user/${userId}`);
-
-        if (!user.success) return;
-
-        const rect =
-            element.getBoundingClientRect();
-
-        tooltipDiv =
-            document.createElement('div');
-
-        tooltipDiv.className =
-            'avatar-tooltip';
-
-        tooltipDiv.innerHTML = `
-            <div>
-                <strong>ID на сайте:</strong>
-                ${escapeHtml(user.userData.id)}
-            </div>
-
-            <div>
-                <strong>Ник в игре:</strong>
-                ${escapeHtml(user.userData.inGameNick)}
-            </div>
-
-            <div>
-                <strong>ID в игре:</strong>
-                ${escapeHtml(user.userData.inGameId)}
-            </div>
-        `;
-
-        document.body.appendChild(tooltipDiv);
-
-        tooltipDiv.style.left =
-            `${rect.right + 8}px`;
-
-        tooltipDiv.style.top =
-            `${rect.top}px`;
-    };
-
-    const mouseleaveHandler = () => {
-        if (tooltipDiv) {
-            tooltipDiv.remove();
-            tooltipDiv = null;
-        }
-    };
-
-    element.addEventListener(
-        'mouseenter',
-        mouseenterHandler
-    );
-
-    element.addEventListener(
-        'mouseleave',
-        mouseleaveHandler
-    );
-}
-
-// ------------------ PARTY ------------------
+// ============================================================
+// PARTY
+// ============================================================
 
 async function createParty() {
-    if (!currentUser) return;
+  if (!currentUser) return;
 
-    const res = await apiCall(
-        '/api/create-party',
-        'POST',
-        {
-            leaderId: currentUser.id
-        }
-    );
-
-    if (!res.success) {
-        showNotification(
-            res.message || 'Не удалось создать пати',
-            'error'
-        );
-        return;
+  const result = await apiCall(
+    '/api/create-party',
+    'POST',
+    {
+      userId: currentUser.id
     }
+  );
 
-    currentParty = {
-        id: res.partyId,
-        members: [currentUser.id],
-        leaderId: currentUser.id
-    };
-
-    updatePartyUI();
-
+  if (!result.success) {
     showNotification(
-        `Пати создана! Код: ${res.partyId}`,
-        'success'
+      result.message || 'Не удалось создать пати',
+      'error'
     );
+
+    return;
+  }
+
+  currentParty =
+    result.party ||
+    result.partyData ||
+    result;
+
+  updatePartyUI();
+
+  showNotification(
+    'Пати создана',
+    'success'
+  );
 }
 
-async function joinParty(partyCode) {
-    if (!currentUser) return;
 
-    const res = await apiCall(
-        '/api/join-party',
-        'POST',
-        {
-            partyId: partyCode,
-            userId: currentUser.id
-        }
-    );
+async function joinParty(code) {
+  if (!currentUser || !code) return;
 
-    if (res.success) {
-        showNotification(
-            'Вы присоединились к пати',
-            'success'
-        );
-    } else {
-        showNotification(
-            res.message || 'Не удалось присоединиться',
-            'error'
-        );
+  const result = await apiCall(
+    '/api/join-party',
+    'POST',
+    {
+      userId: currentUser.id,
+      code
     }
+  );
+
+  if (!result.success) {
+    showNotification(
+      result.message || 'Не удалось присоединиться',
+      'error'
+    );
+
+    return;
+  }
+
+  currentParty =
+    result.party ||
+    result.partyData ||
+    result;
+
+  updatePartyUI();
+
+  showNotification(
+    'Вы присоединились к пати',
+    'success'
+  );
 }
+
 
 async function leaveParty(partyId) {
-    if (!currentUser || !partyId) return;
+  if (!currentUser || !partyId) return;
 
-    const res = await apiCall(
-        '/api/leave-party',
-        'POST',
-        {
-            partyId,
-            userId: currentUser.id
-        }
+  const result = await apiCall(
+    '/api/leave-party',
+    'POST',
+    {
+      partyId,
+      userId: currentUser.id
+    }
+  );
+
+  if (!result.success) {
+    showNotification(
+      result.message || 'Не удалось выйти из пати',
+      'error'
     );
 
-    if (res.success) {
-        currentParty = null;
-        updatePartyUI();
+    return;
+  }
 
-        showNotification(
-            'Вы вышли из пати',
-            'info'
-        );
-    } else {
-        showNotification(
-            res.message || 'Не удалось выйти из пати',
-            'error'
-        );
-    }
+  currentParty = null;
+
+  updatePartyUI();
+
+  showNotification(
+    'Вы вышли из пати',
+    'info'
+  );
 }
+
 
 function updatePartyUI() {
-    if (partyStatusDiv) {
-        if (!currentParty) {
-            partyStatusDiv.innerHTML = '';
-        } else {
-            const members =
-                currentParty.members || [];
+  if (!partyStatusDiv) return;
 
-            partyStatusDiv.innerHTML = `
-                Вы в пати
-                (участников: ${members.length})
+  if (!currentParty) {
+    partyStatusDiv.innerHTML =
+      '<span>Вы не состоите в пати</span>';
 
-                Код пати:
-                <strong>${escapeHtml(currentParty.id)}</strong>
-
-                <button
-                    id="copyPartyCodeBtn"
-                    class="copy-code-btn"
-                >
-                    📋 Скопировать код
-                </button>
-
-                <button
-                    id="leavePartyBtn"
-                    class="leave-party-btn"
-                >
-                    Выйти из пати
-                </button>
-            `;
-
-            document
-                .getElementById('copyPartyCodeBtn')
-                ?.addEventListener('click', async () => {
-                    try {
-                        await navigator.clipboard.writeText(
-                            String(currentParty.id)
-                        );
-
-                        showNotification(
-                            'Код пати скопирован',
-                            'success'
-                        );
-                    } catch {
-                        showNotification(
-                            'Не удалось скопировать код',
-                            'error'
-                        );
-                    }
-                });
-
-            document
-                .getElementById('leavePartyBtn')
-                ?.addEventListener('click', () => {
-                    leaveParty(currentParty.id);
-                });
-        }
+    if (partyMembersDiv) {
+      partyMembersDiv.style.display = 'none';
     }
 
-    if (!partyMembersDiv) return;
-
-    if (!currentParty || !currentParty.members?.length) {
-        partyMembersDiv.style.display = 'none';
-        return;
-    }
-
-    partyMembersDiv.style.display = 'block';
-
-    if (partyMembersList) {
-        partyMembersList.innerHTML = '';
-    }
-
-    currentParty.members.forEach(memberId => {
-        if (String(memberId) === String(currentUser.id)) {
-            partyMembersList.innerHTML += `
-                <div>
-                    <img
-                        src="${getUserAvatar(currentUser)}"
-                        class="mini-avatar"
-                        data-id="${escapeHtml(memberId)}"
-                    >
-
-                    ${escapeHtml(currentUser.inGameNick)}
-                    (${escapeHtml(currentUser.inGameId)})
-                    — Вы
-                </div>
-            `;
-
-            return;
-        }
-
-        apiCall(`/api/user/${memberId}`)
-            .then(user => {
-                if (!user.success) return;
-
-                users[memberId] =
-                    user.userData;
-
-                const div =
-                    document.createElement('div');
-
-                div.innerHTML = `
-                    <img
-                        src="${getUserAvatar(user.userData)}"
-                        class="mini-avatar"
-                        data-id="${escapeHtml(memberId)}"
-                    >
-
-                    ${escapeHtml(user.userData.inGameNick)}
-                    (${escapeHtml(user.userData.inGameId)})
-
-                    <button
-                        class="add-friend-from-party"
-                        data-id="${escapeHtml(memberId)}"
-                    >
-                        Добавить в друзья
-                    </button>
-                `;
-
-                partyMembersList.appendChild(div);
-
-                const avatar =
-                    div.querySelector('.mini-avatar');
-
-                avatar?.addEventListener(
-                    'click',
-                    () => showUserProfile(memberId)
-                );
-
-                if (avatar) {
-                    addAvatarHoverTooltip(avatar);
-                }
-
-                div
-                    .querySelector('.add-friend-from-party')
-                    ?.addEventListener(
-                        'click',
-                        () => sendFriendRequest(memberId)
-                    );
-            });
-    });
-}
-
-function inviteToParty(friendId) {
-    if (!currentParty) {
-        showNotification(
-            'Сначала создайте пати',
-            'error'
-        );
-        return;
-    }
-
-    socket.emit('inviteToParty', {
-        partyId: currentParty.id,
-        targetUserId: friendId
-    });
-
-    showNotification(
-        'Приглашение отправлено',
-        'success'
-    );
-}
-
-function showPartyInvite(invite) {
-    const modal =
-        document.createElement('div');
-
-    modal.className = 'modal';
-
-    modal.innerHTML = `
-        <div class="modal-content">
-
-            <h3>Приглашение в пати</h3>
-
-            <p>
-                ${escapeHtml(invite.fromName)}
-                приглашает вас присоединиться к его пати.
-            </p>
-
-            <button id="acceptInviteBtn">
-                Принять
-            </button>
-
-            <button id="declineInviteBtn">
-                Отклонить
-            </button>
-
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    document
-        .getElementById('acceptInviteBtn')
-        ?.addEventListener('click', () => {
-            socket.emit(
-                'acceptPartyInvite',
-                {
-                    partyId: invite.partyId
-                }
-            );
-
-            modal.remove();
-
-            showNotification(
-                'Вы присоединились к пати',
-                'success'
-            );
-        });
-
-    document
-        .getElementById('declineInviteBtn')
-        ?.addEventListener('click', () => {
-            modal.remove();
-        });
-}
-
-// ------------------ MATCH ------------------
-
-function showMatchFound(match) {
-    currentMatch = match;
-    showMatchFoundModal(match);
-}
-
-function showMatchFoundModal(match) {
-    const old =
-        document.getElementById('matchFoundModal');
-
-    if (old) old.remove();
-
-    if (matchTimerInterval) {
-        clearInterval(matchTimerInterval);
-    }
-
-    const modal =
-        document.createElement('div');
-
-    modal.id = 'matchFoundModal';
-    modal.className = 'match-found-modal';
-
-    modal.innerHTML = `
-        <div class="match-found-content">
-
-            <h2>Матч найден!</h2>
-
-            <p>
-                Режим:
-                ${escapeHtml(match.mode)}
-                ${match.ranked ? 'Ранговый' : 'Обычный'}
-            </p>
-
-            <p>
-                Карта:
-                ${escapeHtml(match.map || '—')}
-            </p>
-
-            <div
-                class="participants-list"
-                id="matchParticipantsList"
-            ></div>
-
-            <div class="timer">
-                Принять матч через:
-                <span id="matchTimer">15</span>
-                сек
-            </div>
-
-            <div class="match-buttons">
-                <button id="modalAcceptBtn">
-                    Принять
-                </button>
-
-                <button id="modalDeclineBtn">
-                    Отклонить
-                </button>
-            </div>
-
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-    activeModal = modal;
-
-    const participantsContainer =
-        document.getElementById(
-            'matchParticipantsList'
-        );
-
-    for (const pid of match.participants || []) {
-        apiCall(`/api/user/${pid}`)
-            .then(user => {
-                if (!user.success) return;
-
-                users[pid] =
-                    user.userData;
-
-                const div =
-                    document.createElement('div');
-
-                div.className =
-                    'participant';
-
-                div.innerHTML = `
-                    <img
-                        src="${getUserAvatar(user.userData)}"
-                        class="participant-avatar"
-                        data-id="${escapeHtml(pid)}"
-                    >
-
-                    <span class="participant-name">
-                        ${escapeHtml(user.userData.inGameNick)}
-                        (${escapeHtml(user.userData.inGameId)})
-                    </span>
-                `;
-
-                participantsContainer.appendChild(div);
-
-                div
-                    .querySelector('.participant-avatar')
-                    ?.addEventListener(
-                        'click',
-                        () => showUserProfile(pid)
-                    );
-
-                const avatar =
-                    div.querySelector('.participant-avatar');
-
-                if (avatar) {
-                    addAvatarHoverTooltip(avatar);
-                }
-            });
-    }
-
-    let timeLeft = 15;
-
-    const timerSpan =
-        document.getElementById('matchTimer');
-
-    matchTimerInterval =
-        setInterval(() => {
-            timeLeft--;
-
-            if (timerSpan) {
-                timerSpan.textContent =
-                    String(timeLeft);
-            }
-
-            if (timeLeft <= 0) {
-                clearInterval(matchTimerInterval);
-                declineMatch(match.matchId);
-                modal.remove();
-            }
-        }, 1000);
-
-    document
-        .getElementById('modalAcceptBtn')
-        ?.addEventListener('click', () => {
-            clearInterval(matchTimerInterval);
-            acceptMatch(match.matchId);
-            modal.remove();
-        });
-
-    document
-        .getElementById('modalDeclineBtn')
-        ?.addEventListener('click', () => {
-            clearInterval(matchTimerInterval);
-            declineMatch(match.matchId);
-            modal.remove();
-        });
-}
-
-function acceptMatch(matchId) {
-    socket.emit('acceptMatch', {
-        matchId
-    });
-}
-
-function declineMatch(matchId) {
-    socket.emit('declineMatch', {
-        matchId
-    });
-
-    if (activeMatchInfoDiv) {
-        activeMatchInfoDiv.style.display = 'none';
-    }
-
-    currentMatch = null;
-
-    if (matchTimerInterval) {
-        clearInterval(matchTimerInterval);
-    }
-}
-
-// ------------------ DRAFT ------------------
-
-function handleDraftStart(data) {
-    const old =
-        document.getElementById('draftModal');
-
-    if (old) old.remove();
-
-    const draftModal =
-        document.createElement('div');
-
-    draftModal.id = 'draftModal';
-    draftModal.className = 'modal';
-
-    draftModal.innerHTML = `
-        <div class="modal-content">
-
-            <h3>Выбор команд</h3>
-
-            <p>
-                Капитаны по очереди выбирают игроков.
-            </p>
-
-            <div id="draftStatus"></div>
-            <div id="draftPlayers"></div>
-            <div id="draftTeams"></div>
-
-        </div>
-    `;
-
-    document.body.appendChild(draftModal);
-
-    const updateDraftUI = () => {
-        const statusDiv =
-            document.getElementById('draftStatus');
-
-        const playersDiv =
-            document.getElementById('draftPlayers');
-
-        const teamsDiv =
-            document.getElementById('draftTeams');
-
-        if (!statusDiv) return;
-
-        data.captains =
-            data.captains || [];
-
-        data.remainingPlayers =
-            data.remainingPlayers || [];
-
-        data.teamA =
-            data.teamA || [];
-
-        data.teamB =
-            data.teamB || [];
-
-        const captainId =
-            data.captains.length
-                ? data.captains[
-                    data.turn % data.captains.length
-                ]
-                : null;
-
-        const captain =
-            users[captainId];
-
-        statusDiv.innerHTML = `
-            <strong>Капитаны:</strong>
-            ${data.captains
-                .map(id =>
-                    escapeHtml(
-                        users[id]?.inGameNick || id
-                    )
-                )
-                .join(' vs ')
-            }
-
-            <br>
-
-            <strong>Ход:</strong>
-            ${
-                String(captainId) === String(currentUser.id)
-                    ? 'Ваш ход!'
-                    : `Выбирает ${escapeHtml(
-                        captain?.inGameNick || 'Игрок'
-                    )}`
-            }
-        `;
-
-        playersDiv.innerHTML = `
-            <strong>Доступные игроки:</strong>
-            <br>
-
-            ${data.remainingPlayers
-                .map(pid => {
-                    const user =
-                        users[pid] || {};
-
-                    const canPick =
-                        String(captainId) ===
-                        String(currentUser.id);
-
-                    return `
-                        <div>
-                            ${escapeHtml(
-                                user.inGameNick || pid
-                            )}
-                            (${escapeHtml(
-                                user.inGameId || ''
-                            )})
-
-                            ${
-                                canPick
-                                    ? `
-                                        <button
-                                            class="pick-btn"
-                                            data-id="${escapeHtml(pid)}"
-                                        >
-                                            Выбрать
-                                        </button>
-                                    `
-                                    : ''
-                            }
-                        </div>
-                    `;
-                })
-                .join('')
-            }
-        `;
-
-        teamsDiv.innerHTML = `
-            <strong>Команда A:</strong>
-            ${data.teamA
-                .map(id =>
-                    escapeHtml(
-                        users[id]?.inGameNick || id
-                    )
-                )
-                .join(', ') || '—'
-            }
-
-            <br>
-
-            <strong>Команда B:</strong>
-            ${data.teamB
-                .map(id =>
-                    escapeHtml(
-                        users[id]?.inGameNick || id
-                    )
-                )
-                .join(', ') || '—'
-            }
-        `;
-
-        playersDiv
-            .querySelectorAll('.pick-btn')
-            .forEach(btn => {
-                btn.addEventListener('click', () => {
-                    socket.emit(
-                        'draftPick',
-                        {
-                            matchId:
-                                currentMatch.matchId,
-
-                            pickedUserId:
-                                btn.dataset.id
-                        }
-                    );
-                });
-            });
-    };
-
-    updateDraftUI();
-
-    socket.on('draftUpdate', update => {
-        data.remainingPlayers =
-            update.remainingPlayers || [];
-
-        data.teamA =
-            update.teamA || [];
-
-        data.teamB =
-            update.teamB || [];
-
-        data.turn =
-            update.turn || 0;
-
-        updateDraftUI();
-
-        if (!data.remainingPlayers.length) {
-            draftModal.remove();
-        }
-    });
-
-    socket.once('mapVoteStart', voteData => {
-        draftModal.remove();
-
-        showMapVote(voteData);
-    });
-}
-
-function showMapVote(voteData) {
-    const voteModal =
-        document.createElement('div');
-
-    voteModal.className = 'modal';
-
-    voteModal.innerHTML = `
-        <div class="modal-content">
-
-            <h3>Голосование за карту</h3>
-
-            <div id="voteButtons"></div>
-
-        </div>
-    `;
-
-    document.body.appendChild(voteModal);
-
-    const buttonsDiv =
-        voteModal.querySelector('#voteButtons');
-
-    (voteData.maps || []).forEach(map => {
-        const btn =
-            document.createElement('button');
-
-        btn.textContent = map;
-
-        btn.addEventListener('click', () => {
-            socket.emit(
-                'mapVote',
-                {
-                    matchId:
-                        currentMatch.matchId,
-
-                    mapName: map
-                }
-            );
-
-            voteModal.remove();
-        });
-
-        buttonsDiv.appendChild(btn);
-    });
-}
-
-// ------------------ LOBBY ------------------
-
-function openLobby(match) {
-    if (matchTimerInterval) {
-        clearInterval(matchTimerInterval);
-    }
-
-    const old =
-        document.getElementById('lobbyModal');
-
-    if (old) old.remove();
-
-    currentMatch = match;
-
-    const lobbyDiv =
-        document.createElement('div');
-
-    lobbyDiv.id = 'lobbyModal';
-    lobbyDiv.className = 'modal';
-
-    lobbyDiv.innerHTML = `
-        <div class="modal-content">
-
-            <h3>Лобби матча</h3>
-
-            <p>
-                Режим:
-                ${escapeHtml(match.mode)}
-                ${match.ranked ? 'Ранговый' : 'Обычный'}
-            </p>
-
-            <p>
-                Карта:
-                ${escapeHtml(match.map || '—')}
-            </p>
-
-            <div>
-                <strong>Команда A:</strong>
-                ${(match.teamA || [])
-                    .map(pid =>
-                        escapeHtml(
-                            users[pid]?.inGameNick || pid
-                        )
-                    )
-                    .join(', ') || '—'
-                }
-            </div>
-
-            <div>
-                <strong>Команда B:</strong>
-                ${(match.teamB || [])
-                    .map(pid =>
-                        escapeHtml(
-                            users[pid]?.inGameNick || pid
-                        )
-                    )
-                    .join(', ') || '—'
-                }
-            </div>
-
-            <div style="
-                background:#0f172a;
-                padding:10px;
-                border-radius:8px;
-                margin:10px 0;
-            ">
-                <strong>⚠️ Инструкция:</strong>
-                После завершения матча загрузите
-                скриншот итогов.
-                Модератор проверит результат
-                и начислит MMR.
-            </div>
-
-            <div
-                id="lobbyParticipants"
-                style="margin:10px 0;"
-            ></div>
-
-            <div
-                id="lobbyChatMessages"
-                class="lobby-chat"
-            ></div>
-
-            <div class="lobby-input">
-
-                <input
-                    type="text"
-                    id="lobbyChatInput"
-                    placeholder="Чат лобби"
-                >
-
-                <button id="lobbySendBtn">
-                    Отправить
-                </button>
-
-            </div>
-
-            <div id="screenshotArea">
-
-                <input
-                    type="file"
-                    id="screenshotUpload"
-                    accept="image/*"
-                >
-
-                <button id="uploadScreenshotBtn">
-                    Загрузить скриншот
-                </button>
-
-            </div>
-
-            <button id="closeLobbyBtn">
-                Закрыть
-            </button>
-
-        </div>
-    `;
-
-    document.body.appendChild(lobbyDiv);
-
-    const participantsContainer =
-        document.getElementById(
-            'lobbyParticipants'
-        );
-
-    participantsContainer.innerHTML =
-        '<h4>Участники:</h4>';
-
-    for (const pid of match.participants || []) {
-        apiCall(`/api/user/${pid}`)
-            .then(user => {
-                if (!user.success) return;
-
-                users[pid] =
-                    user.userData;
-
-                const div =
-                    document.createElement('div');
-
-                div.style.margin = '5px 0';
-
-                div.innerHTML = `
-                    <img
-                        src="${getUserAvatar(user.userData)}"
-                        style="
-                            width:24px;
-                            height:24px;
-                            border-radius:50%;
-                            vertical-align:middle;
-                            margin-right:8px;
-                            cursor:pointer;
-                        "
-                        class="lobby-avatar"
-                        data-id="${escapeHtml(pid)}"
-                    >
-
-                    ${escapeHtml(
-                        user.userData.inGameNick
-                    )}
-
-                    (ID:
-                    ${escapeHtml(
-                        user.userData.inGameId
-                    )})
-
-                    ${
-                        String(pid) !==
-                        String(currentUser.id)
-                            ? `
-                                <button
-                                    class="add-friend-lobby"
-                                    data-id="${escapeHtml(pid)}"
-                                >
-                                    Добавить в друзья
-                                </button>
-                            `
-                            : ''
-                    }
-                `;
-
-                participantsContainer.appendChild(div);
-
-                const avatar =
-                    div.querySelector('.lobby-avatar');
-
-                avatar?.addEventListener(
-                    'click',
-                    () => showUserProfile(pid)
-                );
-
-                if (avatar) {
-                    addAvatarHoverTooltip(avatar);
-                }
-
-                div
-                    .querySelector('.add-friend-lobby')
-                    ?.addEventListener(
-                        'click',
-                        () => sendFriendRequest(pid)
-                    );
-            });
-    }
-
-    const lobbyInput =
-        document.getElementById(
-            'lobbyChatInput'
-        );
-
-    const lobbySend =
-        document.getElementById(
-            'lobbySendBtn'
-        );
-
-    const uploadBtn =
-        document.getElementById(
-            'uploadScreenshotBtn'
-        );
-
-    const fileInput =
-        document.getElementById(
-            'screenshotUpload'
-        );
-
-    const closeBtn =
-        document.getElementById(
-            'closeLobbyBtn'
-        );
-
-    lobbySend?.addEventListener(
-        'click',
-        () => {
-            const text =
-                lobbyInput.value.trim();
-
-            if (!text) return;
-
-            socket.emit(
-                'lobbyChat',
-                {
-                    matchId: match.matchId,
-                    text
-                }
-            );
-
-            lobbyInput.value = '';
-        }
+    return;
+  }
+
+  const members =
+    currentParty.members ||
+    currentParty.players ||
+    [];
+
+  partyStatusDiv.innerHTML = `
+    <div>
+      <strong>Пати</strong>
+
+      ${
+        currentParty.code
+          ? `<span>Код: <strong>${escapeHtml(currentParty.code)}</strong></span>`
+          : ''
+      }
+
+      <button
+        class="leave-party-btn"
+        id="leaveCurrentPartyBtn"
+      >
+        Выйти из пати
+      </button>
+    </div>
+  `;
+
+  document
+    .getElementById('leaveCurrentPartyBtn')
+    ?.addEventListener(
+      'click',
+      () => leaveParty(currentParty.id)
     );
 
-    lobbyInput?.addEventListener(
-        'keypress',
-        e => {
-            if (e.key === 'Enter') {
-                lobbySend.click();
-            }
-        }
-    );
+  if (!partyMembersDiv || !partyMembersList) {
+    return;
+  }
 
-    uploadBtn?.addEventListener(
-        'click',
-        async () => {
-            const file =
-                fileInput.files[0];
+  partyMembersDiv.style.display =
+    'block';
 
-            if (!file) {
-                showNotification(
-                    'Выберите скриншот',
-                    'error'
-                );
-                return;
-            }
+  partyMembersList.innerHTML = '';
 
-            const formData =
-                new FormData();
-
-            formData.append(
-                'screenshot',
-                file
-            );
-
-            formData.append(
-                'matchId',
-                match.matchId
-            );
-
-            formData.append(
-                'userId',
-                currentUser.id
-            );
-
-            try {
-                const res =
-                    await fetch(
-                        '/api/upload-screenshot',
-                        {
-                            method: 'POST',
-                            body: formData
-                        }
-                    );
-
-                const data =
-                    await res.json();
-
-                if (data.success) {
-                    showNotification(
-                        'Скриншот загружен',
-                        'success'
-                    );
-                } else {
-                    showNotification(
-                        data.message ||
-                        'Ошибка загрузки',
-                        'error'
-                    );
-                }
-            } catch {
-                showNotification(
-                    'Ошибка загрузки',
-                    'error'
-                );
-            }
-        }
-    );
-
-    closeBtn?.addEventListener(
-        'click',
-        () => {
-            leaveAllQueues();
-
-            if (currentParty) {
-                leaveParty(
-                    currentParty.id
-                );
-            }
-
-            lobbyDiv.remove();
-
-            currentMatch = null;
-        }
-    );
-}
-
-// ------------------ GLOBAL CHAT ------------------
-
-function addChatMessage(msg) {
-    if (!chatMessagesDiv) return;
-
+  members.forEach(member => {
     const div =
-        document.createElement('div');
+      document.createElement('div');
 
-    div.className =
-        'chat-message';
+    const memberId =
+      member.id ||
+      member.userId;
+
+    const memberName =
+      member.username ||
+      member.inGameNick ||
+      member.name ||
+      'Игрок';
 
     div.innerHTML = `
-        <img
-            src="${getUserAvatar({
-                avatar: msg.avatar
-            })}"
-            class="chat-avatar"
-            data-id="${escapeHtml(msg.userId)}"
-            style="cursor:pointer;"
-        >
+      <img
+        class="mini-avatar"
+        src="${escapeHtml(getUserAvatar(member))}"
+        alt=""
+      >
 
-        <strong>
-            ${escapeHtml(
-                msg.inGameNick ||
-                msg.username ||
-                'Игрок'
-            )}
-        </strong>:
+      <span>
+        ${escapeHtml(memberName)}
+      </span>
 
-        <span>
-            ${escapeHtml(msg.text)}
-        </span>
-
-        <small>
-            ${escapeHtml(msg.date || '')}
-        </small>
+      ${
+        memberId &&
+        currentUser &&
+        memberId !== currentUser.id
+          ? `
+            <button
+              class="add-friend-from-party"
+              data-user-id="${escapeHtml(memberId)}"
+            >
+              + Друг
+            </button>
+          `
+          : ''
+      }
     `;
 
-    chatMessagesDiv.appendChild(div);
+    partyMembersList.appendChild(div);
+  });
 
-    chatMessagesDiv.scrollTop =
-        chatMessagesDiv.scrollHeight;
-
-    const avatar =
-        div.querySelector('.chat-avatar');
-
-    avatar?.addEventListener(
+  partyMembersList
+    .querySelectorAll(
+      '.add-friend-from-party'
+    )
+    .forEach(button => {
+      button.addEventListener(
         'click',
-        () => showUserProfile(msg.userId)
-    );
-
-    if (avatar) {
-        addAvatarHoverTooltip(avatar);
-    }
+        () => sendFriendRequest(
+          button.dataset.userId
+        )
+      );
+    });
 }
 
+
+// ============================================================
+// FRIENDS
+// ============================================================
+
+async function loadFriends() {
+  if (!currentUser) return;
+
+  const result = await apiCall(
+    `/api/friends/${encodeURIComponent(currentUser.id)}`,
+    'GET'
+  );
+
+  if (!result.success) {
+    console.error(
+      'loadFriends:',
+      result.message
+    );
+
+    return;
+  }
+
+  const friends =
+    result.friends ||
+    result.data ||
+    [];
+
+  const requests =
+    result.requests ||
+    result.pendingRequests ||
+    [];
+
+  renderFriends(friends);
+  renderFriendRequests(requests);
+}
+
+
+function renderFriends(friends) {
+  if (!friendsListDiv) return;
+
+  friendsListDiv.innerHTML = '';
+
+  if (!friends.length) {
+    friendsListDiv.innerHTML =
+      '<p class="muted-text">У вас пока нет друзей.</p>';
+
+    return;
+  }
+
+  friends.forEach(friend => {
+    const div =
+      document.createElement('div');
+
+    div.className =
+      'friend-item';
+
+    const id =
+      friend.id ||
+      friend.userId;
+
+    const name =
+      friend.username ||
+      friend.inGameNick ||
+      friend.name ||
+      'Игрок';
+
+    div.innerHTML = `
+      <img
+        class="friend-avatar"
+        src="${escapeHtml(getUserAvatar(friend))}"
+        alt=""
+      >
+
+      <div>
+        <strong>${escapeHtml(name)}</strong>
+
+        <div>
+          <button
+            class="pm-friend"
+            data-user-id="${escapeHtml(id || '')}"
+          >
+            Написать
+          </button>
+
+          <button
+            class="remove-friend"
+            data-user-id="${escapeHtml(id || '')}"
+          >
+            Удалить
+          </button>
+        </div>
+      </div>
+    `;
+
+    friendsListDiv.appendChild(div);
+  });
+
+  friendsListDiv
+    .querySelectorAll('.pm-friend')
+    .forEach(button => {
+      button.addEventListener(
+        'click',
+        () => openPrivateChat(
+          button.dataset.userId
+        )
+      );
+    });
+
+  friendsListDiv
+    .querySelectorAll('.remove-friend')
+    .forEach(button => {
+      button.addEventListener(
+        'click',
+        () => removeFriend(
+          button.dataset.userId
+        )
+      );
+    });
+}
+
+
+function renderFriendRequests(requests) {
+  if (!friendRequestsDiv) return;
+
+  friendRequestsDiv.innerHTML = '';
+
+  if (!requests.length) {
+    friendRequestsDiv.innerHTML =
+      '<p class="muted-text">Новых заявок нет.</p>';
+
+    return;
+  }
+
+  requests.forEach(request => {
+    const div =
+      document.createElement('div');
+
+    div.className =
+      'friend-item';
+
+    const id =
+      request.id ||
+      request.userId ||
+      request.from;
+
+    const name =
+      request.username ||
+      request.inGameNick ||
+      request.name ||
+      request.fromName ||
+      'Игрок';
+
+    div.innerHTML = `
+      <img
+        class="friend-avatar"
+        src="${escapeHtml(getUserAvatar(request))}"
+        alt=""
+      >
+
+      <div>
+        <strong>${escapeHtml(name)}</strong>
+
+        <div>
+          <button
+            class="accept-request"
+            data-user-id="${escapeHtml(id || '')}"
+          >
+            Принять
+          </button>
+
+          <button
+            class="reject-request"
+            data-user-id="${escapeHtml(id || '')}"
+          >
+            Отклонить
+          </button>
+        </div>
+      </div>
+    `;
+
+    friendRequestsDiv.appendChild(div);
+  });
+
+  friendRequestsDiv
+    .querySelectorAll('.accept-request')
+    .forEach(button => {
+      button.addEventListener(
+        'click',
+        () => respondFriendRequest(
+          button.dataset.userId,
+          true
+        )
+      );
+    });
+
+  friendRequestsDiv
+    .querySelectorAll('.reject-request')
+    .forEach(button => {
+      button.addEventListener(
+        'click',
+        () => respondFriendRequest(
+          button.dataset.userId,
+          false
+        )
+      );
+    });
+}
+
+
+async function sendFriendRequest(userId) {
+  if (!currentUser || !userId) return;
+
+  const result = await apiCall(
+    '/api/friend-request',
+    'POST',
+    {
+      userId: currentUser.id,
+      targetId: userId
+    }
+  );
+
+  if (result.success) {
+    showNotification(
+      'Заявка отправлена',
+      'success'
+    );
+  } else {
+    showNotification(
+      result.message || 'Не удалось отправить заявку',
+      'error'
+    );
+  }
+}
+
+
+async function respondFriendRequest(
+  userId,
+  accept
+) {
+  if (!currentUser || !userId) return;
+
+  const result = await apiCall(
+    '/api/friend-request/respond',
+    'POST',
+    {
+      userId: currentUser.id,
+      fromUserId: userId,
+      accept
+    }
+  );
+
+  if (result.success) {
+    showNotification(
+      accept
+        ? 'Заявка принята'
+        : 'Заявка отклонена',
+      'success'
+    );
+
+    loadFriends();
+  } else {
+    showNotification(
+      result.message || 'Ошибка',
+      'error'
+    );
+  }
+}
+
+
+async function removeFriend(userId) {
+  if (!currentUser || !userId) return;
+
+  const result = await apiCall(
+    '/api/remove-friend',
+    'POST',
+    {
+      userId: currentUser.id,
+      friendId: userId
+    }
+  );
+
+  if (result.success) {
+    showNotification(
+      'Друг удалён',
+      'info'
+    );
+
+    loadFriends();
+  } else {
+    showNotification(
+      result.message || 'Не удалось удалить друга',
+      'error'
+    );
+  }
+}
+
+
+// ============================================================
+// CHAT
+// ============================================================
+
 function sendGlobalChat() {
-    const input =
-        document.getElementById('chatInput');
+  if (!currentUser) return;
 
-    if (!input || !currentUser) return;
+  const input =
+    document.getElementById('chatInput');
 
+  if (!input) return;
+
+  const message =
+    input.value.trim();
+
+  if (!message) return;
+
+  socket.emit(
+    'chatMessage',
+    {
+      userId: currentUser.id,
+      message
+    }
+  );
+
+  input.value = '';
+}
+
+
+function addChatMessage(message) {
+  if (!chatMessagesDiv) return;
+
+  const div =
+    document.createElement('div');
+
+  div.className =
+    'chat-message';
+
+  const user =
+    message.user ||
+    message.author ||
+    {};
+
+  const userName =
+    message.username ||
+    message.userName ||
+    user.username ||
+    message.name ||
+    'Игрок';
+
+  const text =
+    message.message ||
+    message.text ||
+    '';
+
+  const avatar =
+    message.avatar ||
+    user.avatar ||
+    'https://via.placeholder.com/40';
+
+  div.innerHTML = `
+    <img
+      class="chat-avatar"
+      src="${escapeHtml(avatar)}"
+      alt=""
+    >
+
+    <div>
+      <strong>
+        ${escapeHtml(userName)}
+      </strong>
+
+      <small>
+        ${escapeHtml(
+          message.time ||
+          message.date ||
+          ''
+        )}
+      </small>
+
+      <div>
+        ${escapeHtml(text)}
+      </div>
+    </div>
+  `;
+
+  chatMessagesDiv.appendChild(div);
+
+  chatMessagesDiv.scrollTop =
+    chatMessagesDiv.scrollHeight;
+}
+
+
+function openPrivateChat(userId) {
+  if (!currentUser || !userId) return;
+
+  if (!privateChatArea) return;
+
+  privateChatArea.innerHTML = `
+    <div class="private-chat">
+      <h3>Личный чат</h3>
+
+      <div
+        id="privateMessages"
+        class="chat-messages"
+        style="height:250px;"
+      ></div>
+
+      <div class="chat-input">
+        <input
+          id="privateChatInput"
+          type="text"
+          placeholder="Сообщение..."
+        >
+
+        <button id="privateChatSend">
+          Отправить
+        </button>
+      </div>
+    </div>
+  `;
+
+  const sendButton =
+    document.getElementById(
+      'privateChatSend'
+    );
+
+  const input =
+    document.getElementById(
+      'privateChatInput'
+    );
+
+  const send = () => {
     const text =
-        input.value.trim();
+      input.value.trim();
 
     if (!text) return;
 
     socket.emit(
-        'chatMessage',
-        text
+      'privateMessage',
+      {
+        from: currentUser.id,
+        to: userId,
+        message: text
+      }
     );
 
     input.value = '';
+  };
+
+  sendButton?.addEventListener(
+    'click',
+    send
+  );
+
+  input?.addEventListener(
+    'keypress',
+    event => {
+      if (event.key === 'Enter') {
+        send();
+      }
+    }
+  );
+
+  socket.emit(
+    'privateHistory',
+    {
+      userId: currentUser.id,
+      targetId: userId
+    }
+  );
 }
 
-// ------------------ PRIVATE CHAT ------------------
 
-function openPrivateChatModal(userId, userNick) {
-    const modal =
-        document.createElement('div');
+// ============================================================
+// TOP
+// ============================================================
 
-    modal.className = 'modal';
+async function loadTopLeaderboard() {
+  const result = await apiCall(
+    '/api/leaderboard',
+    'GET'
+  );
 
-    modal.innerHTML = `
-        <div
-            class="modal-content"
-            style="max-width:500px;"
-        >
+  if (!result.success) {
+    console.error(
+      'leaderboard:',
+      result.message
+    );
 
-            <h3>
-                Личный чат с
-                ${escapeHtml(userNick)}
-            </h3>
+    return;
+  }
 
-            <div
-                id="privateChatMessages"
-                class="chat-messages"
-                style="height:300px;"
-            ></div>
+  window.topLeaderboard =
+    result.players ||
+    result.users ||
+    result.leaderboard ||
+    [];
+}
 
-            <div class="chat-input">
 
-                <input
-                    type="text"
-                    id="privateChatInput"
-                    placeholder="Сообщение..."
+function renderTop() {
+  const topView =
+    document.getElementById('topView');
+
+  if (!topView) return;
+
+  const players =
+    window.topLeaderboard || [];
+
+  topView.innerHTML = `
+    <h2>Топ игроков</h2>
+
+    <div class="top-tabs">
+      <button
+        class="top-tab active"
+        data-top-mode="1v1"
+      >
+        1x1
+      </button>
+
+      <button
+        class="top-tab"
+        data-top-mode="2v2"
+      >
+        2x2
+      </button>
+
+      <button
+        class="top-tab"
+        data-top-mode="5v5"
+      >
+        5x5
+      </button>
+    </div>
+
+    <div id="topTableContainer"></div>
+  `;
+
+  const tabs =
+    topView.querySelectorAll(
+      '.top-tab'
+    );
+
+  tabs.forEach(tab => {
+    tab.addEventListener(
+      'click',
+      () => {
+        tabs.forEach(t =>
+          t.classList.remove('active')
+        );
+
+        tab.classList.add('active');
+
+        renderTopTable(
+          tab.dataset.topMode,
+          players
+        );
+      }
+    );
+  });
+
+  renderTopTable(
+    '1v1',
+    players
+  );
+}
+
+
+function renderTopTable(mode, players) {
+  const container =
+    document.getElementById(
+      'topTableContainer'
+    );
+
+  if (!container) return;
+
+  const mmrKey =
+    `mmr_${mode}`;
+
+  const sorted =
+    [...players]
+      .sort(
+        (a, b) =>
+          (Number(b?.stats?.[mmrKey]) || 0) -
+          (Number(a?.stats?.[mmrKey]) || 0)
+      );
+
+  container.innerHTML = `
+    <table class="top-table">
+      <thead>
+        <tr>
+          <th>#</th>
+          <th>Игрок</th>
+          <th>MMR</th>
+        </tr>
+      </thead>
+
+      <tbody>
+        ${
+          sorted.length
+            ? sorted
+                .slice(0, 100)
+                .map(
+                  (player, index) => `
+                    <tr>
+                      <td>${index + 1}</td>
+
+                      <td>
+                        <img
+                          class="top-avatar"
+                          src="${escapeHtml(
+                            getUserAvatar(player)
+                          )}"
+                          alt=""
+                        >
+
+                        ${escapeHtml(
+                          player.username ||
+                          player.inGameNick ||
+                          'Игрок'
+                        )}
+                      </td>
+
+                      <td>
+                        ${
+                          Number(
+                            player?.stats?.[mmrKey]
+                          ) || 0
+                        }
+                      </td>
+                    </tr>
+                  `
+                )
+                .join('')
+            : `
+              <tr>
+                <td colspan="3">
+                  Нет данных
+                </td>
+              </tr>
+            `
+        }
+      </tbody>
+    </table>
+  `;
+}
+
+
+// ============================================================
+// CLAN
+// ============================================================
+
+async function loadClanInfo() {
+  if (!currentUser) return;
+
+  const clanView =
+    document.getElementById('clanView');
+
+  if (!clanView) return;
+
+  const result = await apiCall(
+    `/api/clan/${encodeURIComponent(currentUser.id)}`,
+    'GET'
+  );
+
+  if (
+    !result.success ||
+    !result.clan
+  ) {
+    renderClanCreate();
+    return;
+  }
+
+  renderClan(result.clan);
+}
+
+
+function renderClanCreate() {
+  const clanView =
+    document.getElementById('clanView');
+
+  if (!clanView) return;
+
+  clanView.innerHTML = `
+    <h2>Клан</h2>
+
+    <p>
+      Вы пока не состоите в клане.
+    </p>
+
+    <div>
+      <input
+        type="text"
+        id="clanTag"
+        placeholder="Тег клана"
+        maxlength="5"
+      >
+
+      <input
+        type="text"
+        id="clanName"
+        placeholder="Название клана"
+        maxlength="32"
+      >
+
+      <button
+        id="createClanBtn"
+        class="glow-btn"
+      >
+        Создать клан
+      </button>
+    </div>
+
+    <div style="margin-top:20px;">
+      <input
+        type="text"
+        id="joinClanId"
+        placeholder="ID клана"
+      >
+
+      <button
+        id="joinClanBtn"
+        class="glow-btn"
+      >
+        Присоединиться
+      </button>
+    </div>
+  `;
+
+  document
+    .getElementById('createClanBtn')
+    ?.addEventListener(
+      'click',
+      async () => {
+        const tag =
+          document
+            .getElementById('clanTag')
+            .value
+            .trim();
+
+        const name =
+          document
+            .getElementById('clanName')
+            .value
+            .trim();
+
+        if (!tag || !name) {
+          showNotification(
+            'Заполните тег и название',
+            'error'
+          );
+
+          return;
+        }
+
+        const result =
+          await apiCall(
+            '/api/create-clan',
+            'POST',
+            {
+              userId: currentUser.id,
+              clanTag: tag,
+              clanName: name
+            }
+          );
+
+        if (result.success) {
+          showNotification(
+            'Клан создан',
+            'success'
+          );
+
+          loadClanInfo();
+        } else {
+          showNotification(
+            result.message || 'Ошибка',
+            'error'
+          );
+        }
+      }
+    );
+
+  document
+    .getElementById('joinClanBtn')
+    ?.addEventListener(
+      'click',
+      async () => {
+        const clanId =
+          document
+            .getElementById('joinClanId')
+            .value
+            .trim();
+
+        if (!clanId) return;
+
+        const result =
+          await apiCall(
+            '/api/join-clan',
+            'POST',
+            {
+              userId: currentUser.id,
+              clanId
+            }
+          );
+
+        if (result.success) {
+          showNotification(
+            'Вы присоединились к клану',
+            'success'
+          );
+
+          loadClanInfo();
+        } else {
+          showNotification(
+            result.message || 'Ошибка',
+            'error'
+          );
+        }
+      }
+    );
+}
+
+
+function renderClan(clan) {
+  const clanView =
+    document.getElementById('clanView');
+
+  if (!clanView) return;
+
+  const members =
+    clan.members ||
+    [];
+
+  clanView.innerHTML = `
+    <h2>Клан</h2>
+
+    <div class="stat-card">
+      <h3>
+        ${escapeHtml(
+          clan.name ||
+          'Клан'
+        )}
+      </h3>
+
+      <p>
+        Тег:
+        <strong>
+          ${escapeHtml(
+            clan.tag || ''
+          )}
+        </strong>
+      </p>
+
+      <p>
+        ID:
+        <strong>
+          ${escapeHtml(
+            clan.id || ''
+          )}
+        </strong>
+      </p>
+    </div>
+
+    <div style="margin-top:20px;">
+      <h3>Участники</h3>
+
+      <div class="friends-list">
+        ${
+          members.length
+            ? members
+                .map(
+                  member => `
+                    <div class="friend-item">
+                      <img
+                        class="friend-avatar"
+                        src="${escapeHtml(
+                          getUserAvatar(member)
+                        )}"
+                        alt=""
+                      >
+
+                      <strong>
+                        ${escapeHtml(
+                          member.username ||
+                          member.inGameNick ||
+                          'Игрок'
+                        )}
+                      </strong>
+                    </div>
+                  `
+                )
+                .join('')
+            : '<p>Участников нет</p>'
+        }
+      </div>
+    </div>
+  `;
+}
+
+
+// ============================================================
+// CHANGE NICK
+// ============================================================
+
+async function changeInGameNick(newNick) {
+  if (!currentUser || !newNick) return;
+
+  const result =
+    await apiCall(
+      '/api/change-nick',
+      'POST',
+      {
+        userId: currentUser.id,
+        newNick
+      }
+    );
+
+  if (!result.success) {
+    showNotification(
+      result.message || 'Не удалось изменить ник',
+      'error'
+    );
+
+    return;
+  }
+
+  currentUser.inGameNick =
+    newNick;
+
+  updateUI();
+
+  showNotification(
+    'Ник в игре изменён',
+    'success'
+  );
+}
+
+
+// ============================================================
+// AVATAR
+// ============================================================
+
+async function uploadAvatar(file) {
+  if (!currentUser || !file) return;
+
+  if (!file.type.startsWith('image/')) {
+    showNotification(
+      'Можно загружать только изображения',
+      'error'
+    );
+
+    return;
+  }
+
+  if (file.size > 5 * 1024 * 1024) {
+    showNotification(
+      'Максимальный размер аватарки — 5 МБ',
+      'error'
+    );
+
+    return;
+  }
+
+  const formData =
+    new FormData();
+
+  formData.append(
+    'avatar',
+    file
+  );
+
+  formData.append(
+    'userId',
+    currentUser.id
+  );
+
+  try {
+    const response =
+      await fetch(
+        '/api/upload-avatar',
+        {
+          method: 'POST',
+          body: formData
+        }
+      );
+
+    const result =
+      await response.json();
+
+    if (!result.success) {
+      showNotification(
+        result.message ||
+          'Не удалось загрузить аватар',
+        'error'
+      );
+
+      return;
+    }
+
+    if (result.avatar) {
+      currentUser.avatar =
+        result.avatar;
+
+      if (avatarImg) {
+        avatarImg.src =
+          result.avatar;
+      }
+    }
+
+    showNotification(
+      'Аватарка обновлена',
+      'success'
+    );
+  } catch (error) {
+    console.error(error);
+
+    showNotification(
+      'Ошибка загрузки аватарки',
+      'error'
+    );
+  }
+}
+
+
+// ============================================================
+// MATCH FOUND
+// ============================================================
+
+function showMatchFound(match) {
+  currentMatch = match;
+
+  const old =
+    document.getElementById(
+      'matchFoundModal'
+    );
+
+  if (old) old.remove();
+
+  const modal =
+    document.createElement('div');
+
+  modal.id =
+    'matchFoundModal';
+
+  modal.className =
+    'match-found-modal';
+
+  const players =
+    match.players ||
+    match.participants ||
+    [];
+
+  let seconds =
+    Number(
+      match.acceptTime ||
+      match.timeout ||
+      30
+    );
+
+  modal.innerHTML = `
+    <div class="match-found-content">
+      <h2>Матч найден!</h2>
+
+      <div class="participants-list">
+        ${
+          players
+            .map(player => `
+              <div class="participant">
+                <img
+                  class="participant-avatar"
+                  src="${escapeHtml(
+                    getUserAvatar(player)
+                  )}"
+                  alt=""
                 >
 
-                <button id="privateChatSendBtn">
-                    Отправить
-                </button>
-
-            </div>
-
-            <button id="closePrivateChatBtn">
-                Закрыть
-            </button>
-
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    const container =
-        modal.querySelector(
-            '#privateChatMessages'
-        );
-
-    const input =
-        modal.querySelector(
-            '#privateChatInput'
-        );
-
-    const sendBtn =
-        modal.querySelector(
-            '#privateChatSendBtn'
-        );
-
-    const closeBtn =
-        modal.querySelector(
-            '#closePrivateChatBtn'
-        );
-
-    const history =
-        privateHistory.filter(msg =>
-            (
-                String(msg.from) === String(userId) &&
-                String(msg.to) === String(currentUser.id)
-            ) ||
-            (
-                String(msg.from) === String(currentUser.id) &&
-                String(msg.to) === String(userId)
-            )
-        );
-
-    history.forEach(msg => {
-        renderPrivateMessage(
-            container,
-            msg,
-            userNick
-        );
-    });
-
-    container.scrollTop =
-        container.scrollHeight;
-
-    const privateHandler = msg => {
-        const related =
-            (
-                String(msg.from) === String(userId) &&
-                String(msg.to) === String(currentUser.id)
-            ) ||
-            (
-                String(msg.from) === String(currentUser.id) &&
-                String(msg.to) === String(userId)
-            );
-
-        if (!related) return;
-
-        privateHistory.push(msg);
-
-        renderPrivateMessage(
-            container,
-            msg,
-            userNick
-        );
-    };
-
-    socket.on(
-        'privateMessage',
-        privateHandler
-    );
-
-    sendBtn?.addEventListener(
-        'click',
-        () => {
-            const text =
-                input.value.trim();
-
-            if (!text) return;
-
-            socket.emit(
-                'privateMessage',
-                {
-                    toUserId: userId,
-                    text
-                }
-            );
-
-            input.value = '';
+                <span>
+                  ${escapeHtml(
+                    player.username ||
+                    player.inGameNick ||
+                    'Игрок'
+                  )}
+                </span>
+              </div>
+            `)
+            .join('')
         }
+      </div>
+
+      <div class="timer">
+        Принятие:
+        <strong id="matchAcceptTimer">
+          ${seconds}
+        </strong>
+      </div>
+
+      <div class="match-buttons">
+        <button id="acceptMatchBtn">
+          Принять
+        </button>
+
+        <button id="declineMatchBtn">
+          Отклонить
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document
+    .getElementById('acceptMatchBtn')
+    ?.addEventListener(
+      'click',
+      () => acceptMatch(match)
     );
 
-    input?.addEventListener(
-        'keypress',
-        e => {
-            if (e.key === 'Enter') {
-                sendBtn.click();
-            }
-        }
+  document
+    .getElementById('declineMatchBtn')
+    ?.addEventListener(
+      'click',
+      () => declineMatch(match)
     );
 
-    closeBtn?.addEventListener(
-        'click',
-        () => {
-            socket.off(
-                'privateMessage',
-                privateHandler
-            );
+  if (matchTimerInterval) {
+    clearInterval(matchTimerInterval);
+  }
 
-            modal.remove();
-        }
-    );
+  matchTimerInterval =
+    setInterval(() => {
+      seconds--;
+
+      const timer =
+        document.getElementById(
+          'matchAcceptTimer'
+        );
+
+      if (timer) {
+        timer.textContent =
+          Math.max(seconds, 0);
+      }
+
+      if (seconds <= 0) {
+        clearInterval(
+          matchTimerInterval
+        );
+
+        matchTimerInterval =
+          null;
+      }
+    }, 1000);
 }
 
-function renderPrivateMessage(
-    container,
-    msg,
-    userNick
-) {
+
+function acceptMatch(match) {
+  if (!currentUser) return;
+
+  socket.emit(
+    'acceptMatch',
+    {
+      matchId:
+        match.matchId ||
+        match.id,
+      userId:
+        currentUser.id
+    }
+  );
+
+  const modal =
+    document.getElementById(
+      'matchFoundModal'
+    );
+
+  if (modal) {
+    modal.remove();
+  }
+
+  if (matchTimerInterval) {
+    clearInterval(
+      matchTimerInterval
+    );
+
+    matchTimerInterval =
+      null;
+  }
+
+  showNotification(
+    'Матч принят',
+    'success'
+  );
+}
+
+
+function declineMatch(match) {
+  if (!currentUser) return;
+
+  socket.emit(
+    'declineMatch',
+    {
+      matchId:
+        match.matchId ||
+        match.id,
+      userId:
+        currentUser.id
+    }
+  );
+
+  const modal =
+    document.getElementById(
+      'matchFoundModal'
+    );
+
+  if (modal) {
+    modal.remove();
+  }
+
+  if (matchTimerInterval) {
+    clearInterval(
+      matchTimerInterval
+    );
+
+    matchTimerInterval =
+      null;
+  }
+
+  showNotification(
+    'Матч отклонён',
+    'info'
+  );
+}
+
+
+// ============================================================
+// DRAFT
+// ============================================================
+
+function handleDraftStart(data) {
+  const existing =
+    document.getElementById(
+      'draftModal'
+    );
+
+  if (existing) {
+    existing.remove();
+  }
+
+  const modal =
+    document.createElement('div');
+
+  modal.id =
+    'draftModal';
+
+  modal.className =
+    'modal';
+
+  const maps =
+    data.maps ||
+    [];
+
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h2>Выбор карты</h2>
+
+      <div id="draftContent">
+        ${
+          maps.length
+            ? maps
+                .map(
+                  map => `
+                    <button
+                      class="glow-btn draft-map-btn"
+                      data-map="${escapeHtml(map)}"
+                    >
+                      ${escapeHtml(map)}
+                    </button>
+                  `
+                )
+                .join('')
+            : `
+              <p>
+                Ожидание выбора...
+              </p>
+            `
+        }
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  modal
+    .querySelectorAll('.draft-map-btn')
+    .forEach(button => {
+      button.addEventListener(
+        'click',
+        () => {
+          socket.emit(
+            'mapVote',
+            {
+              matchId:
+                data.matchId,
+              userId:
+                currentUser?.id,
+              map:
+                button.dataset.map
+            }
+          );
+        }
+      );
+    });
+}
+
+
+// ============================================================
+// LOBBY
+// ============================================================
+
+function openLobby(match) {
+  const old =
+    document.getElementById(
+      'lobbyModal'
+    );
+
+  if (old) old.remove();
+
+  const modal =
+    document.createElement('div');
+
+  modal.id =
+    'lobbyModal';
+
+  modal.className =
+    'modal';
+
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h2>Лобби матча</h2>
+
+      <div id="lobbyPlayers"></div>
+
+      <div
+        class="lobby-chat"
+        id="lobbyChat"
+      ></div>
+
+      <div class="lobby-input">
+        <input
+          id="lobbyChatInput"
+          type="text"
+          placeholder="Сообщение..."
+        >
+
+        <button id="lobbyChatSend">
+          Отправить
+        </button>
+      </div>
+
+      <button id="closeLobbyBtn">
+        Закрыть
+      </button>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  renderLobbyPlayers(match);
+
+  document
+    .getElementById('closeLobbyBtn')
+    ?.addEventListener(
+      'click',
+      () => modal.remove()
+    );
+
+  const input =
+    document.getElementById(
+      'lobbyChatInput'
+    );
+
+  const send =
+    document.getElementById(
+      'lobbyChatSend'
+    );
+
+  const sendMessage = () => {
+    const text =
+      input.value.trim();
+
+    if (!text) return;
+
+    socket.emit(
+      'lobbyChatMessage',
+      {
+        matchId:
+          match.matchId ||
+          match.id,
+        userId:
+          currentUser?.id,
+        message: text
+      }
+    );
+
+    input.value = '';
+  };
+
+  send?.addEventListener(
+    'click',
+    sendMessage
+  );
+
+  input?.addEventListener(
+    'keypress',
+    event => {
+      if (event.key === 'Enter') {
+        sendMessage();
+      }
+    }
+  );
+}
+
+
+function renderLobbyPlayers(match) {
+  const container =
+    document.getElementById(
+      'lobbyPlayers'
+    );
+
+  if (!container) return;
+
+  const players =
+    match.players ||
+    match.participants ||
+    [];
+
+  container.innerHTML =
+    players
+      .map(
+        player => `
+          <div class="participant">
+            <img
+              class="participant-avatar"
+              src="${escapeHtml(
+                getUserAvatar(player)
+              )}"
+              alt=""
+            >
+
+            <span>
+              ${escapeHtml(
+                player.username ||
+                player.inGameNick ||
+                'Игрок'
+              )}
+            </span>
+          </div>
+        `
+      )
+      .join('');
+}
+
+
+// ============================================================
+// NAVIGATION
+// ============================================================
+
+function setupNavigation() {
+  const buttons =
+    document.querySelectorAll(
+      '.nav-btn'
+    );
+
+  const views = {
+    play:
+      document.getElementById(
+        'playView'
+      ),
+
+    profile:
+      document.getElementById(
+        'profileView'
+      ),
+
+    history:
+      document.getElementById(
+        'historyView'
+      ),
+
+    friends:
+      document.getElementById(
+        'friendsView'
+      ),
+
+    chat:
+      document.getElementById(
+        'chatView'
+      ),
+
+    top:
+      document.getElementById(
+        'topView'
+      ),
+
+    clan:
+      document.getElementById(
+        'clanView'
+      )
+  };
+
+  buttons.forEach(button => {
+    button.addEventListener(
+      'click',
+      () => {
+        const target =
+          button.dataset.view;
+
+        if (!views[target]) return;
+
+        buttons.forEach(btn =>
+          btn.classList.remove(
+            'active'
+          )
+        );
+
+        button.classList.add(
+          'active'
+        );
+
+        Object.values(views)
+          .forEach(view => {
+            if (view) {
+              view.style.display =
+                'none';
+
+              view.classList.remove(
+                'active'
+              );
+            }
+          });
+
+        views[target].style.display =
+          'block';
+
+        views[target].classList.add(
+          'active'
+        );
+
+        if (target === 'friends') {
+          loadFriends();
+        }
+
+        if (target === 'top') {
+          loadTopLeaderboard()
+            .then(renderTop);
+        }
+
+        if (target === 'clan') {
+          loadClanInfo();
+        }
+      }
+    );
+  });
+
+  // ВАЖНО:
+  // после входа всегда показываем Играть.
+  const playButton =
+    document.querySelector(
+      '.nav-btn[data-view="play"]'
+    );
+
+  if (playButton) {
+    playButton.click();
+  }
+}
+
+
+// ============================================================
+// QUEUE BUTTONS
+// ============================================================
+
+function setupQueueButtons() {
+  document
+    .querySelectorAll(
+      '.queue-mode-btn'
+    )
+    .forEach(button => {
+      button.addEventListener(
+        'click',
+        () => {
+          if (!currentUser) {
+            showNotification(
+              'Сначала войдите в аккаунт',
+              'error'
+            );
+
+            return;
+          }
+
+          const mode =
+            button.dataset.mode;
+
+          const ranked =
+            button.dataset.ranked ===
+            'true';
+
+          joinQueue(
+            mode,
+            ranked
+          );
+        }
+      );
+    });
+
+  document
+    .querySelectorAll(
+      '.leave-queue-btn'
+    )
+    .forEach(button => {
+      button.addEventListener(
+        'click',
+        () => {
+          const mode =
+            button.dataset.mode;
+
+          const ranked =
+            button.dataset.ranked ===
+            'true';
+
+          leaveQueue(
+            mode,
+            ranked
+          );
+        }
+      );
+    });
+}
+
+
+// ============================================================
+// PARTICLES
+// ============================================================
+
+function createParticles(x, y) {
+  for (let i = 0; i < 12; i++) {
+    const particle =
+      document.createElement('div');
+
+    particle.className =
+      'particle';
+
+    const angle =
+      Math.random() *
+      Math.PI *
+      2;
+
+    const speed =
+      3 +
+      Math.random() * 5;
+
+    particle.style.setProperty(
+      '--dx',
+      `${Math.cos(angle) * speed}px`
+    );
+
+    particle.style.setProperty(
+      '--dy',
+      `${Math.sin(angle) * speed}px`
+    );
+
+    particle.style.left =
+      `${x}px`;
+
+    particle.style.top =
+      `${y}px`;
+
+    document.body.appendChild(
+      particle
+    );
+
+    setTimeout(
+      () => particle.remove(),
+      600
+    );
+  }
+}
+
+
+// ============================================================
+// EVENTS
+// ============================================================
+
+document.addEventListener(
+  'click',
+  event => {
+    if (
+      event.target.closest(
+        'button'
+      )
+    ) {
+      createParticles(
+        event.clientX,
+        event.clientY
+      );
+    }
+  }
+);
+
+
+document
+  .getElementById(
+    'doLoginBtn'
+  )
+  ?.addEventListener(
+    'click',
+    () => {
+      const username =
+        document
+          .getElementById(
+            'loginUsername'
+          )
+          ?.value
+          .trim();
+
+      const password =
+        document
+          .getElementById(
+            'loginPassword'
+          )
+          ?.value || '';
+
+      login(
+        username,
+        password
+      );
+    }
+  );
+
+
+document
+  .getElementById(
+    'loginPassword'
+  )
+  ?.addEventListener(
+    'keypress',
+    event => {
+      if (event.key === 'Enter') {
+        document
+          .getElementById(
+            'doLoginBtn'
+          )
+          ?.click();
+      }
+    }
+  );
+
+
+document
+  .getElementById(
+    'doRegisterBtn'
+  )
+  ?.addEventListener(
+    'click',
+    () => {
+      const username =
+        document
+          .getElementById(
+            'regUsername'
+          )
+          ?.value
+          .trim();
+
+      const password =
+        document
+          .getElementById(
+            'regPassword'
+          )
+          ?.value || '';
+
+      const confirm =
+        document
+          .getElementById(
+            'regPasswordConfirm'
+          )
+          ?.value || '';
+
+      const inGameNick =
+        document
+          .getElementById(
+            'regInGameNick'
+          )
+          ?.value
+          .trim();
+
+      const inGameId =
+        document
+          .getElementById(
+            'regInGameId'
+          )
+          ?.value
+          .trim();
+
+      if (password !== confirm) {
+        authMessage.textContent =
+          'Пароли не совпадают';
+
+        return;
+      }
+
+      register(
+        username,
+        password,
+        inGameNick,
+        inGameId
+      );
+    }
+  );
+
+
+document
+  .getElementById(
+    'showRegisterLink'
+  )
+  ?.addEventListener(
+    'click',
+    event => {
+      event.preventDefault();
+
+      showRegisterForm();
+    }
+  );
+
+
+document
+  .getElementById(
+    'showLoginLink'
+  )
+  ?.addEventListener(
+    'click',
+    event => {
+      event.preventDefault();
+
+      showLoginForm();
+    }
+  );
+
+
+document
+  .getElementById(
+    'logoutBtn'
+  )
+  ?.addEventListener(
+    'click',
+    () => {
+      leaveAllQueues();
+
+      localStorage.removeItem(
+        'userId'
+      );
+
+      localStorage.removeItem(
+        'loginTime'
+      );
+
+      socket.disconnect();
+
+      location.reload();
+    }
+  );
+
+
+document
+  .getElementById(
+    'createPartyBtn'
+  )
+  ?.addEventListener(
+    'click',
+    createParty
+  );
+
+
+document
+  .getElementById(
+    'joinPartyBtn'
+  )
+  ?.addEventListener(
+    'click',
+    () => {
+      const input =
+        document.getElementById(
+          'joinPartyCode'
+        );
+
+      const code =
+        input?.value.trim();
+
+      if (!code) {
+        showNotification(
+          'Введите код пати',
+          'error'
+        );
+
+        return;
+      }
+
+      joinParty(code);
+    }
+  );
+
+
+document
+  .getElementById(
+    'chatSendBtn'
+  )
+  ?.addEventListener(
+    'click',
+    sendGlobalChat
+  );
+
+
+document
+  .getElementById(
+    'chatInput'
+  )
+  ?.addEventListener(
+    'keypress',
+    event => {
+      if (event.key === 'Enter') {
+        sendGlobalChat();
+      }
+    }
+  );
+
+
+// ============================================================
+// AVATAR EVENTS
+// ============================================================
+
+const changeAvatarBtn =
+  document.getElementById(
+    'changeAvatarBtn'
+  );
+
+const avatarUpload =
+  document.getElementById(
+    'avatarUpload'
+  );
+
+
+changeAvatarBtn?.addEventListener(
+  'click',
+  () => {
+    avatarUpload?.click();
+  }
+);
+
+
+avatarUpload?.addEventListener(
+  'change',
+  async event => {
+    const file =
+      event.target.files?.[0];
+
+    if (file) {
+      await uploadAvatar(file);
+    }
+
+    event.target.value = '';
+  }
+);
+
+
+// ============================================================
+// PROFILE TOOLTIP
+// ============================================================
+
+profileInfoIcon?.addEventListener(
+  'click',
+  event => {
+    event.stopPropagation();
+
+    if (!tooltip) return;
+
+    if (
+      tooltip.style.display ===
+      'block'
+    ) {
+      tooltip.style.display =
+        'none';
+
+      return;
+    }
+
+    const rect =
+      profileInfoIcon.getBoundingClientRect();
+
+    tooltip.style.display =
+      'block';
+
+    tooltip.style.left =
+      `${rect.right + 8}px`;
+
+    tooltip.style.top =
+      `${rect.top}px`;
+  }
+);
+
+
+document.addEventListener(
+  'click',
+  event => {
+    if (
+      tooltip &&
+      !event.target.closest(
+        '#profileInfoIcon'
+      ) &&
+      !event.target.closest(
+        '#profileTooltip'
+      )
+    ) {
+      tooltip.style.display =
+        'none';
+    }
+  }
+);
+
+
+// ============================================================
+// CHANGE NICK
+// ============================================================
+
+const changeNickBtn =
+  document.getElementById(
+    'changeNickBtn'
+  );
+
+const newNickInput =
+  document.getElementById(
+    'newNickInput'
+  );
+
+
+changeNickBtn?.addEventListener(
+  'click',
+  () => {
+    const nick =
+      newNickInput?.value.trim();
+
+    if (!nick) {
+      showNotification(
+        'Введите новый ник',
+        'error'
+      );
+
+      return;
+    }
+
+    changeInGameNick(nick);
+  }
+);
+
+
+newNickInput?.addEventListener(
+  'keypress',
+  event => {
+    if (event.key === 'Enter') {
+      changeNickBtn?.click();
+    }
+  }
+);
+
+
+// ============================================================
+// SOCKET.IO
+// ============================================================
+
+socket.on(
+  'connect',
+  () => {
+    console.log(
+      'Socket connected:',
+      socket.id
+    );
+
+    if (currentUser) {
+      socket.emit(
+        'auth',
+        currentUser.id
+      );
+    }
+  }
+);
+
+
+socket.on(
+  'disconnect',
+  () => {
+    console.log(
+      'Socket disconnected'
+    );
+  }
+);
+
+
+socket.on(
+  'queueUpdate',
+  queues => {
+    queueState =
+      queues || {};
+
+    updateQueueDisplay();
+  }
+);
+
+
+socket.on(
+  'matchFound',
+  match => {
+    showMatchFound(match);
+  }
+);
+
+
+socket.on(
+  'matchCancelled',
+  () => {
+    const modal =
+      document.getElementById(
+        'matchFoundModal'
+      );
+
+    if (modal) {
+      modal.remove();
+    }
+
+    if (matchTimerInterval) {
+      clearInterval(
+        matchTimerInterval
+      );
+
+      matchTimerInterval =
+        null;
+    }
+
+    if (activeMatchInfoDiv) {
+      activeMatchInfoDiv.style.display =
+        'none';
+    }
+
+    currentMatch = null;
+
+    showNotification(
+      'Матч отменён',
+      'error'
+    );
+
+    leaveAllQueues();
+
+    if (currentParty?.id) {
+      leaveParty(
+        currentParty.id
+      );
+    }
+  }
+);
+
+
+socket.on(
+  'draftStart',
+  data => {
+    currentMatch = {
+      ...(currentMatch || {}),
+      matchId:
+        data.matchId
+    };
+
+    handleDraftStart(data);
+  }
+);
+
+
+socket.on(
+  'lobbyOpen',
+  match => {
+    openLobby(match);
+  }
+);
+
+
+socket.on(
+  'statsUpdated',
+  stats => {
+    if (!currentUser) return;
+
+    currentUser.stats =
+      stats || {};
+
+    if (stats?.avatar) {
+      currentUser.avatar =
+        stats.avatar;
+    }
+
+    updateUI();
+
+    showNotification(
+      'Статистика обновлена',
+      'success'
+    );
+  }
+);
+
+
+socket.on(
+  'friendRequest',
+  data => {
+    showNotification(
+      `Новая заявка в друзья от ${
+        data.fromName || 'игрока'
+      }`,
+      'info'
+    );
+
+    loadFriends();
+  }
+);
+
+
+socket.on(
+  'friendAdded',
+  () => {
+    loadFriends();
+  }
+);
+
+
+socket.on(
+  'partyUpdate',
+  party => {
+    currentParty =
+      party || null;
+
+    updatePartyUI();
+  }
+);
+
+
+socket.on(
+  'partyInvite',
+  invite => {
+    showNotification(
+      `${
+        invite.fromName ||
+        'Игрок'
+      } приглашает вас в пати`,
+      'info'
+    );
+
+    showPartyInvite(invite);
+  }
+);
+
+
+socket.on(
+  'chatMessage',
+  message => {
+    addChatMessage(message);
+  }
+);
+
+
+socket.on(
+  'chatHistory',
+  history => {
+    if (!chatMessagesDiv) return;
+
+    chatMessagesDiv.innerHTML = '';
+
+    (history || [])
+      .forEach(
+        message =>
+          addChatMessage(message)
+      );
+  }
+);
+
+
+socket.on(
+  'privateHistory',
+  history => {
+    privateHistory =
+      history || [];
+  }
+);
+
+
+socket.on(
+  'privateMessage',
+  message => {
+    const container =
+      document.getElementById(
+        'privateMessages'
+      );
+
+    if (!container) return;
+
     const div =
-        document.createElement('div');
+      document.createElement('div');
 
     div.className =
-        'chat-message';
-
-    const isMine =
-        String(msg.from) ===
-        String(currentUser.id);
+      'chat-message';
 
     div.innerHTML = `
+      <div>
         <strong>
-            ${isMine
-                ? 'Вы'
-                : escapeHtml(userNick)
-            }:
+          ${escapeHtml(
+            message.username ||
+            message.fromName ||
+            'Игрок'
+          )}
         </strong>
 
-        ${escapeHtml(msg.text)}
-
-        <small>
-            ${escapeHtml(
-                msg.date ||
-                new Date().toLocaleString()
-            )}
-        </small>
+        <div>
+          ${escapeHtml(
+            message.message ||
+            message.text ||
+            ''
+          )}
+        </div>
+      </div>
     `;
 
     container.appendChild(div);
 
     container.scrollTop =
-        container.scrollHeight;
-}
+      container.scrollHeight;
+  }
+);
 
-// ------------------ SEARCH ------------------
 
-async function searchUsers(query) {
-    const q =
-        query.trim();
+socket.on(
+  'lobbyChatMessage',
+  message => {
+    const chat =
+      document.getElementById(
+        'lobbyChat'
+      );
 
-    const results =
-        document.getElementById(
-            'friendSearchResults'
-        );
+    if (!chat) return;
 
-    if (!results) return;
+    const div =
+      document.createElement('div');
 
-    if (!q) {
-        results.innerHTML =
-            '<p class="muted-text">Введите игровой ник, игровой ID или ID пользователя.</p>';
-        return;
-    }
+    div.style.marginBottom =
+      '8px';
 
-    results.innerHTML =
-        '<p class="muted-text">Поиск...</p>';
+    div.innerHTML = `
+      <strong>
+        ${escapeHtml(
+          message.username ||
+          message.fromName ||
+          'Игрок'
+        )}
+      </strong>:
+      ${escapeHtml(
+        message.message ||
+        ''
+      )}
+    `;
 
-    const res =
-        await apiCall(
-            `/api/search-users?q=${encodeURIComponent(q)}`
-        );
+    chat.appendChild(div);
 
-    if (!res.success || !res.users?.length) {
-        results.innerHTML =
-            '<p class="muted-text">Игроки не найдены.</p>';
-        return;
-    }
+    chat.scrollTop =
+      chat.scrollHeight;
+  }
+);
 
-    results.innerHTML =
-        res.users.map(user => `
-            <div class="friend-item friend-search-item">
 
-                <img
-                    src="${getUserAvatar(user)}"
-                    class="friend-avatar"
-                    data-id="${escapeHtml(user.id)}"
-                >
+socket.on(
+  'queueError',
+  error => {
+    showNotification(
+      error?.message ||
+      'Ошибка очереди',
+      'error'
+    );
+  }
+);
 
-                <div class="friend-search-info">
-                    <strong>
-                        ${escapeHtml(
-                            user.inGameNick || 'Игрок'
-                        )}
-                    </strong>
 
-                    <small>
-                        ID:
-                        ${escapeHtml(
-                            user.inGameId || user.id
-                        )}
-                    </small>
-                </div>
+socket.on(
+  'muted',
+  data => {
+    showNotification(
+      `Вы замьючены до ${
+        data?.until
+          ? new Date(
+              data.until
+            ).toLocaleString()
+          : 'неизвестной даты'
+      }. Причина: ${
+        data?.reason || 'не указана'
+      }`,
+      'error'
+    );
+  }
+);
 
-                <button
-                    class="add-search-friend"
-                    data-id="${escapeHtml(user.id)}"
-                >
-                    Добавить
-                </button>
 
-            </div>
-        `).join('');
-
-    results
-        .querySelectorAll('.friend-avatar')
-        .forEach(img => {
-            img.addEventListener(
-                'click',
-                () => showUserProfile(img.dataset.id)
-            );
-        });
-
-    results
-        .querySelectorAll('.add-search-friend')
-        .forEach(btn => {
-            btn.addEventListener(
-                'click',
-                async () => {
-                    await sendFriendRequest(
-                        btn.dataset.id
-                    );
-
-                    btn.disabled = true;
-                    btn.textContent =
-                        'Отправлено';
-                }
-            );
-        });
-}
-
-function setupFriendSearch() {
-    const input =
-        document.getElementById(
-            'friendSearchInput'
-        );
-
-    const btn =
-        document.getElementById(
-            'friendSearchBtn'
-        );
-
-    if (!input || !btn) return;
-
-    const run = () =>
-        searchUsers(input.value);
-
-    btn.addEventListener(
-        'click',
-        run
+socket.on(
+  'banned',
+  data => {
+    showNotification(
+      `Вы забанены${
+        data?.reason
+          ? `. Причина: ${data.reason}`
+          : ''
+      }`,
+      'error'
     );
 
-    input.addEventListener(
-        'keypress',
-        e => {
-            if (e.key === 'Enter') {
-                run();
-            }
+    setTimeout(
+      () => {
+        localStorage.removeItem(
+          'userId'
+        );
+
+        localStorage.removeItem(
+          'loginTime'
+        );
+
+        location.reload();
+      },
+      3000
+    );
+  }
+);
+
+
+// ============================================================
+// PARTY INVITE
+// ============================================================
+
+function showPartyInvite(invite) {
+  const old =
+    document.getElementById(
+      'partyInviteModal'
+    );
+
+  if (old) old.remove();
+
+  const modal =
+    document.createElement('div');
+
+  modal.id =
+    'partyInviteModal';
+
+  modal.className =
+    'modal';
+
+  modal.innerHTML = `
+    <div class="modal-content">
+      <h2>Приглашение в пати</h2>
+
+      <p>
+        ${
+          escapeHtml(
+            invite.fromName ||
+            'Игрок'
+          )
         }
+        приглашает вас в пати.
+      </p>
+
+      <div style="display:flex;gap:10px;margin-top:20px;">
+        <button
+          id="acceptPartyInvite"
+          class="glow-btn"
+        >
+          Принять
+        </button>
+
+        <button
+          id="declinePartyInvite"
+        >
+          Отклонить
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(modal);
+
+  document
+    .getElementById(
+      'acceptPartyInvite'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        socket.emit(
+          'partyInviteAccept',
+          {
+            inviteId:
+              invite.id,
+            partyId:
+              invite.partyId,
+            userId:
+              currentUser?.id
+          }
+        );
+
+        modal.remove();
+      }
+    );
+
+  document
+    .getElementById(
+      'declinePartyInvite'
+    )
+    ?.addEventListener(
+      'click',
+      () => {
+        socket.emit(
+          'partyInviteDecline',
+          {
+            inviteId:
+              invite.id,
+            userId:
+              currentUser?.id
+          }
+        );
+
+        modal.remove();
+      }
     );
 }
 
-// ------------------ TOP ------------------
 
-async function loadTopLeaderboard() {
-    const res =
-        await apiCall('/api/top-players');
+// ============================================================
+// MOBILE MENU
+// ============================================================
 
-    if (!res.success) return;
+function setupMobileMenu() {
+  if (
+    document.querySelector(
+      '.mobile-menu-btn'
+    )
+  ) {
+    return;
+  }
 
-    topPlayersData =
-        res.data;
+  const button =
+    document.createElement('button');
 
-    renderTop();
-}
+  button.className =
+    'mobile-menu-btn';
 
-function renderTop() {
-    const container =
-        document.getElementById(
-            'topView'
-        );
+  button.textContent =
+    '☰';
 
-    if (!container) return;
+  button.setAttribute(
+    'aria-label',
+    'Меню'
+  );
 
-    if (!topPlayersData) {
-        container.innerHTML =
-            '<p>Загрузка...</p>';
-        return;
+  document.body.appendChild(
+    button
+  );
+
+  const sidebar =
+    document.querySelector(
+      '.sidebar'
+    );
+
+  if (!sidebar) return;
+
+  button.addEventListener(
+    'click',
+    () => {
+      sidebar.classList.toggle(
+        'mobile-open'
+      );
+
+      document.body.classList.toggle(
+        'menu-open'
+      );
     }
-
-    container.innerHTML = `
-        <h2>Топ игроков по победам</h2>
-
-        <div class="top-tabs">
-
-            <button
-                class="top-tab active"
-                data-period="day"
-            >
-                За день
-            </button>
-
-            <button
-                class="top-tab"
-                data-period="week"
-            >
-                За неделю
-            </button>
-
-            <button
-                class="top-tab"
-                data-period="month"
-            >
-                За месяц
-            </button>
-
-        </div>
-
-        <div id="topTable"></div>
-    `;
-
-    const showPeriod = period => {
-        const players =
-            topPlayersData[period] || [];
-
-        const table =
-            document.getElementById(
-                'topTable'
-            );
-
-        if (!table) return;
-
-        table.innerHTML = `
-            <table class="top-table">
-
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Игрок</th>
-                        <th>Победы</th>
-                    </tr>
-                </thead>
-
-                <tbody>
-
-                    ${players.map((p, idx) => `
-                        <tr>
-
-                            <td>
-                                ${idx + 1}
-                            </td>
-
-                            <td>
-                                <img
-                                    src="${getUserAvatar(p.userData)}"
-                                    class="top-avatar"
-                                >
-
-                                ${escapeHtml(
-                                    p.userData.inGameNick
-                                )}
-                            </td>
-
-                            <td>
-                                ${p.wins || 0}
-                            </td>
-
-                        </tr>
-                    `).join('')}
-
-                </tbody>
-
-            </table>
-        `;
-    };
-
-    container
-        .querySelectorAll('.top-tab')
-        .forEach(tab => {
-            tab.addEventListener(
-                'click',
-                () => {
-                    container
-                        .querySelectorAll('.top-tab')
-                        .forEach(t =>
-                            t.classList.remove(
-                                'active'
-                            )
-                        );
-
-                    tab.classList.add('active');
-
-                    showPeriod(
-                        tab.dataset.period
-                    );
-                }
-            );
-        });
-
-    showPeriod('day');
-}
-
-// ------------------ CLANS ------------------
-
-async function loadClanInfo() {
-    if (!currentUser) return;
-
-    const clanContainer =
-        document.getElementById(
-            'clanView'
-        );
-
-    if (!clanContainer) return;
-
-    const res =
-        await apiCall(
-            `/api/clan-info?userId=${encodeURIComponent(currentUser.id)}`
-        );
-
-    if (res.success && res.clan) {
-        const clan =
-            res.clan;
-
-        clanContainer.innerHTML = `
-            <h2>
-                Клан:
-                ${escapeHtml(clan.tag)}
-                |
-                ${escapeHtml(clan.name)}
-            </h2>
-
-            <p>
-                Создатель:
-                ${escapeHtml(
-                    users[clan.ownerId]?.inGameNick ||
-                    clan.ownerId ||
-                    '—'
-                )}
-            </p>
-
-            <p>
-                Участники:
-                ${clan.members?.length || 0}
-                /
-                ${clan.maxMembers || 0}
-            </p>
-
-            <ul id="clanMembersList">
-                ${(clan.members || [])
-                    .map(member => `
-                        <li>
-                            <img
-                                src="${getUserAvatar(member)}"
-                                class="clan-avatar"
-                            >
-
-                            ${escapeHtml(
-                                member.inGameNick || 'Игрок'
-                            )}
-                        </li>
-                    `)
-                    .join('')
-                }
-            </ul>
-
-            <button
-                id="leaveClanBtn"
-                class="glow-btn"
-            >
-                Покинуть клан
-            </button>
-        `;
-
-        document
-            .getElementById('leaveClanBtn')
-            ?.addEventListener(
-                'click',
-                async () => {
-                    const result =
-                        await apiCall(
-                            '/api/leave-clan',
-                            'POST',
-                            {
-                                userId:
-                                    currentUser.id
-                            }
-                        );
-
-                    if (result.success) {
-                        showNotification(
-                            'Вы вышли из клана',
-                            'success'
-                        );
-
-                        loadClanInfo();
-                    } else {
-                        showNotification(
-                            result.message ||
-                            'Ошибка',
-                            'error'
-                        );
-                    }
-                }
-            );
-
-        return;
-    }
-
-    clanContainer.innerHTML = `
-        <h2>Клан</h2>
-
-        <p>
-            Вы не состоите в клане.
-        </p>
-
-        <div>
-
-            <input
-                type="text"
-                id="clanTag"
-                placeholder="Тег клана (до 5 символов)"
-                maxlength="5"
-            >
-
-            <input
-                type="text"
-                id="clanName"
-                placeholder="Название клана (до 32 символов)"
-                maxlength="32"
-            >
-
-            <button
-                id="createClanBtn"
-                class="glow-btn"
-            >
-                Создать клан
-            </button>
-
-        </div>
-
-        <div style="margin-top:20px;">
-
-            <input
-                type="text"
-                id="joinClanId"
-                placeholder="ID клана для присоединения"
-            >
-
-            <button
-                id="joinClanBtn"
-                class="glow-btn"
-            >
-                Присоединиться
-            </button>
-
-        </div>
-    `;
-
-    document
-        .getElementById('createClanBtn')
-        ?.addEventListener(
-            'click',
-            async () => {
-                const tag =
-                    document
-                        .getElementById('clanTag')
-                        .value
-                        .trim();
-
-                const name =
-                    document
-                        .getElementById('clanName')
-                        .value
-                        .trim();
-
-                if (!tag || !name) {
-                    showNotification(
-                        'Заполните тег и название',
-                        'error'
-                    );
-                    return;
-                }
-
-                const result =
-                    await apiCall(
-                        '/api/create-clan',
-                        'POST',
-                        {
-                            userId:
-                                currentUser.id,
-
-                            clanTag:
-                                tag,
-
-                            clanName:
-                                name
-                        }
-                    );
-
-                if (result.success) {
-                    showNotification(
-                        'Клан создан',
-                        'success'
-                    );
-
-                    loadClanInfo();
-                } else {
-                    showNotification(
-                        result.message ||
-                        'Ошибка',
-                        'error'
-                    );
-                }
-            }
-        );
-
-    document
-        .getElementById('joinClanBtn')
-        ?.addEventListener(
-            'click',
-            async () => {
-                const clanId =
-                    document
-                        .getElementById('joinClanId')
-                        .value
-                        .trim();
-
-                if (!clanId) return;
-
-                const result =
-                    await apiCall(
-                        '/api/join-clan',
-                        'POST',
-                        {
-                            userId:
-                                currentUser.id,
-
-                            clanId
-                        }
-                    );
-
-                if (result.success) {
-                    showNotification(
-                        'Вы присоединились к клану',
-                        'success'
-                    );
-
-                    loadClanInfo();
-                } else {
-                    showNotification(
-                        result.message ||
-                        'Ошибка',
-                        'error'
-                    );
-                }
-            }
-        );
-}
-
-// ------------------ CHANGE NICK ------------------
-
-async function changeInGameNick(newNick) {
-    if (!currentUser || !newNick) return;
-
-    const res =
-        await apiCall(
-            '/api/change-nick',
-            'POST',
-            {
-                userId:
-                    currentUser.id,
-
-                newNick
-            }
-        );
-
-    if (res.success) {
-        currentUser.inGameNick =
-            newNick;
-
-        updateUI();
-
-        showNotification(
-            'Ник изменён',
-            'success'
-        );
-    } else {
-        showNotification(
-            res.message ||
-            'Ошибка изменения ника',
-            'error'
-        );
-    }
-}
-
-// ------------------ NAVIGATION ------------------
-
-function setupNavigation() {
-    const btns =
-        document.querySelectorAll(
-            '.nav-btn'
-        );
-
-    const views = {
-        play:
-            document.getElementById('playView'),
-
-        profile:
-            document.getElementById('profileView'),
-
-        history:
-            document.getElementById('historyView'),
-
-        friends:
-            document.getElementById('friendsView'),
-
-        chat:
-            document.getElementById('chatView'),
-
-        top:
-            document.getElementById('topView'),
-
-        clan:
-            document.getElementById('clanView')
-    };
-
-    btns.forEach(btn => {
-        btn.addEventListener(
-            'click',
-            () => {
-                const view =
-                    btn.dataset.view;
-
-                btns.forEach(b =>
-                    b.classList.remove(
-                        'active'
-                    )
-                );
-
-                btn.classList.add('active');
-
-                Object.values(views)
-                    .forEach(v => {
-                        if (v) {
-                            v.style.display =
-                                'none';
-                        }
-                    });
-
-                if (views[view]) {
-                    views[view].style.display =
-                        'block';
-                }
-
-                if (view === 'friends') {
-                    loadFriends();
-                }
-
-                if (view === 'top') {
-                    renderTop();
-                }
-
-                if (view === 'clan') {
-                    loadClanInfo();
-                }
-            }
-        );
+  );
+
+  sidebar
+    .querySelectorAll('.nav-btn')
+    .forEach(navButton => {
+      navButton.addEventListener(
+        'click',
+        () => {
+          sidebar.classList.remove(
+            'mobile-open'
+          );
+
+          document.body.classList.remove(
+            'menu-open'
+          );
+        }
+      );
     });
 }
 
-// ------------------ QUEUE BUTTONS ------------------
 
-function setupQueueButtons() {
-    document
-        .querySelectorAll('.queue-mode-btn')
-        .forEach(btn => {
-            btn.addEventListener(
-                'click',
-                () => {
-                    if (!currentUser) return;
+// ============================================================
+// INIT
+// ============================================================
 
-                    joinQueue(
-                        btn.dataset.mode,
-                        btn.dataset.ranked === 'true'
-                    );
-                }
-            );
-        });
+function initializeApplication() {
+  // Сразу скрываем главный экран.
+  // Это важно: выбор режима не должен
+  // появляться на странице входа.
+  if (mainScreen) {
+    mainScreen.style.display =
+      'none';
+  }
 
-    document
-        .querySelectorAll('.leave-queue-btn')
-        .forEach(btn => {
-            btn.addEventListener(
-                'click',
-                () => {
-                    if (!currentUser) return;
+  if (loginScreen) {
+    loginScreen.style.display =
+      'flex';
+  }
 
-                    leaveQueue(
-                        btn.dataset.mode,
-                        btn.dataset.ranked === 'true'
-                    );
-                }
-            );
-        });
+  showLoginForm();
+
+  setupNavigation();
+  setupQueueButtons();
+  setupMobileMenu();
+
+  tryAutoLogin();
 }
 
-// ------------------ AUTH UI ------------------
 
-function showLoginForm() {
-    const login =
-        document.getElementById(
-            'loginForm'
-        );
-
-    const register =
-        document.getElementById(
-            'registerForm'
-        );
-
-    if (login) login.style.display = 'block';
-    if (register) register.style.display = 'none';
-}
-
-function showRegisterForm() {
-    const login =
-        document.getElementById(
-            'loginForm'
-        );
-
-    const register =
-        document.getElementById(
-            'registerForm'
-        );
-
-    if (login) login.style.display = 'none';
-    if (register) register.style.display = 'block';
-}
-
-// ------------------ EVENTS ------------------
-
-document.addEventListener(
-    'click',
-    e => {
-        if (
-            e.target.closest(
-                'button, .queue-mode-btn, .leave-queue-btn, .nav-btn, .friend-item button, .accept-request, .reject-request, #createPartyBtn, #joinPartyBtn, #chatSendBtn, #searchBtn'
-            )
-        ) {
-            createParticles(
-                e.clientX,
-                e.clientY
-            );
-        }
-    }
-);
-
-document
-    .getElementById('doLoginBtn')
-    ?.addEventListener(
-        'click',
-        () => {
-            const username =
-                document
-                    .getElementById('loginUsername')
-                    .value
-                    .trim();
-
-            const password =
-                document
-                    .getElementById('loginPassword')
-                    .value;
-
-            if (!username || !password) {
-                authMessage.textContent =
-                    'Введите логин и пароль';
-                return;
-            }
-
-            login(
-                username,
-                password
-            );
-        }
-    );
-
-document
-    .getElementById('doRegisterBtn')
-    ?.addEventListener(
-        'click',
-        () => {
-            const username =
-                document
-                    .getElementById('regUsername')
-                    .value
-                    .trim();
-
-            const password =
-                document
-                    .getElementById('regPassword')
-                    .value;
-
-            const confirm =
-                document
-                    .getElementById('regPasswordConfirm')
-                    .value;
-
-            const inGameNick =
-                document
-                    .getElementById('regInGameNick')
-                    .value
-                    .trim();
-
-            const inGameId =
-                document
-                    .getElementById('regInGameId')
-                    .value
-                    .trim();
-
-            if (password !== confirm) {
-                authMessage.textContent =
-                    'Пароли не совпадают';
-                return;
-            }
-
-            if (
-                !username ||
-                !password ||
-                !inGameNick ||
-                !inGameId
-            ) {
-                authMessage.textContent =
-                    'Заполните все поля';
-                return;
-            }
-
-            register(
-                username,
-                password,
-                inGameNick,
-                inGameId
-            );
-        }
-    );
-
-document
-    .getElementById('showRegisterLink')
-    ?.addEventListener(
-        'click',
-        e => {
-            e.preventDefault();
-            showRegisterForm();
-        }
-    );
-
-document
-    .getElementById('showLoginLink')
-    ?.addEventListener(
-        'click',
-        e => {
-            e.preventDefault();
-            showLoginForm();
-        }
-    );
-
-document
-    .getElementById('logoutBtn')
-    ?.addEventListener(
-        'click',
-        () => {
-            localStorage.removeItem('userId');
-            localStorage.removeItem('loginTime');
-
-            socket.disconnect();
-
-            location.reload();
-        }
-    );
-
-document
-    .getElementById('createPartyBtn')
-    ?.addEventListener(
-        'click',
-        createParty
-    );
-
-document
-    .getElementById('joinPartyBtn')
-    ?.addEventListener(
-        'click',
-        () => {
-            const input =
-                document.getElementById(
-                    'joinPartyCode'
-                );
-
-            const partyCode =
-                input?.value.trim();
-
-            if (partyCode) {
-                joinParty(partyCode);
-            }
-        }
-    );
-
-document
-    .getElementById('chatSendBtn')
-    ?.addEventListener(
-        'click',
-        sendGlobalChat
-    );
-
-document
-    .getElementById('chatInput')
-    ?.addEventListener(
-        'keypress',
-        e => {
-            if (e.key === 'Enter') {
-                sendGlobalChat();
-            }
-        }
-    );
-
-// ------------------ AVATAR EVENTS ------------------
-
-const changeAvatarBtn =
-    document.getElementById(
-        'changeAvatarBtn'
-    );
-
-const avatarUpload =
-    document.getElementById(
-        'avatarUpload'
-    );
-
-changeAvatarBtn?.addEventListener(
-    'click',
-    () => avatarUpload?.click()
-);
-
-avatarUpload?.addEventListener(
-    'change',
-    async e => {
-        const file =
-            e.target.files?.[0];
-
-        if (file) {
-            await uploadAvatar(file);
-        }
-
-        e.target.value = '';
-    }
-);
-
-// ------------------ PROFILE INFO ------------------
-
-profileInfoIcon?.addEventListener(
-    'mouseenter',
-    () => {
-        const rect =
-            profileInfoIcon.getBoundingClientRect();
-
-        if (!tooltip) return;
-
-        tooltip.style.display = 'block';
-
-        tooltip.style.left =
-            `${rect.right + 8}px`;
-
-        tooltip.style.top =
-            `${rect.top}px`;
-    }
-);
-
-profileInfoIcon?.addEventListener(
-    'mouseleave',
-    () => {
-        if (tooltip) {
-            tooltip.style.display = 'none';
-        }
-    }
-);
-
-// ------------------ CHANGE NICK EVENT ------------------
-
-const changeNickBtn =
-    document.getElementById(
-        'changeNickBtn'
-    );
-
-const newNickInput =
-    document.getElementById(
-        'newInGameNick'
-    );
-
-changeNickBtn?.addEventListener(
-    'click',
-    () => {
-        const newNick =
-            newNickInput?.value.trim();
-
-        if (!newNick) {
-            showNotification(
-                'Введите новый ник',
-                'error'
-            );
-            return;
-        }
-
-        changeInGameNick(newNick);
-    }
-);
-
-// ------------------ SOCKET ------------------
-
-socket.on(
-    'connect',
-    () => {
-        console.log(
-            'Socket connected:',
-            socket.id
-        );
-
-        if (currentUser) {
-            socket.emit(
-                'auth',
-                currentUser.id
-            );
-        }
-    }
-);
-
-socket.on(
-    'disconnect',
-    reason => {
-        console.log(
-            'Socket disconnected:',
-            reason
-        );
-    }
-);
-
-socket.on(
-    'queueUpdate',
-    queues => {
-        queueState =
-            queues || {};
-
-        updateQueueDisplay();
-    }
-);
-
-socket.on(
-    'matchFound',
-    match => {
-        showMatchFound(match);
-    }
-);
-
-socket.on(
-    'matchCancelled',
-    () => {
-        document
-            .getElementById('matchFoundModal')
-            ?.remove();
-
-        if (matchTimerInterval) {
-            clearInterval(matchTimerInterval);
-        }
-
-        if (activeMatchInfoDiv) {
-            activeMatchInfoDiv.style.display =
-                'none';
-        }
-
-        currentMatch = null;
-
-        showNotification(
-            'Матч отменён, кто-то не принял',
-            'error'
-        );
-
-        leaveAllQueues();
-
-        if (currentParty) {
-            leaveParty(
-                currentParty.id
-            );
-        }
-    }
-);
-
-socket.on(
-    'draftStart',
-    data => {
-        currentMatch = {
-            matchId:
-                data.matchId
-        };
-
-        handleDraftStart(data);
-    }
-);
-
-socket.on(
-    'lobbyOpen',
-    match => {
-        openLobby(match);
-    }
-);
-
-socket.on(
-    'statsUpdated',
-    stats => {
-        if (!currentUser) return;
-
-        currentUser.stats =
-            stats || {};
-
-        if (stats?.avatar) {
-            currentUser.avatar =
-                stats.avatar;
-        }
-
-        updateUI();
-
-        showNotification(
-            'Статистика обновлена',
-            'success'
-        );
-
-        leaveAllQueues();
-
-        if (currentParty) {
-            leaveParty(
-                currentParty.id
-            );
-        }
-    }
-);
-
-socket.on(
-    'friendRequest',
-    data => {
-        showNotification(
-            `Новая заявка в друзья от ${data.fromName}`,
-            'info'
-        );
-
-        if (!currentUser) return;
-
-        currentUser.pendingRequests =
-            currentUser.pendingRequests || [];
-
-        if (!currentUser.pendingRequests.some(
-            id => String(id) === String(data.from)
-        )) {
-            currentUser.pendingRequests.push(
-                data.from
-            );
-        }
-
-        loadFriends();
-    }
-);
-
-socket.on(
-    'friendAdded',
-    friendId => {
-        if (!currentUser) return;
-
-        currentUser.friends =
-            currentUser.friends || [];
-
-        if (!currentUser.friends.some(
-            id => String(id) === String(friendId)
-        )) {
-            currentUser.friends.push(
-                friendId
-            );
-
-            loadFriends();
-        }
-    }
-);
-
-socket.on(
-    'partyUpdate',
-    party => {
-        currentParty =
-            party;
-
-        updatePartyUI();
-    }
-);
-
-socket.on(
-    'partyInvite',
-    invite => {
-        showNotification(
-            `${invite.fromName} приглашает вас в пати`,
-            'info'
-        );
-
-        showPartyInvite(invite);
-    }
-);
-
-socket.on(
-    'chatMessage',
-    msg => {
-        addChatMessage(msg);
-    }
-);
-
-socket.on(
-    'chatHistory',
-    history => {
-        if (!chatMessagesDiv) return;
-
-        chatMessagesDiv.innerHTML = '';
-
-        (history || []).forEach(
-            msg => addChatMessage(msg)
-        );
-    }
-);
-
-socket.on(
-    'privateHistory',
-    history => {
-        privateHistory =
-            history || [];
-    }
-);
-
-socket.on(
-    'queueError',
-    err => {
-        showNotification(
-            err?.message ||
-            'Ошибка очереди',
-            'error'
-        );
-    }
-);
-
-socket.on(
-    'muted',
-    data => {
-        showNotification(
-            `Вы замьючены до ${new Date(data.until).toLocaleString()}. Причина: ${data.reason}`,
-            'error'
-        );
-    }
-);
-
-socket.on(
-    'banned',
-    data => {
-        showNotification(
-            `Вы забанены до ${new Date(data.until).toLocaleString()}. Причина: ${data.reason}`,
-            'error'
-        );
-
-        setTimeout(
-            () => location.reload(),
-            3000
-        );
-    }
-);
-
-// ------------------ START ------------------
-
-setupNavigation();
-setupFriendSearch();
-setupQueueButtons();
-
-tryAutoLogin();
+initializeApplication();
