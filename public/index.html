@@ -1,243 +1,165 @@
 <!DOCTYPE html>
 <html lang="ru">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
-    <title>Satoshi</title>
-    <script src="/socket.io/socket.io.js"></script>
-    <style>
-    :root { --bg: #000000; --card: #050505; --input: #0a0a0a; --border: #1a1a1a; --red: #ff0000; --red-dark: #990000; --text: #b0b0b0; }
-    * { margin: 0; padding: 0; box-sizing: border-box; }
-    *:focus { outline: none !important; }
-    body {
-        font-family: sans-serif;
-        background: #000000; color: #b0b0b0; min-height: 100vh;
-        max-width: 500px; margin: 0 auto; padding: 16px;
-        -webkit-tap-highlight-color: transparent;
-    }
-    .screen { display: none; }
-    .screen.active { display: block; }
-    .card { background: #050505; padding: 13px; border-radius: 8px; margin-bottom: 8px; border: 1px solid #1a1a1a; }
-    h1 { text-align: center; color: #ff0000; margin-bottom: 20px; font-size: 28px; text-shadow: 0 0 15px #ff0000, 0 0 30px #cc0000; }
-    h2 { color: #ff0000; margin-bottom: 12px; font-size: 19px; text-shadow: 0 0 8px #ff0000; }
-    h3 { color: #888; margin-bottom: 10px; font-size: 15px; }
-    input, button, select { width: 100%; padding: 13px; margin-bottom: 10px; border-radius: 6px; font-size: 15px; }
-    input, select { background: #0a0a0a; color: #ccc; border: 1px solid #1a1a1a; }
-    input:focus { border-color: #ff0000; }
-    button {
-        background: #cc0000; color: white; font-weight: bold; cursor: pointer;
-        box-shadow: 0 0 10px rgba(255,0,0,0.4), 0 0 20px rgba(255,0,0,0.2);
-        text-transform: uppercase; border: none;
-    }
-    button:active { background: #990000; transform: scale(0.98); }
-    .btn-secondary { background: #0a0a0a; border: 1px solid #1a1a1a; box-shadow: 0 0 8px rgba(255,0,0,0.2); }
-    .btn-gold { background: #996600; box-shadow: 0 0 15px rgba(255,170,0,0.5); }
-    .btn-danger { background: #1a0000; border: 1px solid #330000; }
-    .msg { text-align: center; margin-bottom: 8px; font-size: 13px; }
-    .error { color: #ff0000; }
-    .success { color: #00cc00; }
-    .top-bar { display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px; padding-bottom: 10px; border-bottom: 1px solid #1a1a1a; }
-    .top-bar button { width: auto; padding: 7px 14px; font-size: 13px; background: #0a0a0a; border: 1px solid #1a1a1a; }
-    .tab-bar { display: flex; gap: 4px; margin-bottom: 14px; flex-wrap: wrap; }
-    .tab-bar button { flex: 1; min-width: 50px; padding: 9px 4px; font-size: 9px; background: #050505; border: 1px solid #1a1a1a; box-shadow: none; }
-    .tab-bar button.active { background: #cc0000; border-color: #cc0000; }
-    #chat-box { background: #050505; border-radius: 6px; padding: 10px; height: 200px; overflow-y: auto; margin-bottom: 8px; font-size: 13px; border: 1px solid #1a1a1a; }
-    .chat-msg { margin-bottom: 5px; }
-    .chat-msg .user { color: #ff0000; font-weight: bold; }
-    .chat-msg .time { color: #333; font-size: 10px; margin-left: 4px; }
-    .queue-info { background: #050505; padding: 8px 12px; border-radius: 6px; margin-bottom: 6px; font-size: 12px; border: 1px solid #1a1a1a; }
-    label { font-size: 12px; color: #666; display: block; margin-bottom: 3px; }
-    .divider { border-top: 1px solid #1a1a1a; margin: 16px 0; }
-    .logo { font-size: 40px; text-align: center; margin-bottom: 4px; }
-    .modal-overlay { display: none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.85); z-index: 100; justify-content: center; align-items: center; }
-    .modal-overlay.active { display: flex; }
-    .modal { background: #0a0a0a; border: 1px solid #ff0000; border-radius: 12px; padding: 20px; width: 90%; max-width: 400px; }
-    .modal h3 { color: #ff0000; text-align: center; margin-bottom: 16px; }
-    .level-badge { display: inline-block; padding: 4px 10px; border-radius: 12px; font-size: 12px; font-weight: bold; }
-    .level-1 { background: #333; color: #888; } .level-2 { background: #2a2a4a; color: #aaa; } .level-3 { background: #1a3a1a; color: #4caf50; }
-    .level-4 { background: #1a3a3a; color: #00bcd4; } .level-5 { background: #2a2a1a; color: #ffeb3b; } .level-6 { background: #3a1a3a; color: #e040fb; }
-    .level-7 { background: #3a2a1a; color: #ff9800; } .level-8 { background: #3a1a1a; color: #f44336; } .level-9 { background: #1a1a3a; color: #448aff; }
-    .level-10 { background: linear-gradient(135deg, #ff0000, #ffaa00); color: #fff; }
-    .rank-row { display: flex; justify-content: space-between; align-items: center; padding: 10px; background: #050505; border-radius: 6px; margin-bottom: 4px; border: 1px solid #1a1a1a; }
-</style>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes">
+  <title>ProjectEvolution | Satoshi</title>
+  <link rel="stylesheet" href="/styles.css">
 </head>
 <body>
-
-<div id="screen-auth" class="screen active">
-    <div class="logo"><span>🎯</span></div>
-    <h1>SATOSHI</h1>
-    <div id="auth-msg" class="msg"></div>
-    <div id="login-form" class="card">
-        <h3>ВХОД</h3>
-        <input type="text" id="login-username" placeholder="Логин">
-        <input type="password" id="login-password" placeholder="Пароль">
-        <button id="btn-login">ВОЙТИ</button>
-        <button id="btn-show-register" class="btn-secondary">СОЗДАТЬ АККАУНТ</button>
-    </div>
-    <div id="register-form" class="card" style="display:none;">
-        <h3>РЕГИСТРАЦИЯ</h3>
-        <input type="text" id="reg-username" placeholder="Логин">
-        <input type="password" id="reg-password" placeholder="Пароль">
-        <input type="text" id="reg-nick" placeholder="Ник в игре">
-        <input type="text" id="reg-gameid" placeholder="ID в Standoff 2">
-        <button id="btn-register">ЗАРЕГИСТРИРОВАТЬСЯ</button>
-        <button id="btn-show-login" class="btn-secondary">← НАЗАД КО ВХОДУ</button>
-    </div>
-</div>
-
-<div id="screen-main" class="screen">
-    <div class="top-bar">
-        <span class="logo-text">🎯 SATOSHI</span>
-        <span id="user-nick" style="font-size:13px; color:#777;"></span>
-        <button id="btn-logout">ВЫЙТИ</button>
-    </div>
-    <div class="tab-bar" id="tab-bar">
-        <button data-tab="queue" class="active">🎯 ПОИСК</button>
-        <button data-tab="chat">💬 ЧАТ</button>
-        <button data-tab="profile">👤 ПРОФИЛЬ</button>
-        <button data-tab="friends">👥 ДРУЗЬЯ</button>
-        <button data-tab="clan">🏠 КЛАН</button>
-        <button data-tab="mvp">🏆 ТОП</button>
-    </div>
-    <div class="tab-content" id="tab-content-queue">
-        <div class="card">
-            <label>РЕЖИМ</label>
-            <button id="btn-mode-select" class="btn-secondary" style="text-align:left;">1 на 1 · Обычный ▾</button>
-            <button id="btn-join-queue">🔍 НАЙТИ ИГРУ</button>
-            <button id="btn-leave-queue" class="btn-danger" style="display:none;">❌ ОТМЕНИТЬ ПОИСК</button>
+  <div id="app">
+    <!-- Экран входа / регистрации -->
+    <div id="loginScreen" class="screen">
+      <div class="login-container">
+        <h1>ProjectEvolution | Satoshi</h1>
+        <h2>Faceit‑подобная платформа</h2>
+        <div id="loginForm">
+          <input type="text" id="loginUsername" placeholder="Логин" autocomplete="off">
+          <input type="password" id="loginPassword" placeholder="Пароль">
+          <button id="doLoginBtn">Войти</button>
+          <p class="switch-link">Нет аккаунта? <a href="#" id="showRegisterLink">Зарегистрироваться</a></p>
         </div>
-        <div id="queue-status" class="msg"></div>
-        <h3>ИГРОКИ В ОЧЕРЕДИ</h3>
-        <div id="queue-list">Загрузка...</div>
-    </div>
-    <div class="tab-content" id="tab-content-chat" style="display:none;">
-        <div id="chat-box"></div>
-        <div style="display:flex; gap:8px;">
-            <input type="text" id="chat-input" placeholder="Сообщение..." style="flex:1;">
-            <button id="btn-send-chat" style="width:auto; padding:13px 18px;">➤</button>
+        <div id="registerForm" style="display: none;">
+          <input type="text" id="regUsername" placeholder="Логин">
+          <input type="password" id="regPassword" placeholder="Пароль">
+          <input type="password" id="regPasswordConfirm" placeholder="Подтвердите пароль">
+          <input type="text" id="regInGameNick" placeholder="Ник в Project Evolution">
+          <input type="text" id="regInGameId" placeholder="ID в Project Evolution">
+          <button id="doRegisterBtn">Зарегистрироваться</button>
+          <p class="switch-link">Уже есть аккаунт? <a href="#" id="showLoginLink">Войти</a></p>
         </div>
+        <p class="info" id="authMessage"></p>
+      </div>
     </div>
-    <div class="tab-content" id="tab-content-profile" style="display:none;">
-        <div class="card"><h3>МОЯ СТАТИСТИКА</h3><div id="profile-stats">Загрузка...</div></div>
-    </div>
-    <div class="tab-content" id="tab-content-friends" style="display:none;">
-        <div class="card"><h3>ДРУЗЬЯ</h3><div id="friends-list">Загрузка...</div></div>
-    </div>
-    <div class="tab-content" id="tab-content-clan" style="display:none;">
-        <div class="card"><h3>КЛАН</h3><div id="clan-info">Загрузка...</div></div>
-    </div>
-    <div class="tab-content" id="tab-content-mvp" style="display:none;">
-        <div class="card"><h3>🏆 ТОП ИГРОКОВ</h3>
-            <div style="display:flex; gap:6px; margin-bottom:10px;">
-                <button id="btn-top-day" class="btn-secondary active" style="flex:1; font-size:11px;">День</button>
-                <button id="btn-top-week" class="btn-secondary" style="flex:1; font-size:11px;">Неделя</button>
-                <button id="btn-top-month" class="btn-secondary" style="flex:1; font-size:11px;">Месяц</button>
+
+    <!-- Главный экран -->
+    <div id="mainScreen" class="screen" style="display: none;">
+      <div class="sidebar">
+        <div class="profile-card">
+          <div class="profile-header">
+            <div class="avatar-container">
+              <img id="avatar" src="https://via.placeholder.com/80" alt="аватар">
+              <input type="file" id="avatarUpload" accept="image/*" style="display: none;">
+              <button id="changeAvatarBtn" class="avatar-upload-btn">📸</button>
             </div>
-            <div id="mvp-list">Загрузка...</div>
+            <div class="profile-info">
+              <div class="streak-container" title="Стрик непрерывных игр">
+                <span id="streakCount">0</span>
+              </div>
+              <div class="nickname-container">
+                <h3 id="nickname">Игрок</h3>
+                <span class="info-icon" id="profileInfoIcon">ℹ️</span>
+                <div class="info-tooltip" id="profileTooltip" style="display: none;">
+                  <div><strong>ID на сайте:</strong> <span id="tooltipSiteId">—</span></div>
+                  <div><strong>Ник на сайте:</strong> <span id="tooltipSiteNick">—</span></div>
+                  <div><strong>ID в игре:</strong> <span id="tooltipGameId">—</span></div>
+                  <div><strong>Ник в игре:</strong> <span id="tooltipGameNick">—</span></div>
+                </div>
+              </div>
+            </div>
+          </div>
+          <button id="logoutBtn">Выйти</button>
         </div>
+        <nav>
+          <button class="nav-btn active" data-view="play">Играть</button>
+          <button class="nav-btn" data-view="profile">Профиль</button>
+          <button class="nav-btn" data-view="history">История</button>
+          <button class="nav-btn" data-view="friends">Друзья</button>
+          <button class="nav-btn" data-view="chat">Чат</button>
+          <button class="nav-btn" data-view="top">Топ</button>
+          <button class="nav-btn" data-view="clan">Клан</button>
+        </nav>
+      </div>
+
+      <div class="content">
+        <!-- Вкладка "Играть" (очередь) -->
+        <div id="playView" class="view active">
+          <h2>Выбор режима</h2>
+          <div id="partyStatus" style="margin-bottom: 10px;"></div>
+          <div id="partyMembers" style="margin-bottom: 15px; background: #1e293b; border-radius: 12px; padding: 10px; display: none;">
+            <h4>Участники пати:</h4>
+            <div id="partyMembersList"></div>
+          </div>
+          <div style="margin-bottom: 15px;">
+            <button id="createPartyBtn">Создать пати</button>
+            <input type="text" id="joinPartyCode" placeholder="Код пати" style="width: 150px;">
+            <button id="joinPartyBtn">Присоединиться</button>
+          </div>
+          <div class="modes-container">
+            <div class="mode-card"><h3>1x1 Дуэль</h3><div class="mode-buttons"><button class="queue-mode-btn" data-mode="1v1" data-ranked="false">Обычный</button><button class="queue-mode-btn" data-mode="1v1" data-ranked="true">Ранговый</button></div><div class="queue-stats"><span class="queue-count" id="queue-count-1v1-unranked">0/2</span><span class="queue-status-text" id="queue-status-1v1-unranked">Не в очереди</span><button class="leave-queue-btn" data-mode="1v1" data-ranked="false" style="display: none;">Выйти</button></div><div class="queue-stats"><span class="queue-count" id="queue-count-1v1-ranked">0/2</span><span class="queue-status-text" id="queue-status-1v1-ranked">Не в очереди</span><button class="leave-queue-btn" data-mode="1v1" data-ranked="true" style="display: none;">Выйти</button></div></div>
+            <div class="mode-card"><h3>2x2 Напарники</h3><div class="mode-buttons"><button class="queue-mode-btn" data-mode="2v2" data-ranked="false">Обычный</button><button class="queue-mode-btn" data-mode="2v2" data-ranked="true">Ранговый</button></div><div class="queue-stats"><span class="queue-count" id="queue-count-2v2-unranked">0/4</span><span class="queue-status-text" id="queue-status-2v2-unranked">Не в очереди</span><button class="leave-queue-btn" data-mode="2v2" data-ranked="false" style="display: none;">Выйти</button></div><div class="queue-stats"><span class="queue-count" id="queue-count-2v2-ranked">0/4</span><span class="queue-status-text" id="queue-status-2v2-ranked">Не в очереди</span><button class="leave-queue-btn" data-mode="2v2" data-ranked="true" style="display: none;">Выйти</button></div></div>
+            <div class="mode-card"><h3>5x5 Соревновательный</h3><div class="mode-buttons"><button class="queue-mode-btn" data-mode="5v5" data-ranked="false">Обычный</button><button class="queue-mode-btn" data-mode="5v5" data-ranked="true">Ранговый</button></div><div class="queue-stats"><span class="queue-count" id="queue-count-5v5-unranked">0/10</span><span class="queue-status-text" id="queue-status-5v5-unranked">Не в очереди</span><button class="leave-queue-btn" data-mode="5v5" data-ranked="false" style="display: none;">Выйти</button></div><div class="queue-stats"><span class="queue-count" id="queue-count-5v5-ranked">0/10</span><span class="queue-status-text" id="queue-status-5v5-ranked">Не в очереди</span><button class="leave-queue-btn" data-mode="5v5" data-ranked="true" style="display: none;">Выйти</button></div></div>
+          </div>
+          <div id="activeMatchInfo" style="display: none;"></div>
+        </div>
+
+        <!-- Вкладка профиля -->
+        <div id="profileView" class="view" style="display: none;">
+          <h2>Мой профиль</h2>
+          <div class="stats-grid" id="profileStats"></div>
+          <div style="margin-top: 20px;">
+            <h3>Смена ника в игре</h3>
+            <input type="text" id="newNickInput" placeholder="Новый ник">
+            <button id="changeNickBtn">Сменить ник</button>
+          </div>
+        </div>
+
+        <!-- Вкладка истории -->
+        <div id="historyView" class="view" style="display: none;">
+          <h2>История матчей</h2>
+          <ul id="matchList"></ul>
+        </div>
+
+        <!-- Вкладка друзей -->
+        <div id="friendsView" class="view" style="display: none;">
+          <h2>Друзья</h2>
+          <div class="friends-tabs">
+            <button class="friends-tab active" data-tab="friends">Мои друзья</button>
+            <button class="friends-tab" data-tab="requests">Заявки в друзья</button>
+          </div>
+          <div id="friendsList" class="friends-list"></div>
+          <div id="friendRequests" class="friends-list" style="display: none;"></div>
+        </div>
+
+        <!-- Вкладка чата -->
+        <div id="chatView" class="view" style="display: none;">
+          <h2>Глобальный чат</h2>
+          <div id="chatMessages" class="chat-messages"></div>
+          <div class="chat-input"><input type="text" id="chatInput" placeholder="Введите сообщение..."><button id="chatSendBtn">Отправить</button></div>
+          <div id="privateChatArea" style="margin-top: 20px;"></div>
+        </div>
+
+        <!-- Вкладка Топ -->
+        <div id="topView" class="view" style="display: none;">
+          <!-- сюда будет вставлен топ -->
+        </div>
+
+        <!-- Вкладка Клан -->
+        <div id="clanView" class="view" style="display: none;">
+          <!-- сюда будет вставлена информация о клане -->
+        </div>
+      </div>
     </div>
-</div>
+  </div>
 
-<div id="screen-match" class="screen">
-    <h2>⚔️ МАТЧ НАЙДЕН!</h2>
-    <div class="card">
-        <p id="match-info" style="margin-bottom:8px;"></p>
-        <p id="match-timer" style="color:#ff0000; font-size:22px; text-align:center; text-shadow: 0 0 10px #ff0000; animation: pulse 1s infinite;"></p>
-    </div>
-    <button id="btn-accept-match">✅ ПРИНЯТЬ</button>
-    <button id="btn-decline-match" class="btn-danger">❌ ОТКЛОНИТЬ</button>
-</div>
-
-<div class="modal-overlay" id="modal-mode">
-    <div class="modal">
-        <h3>ВЫБОР РЕЖИМА</h3>
-        <label>Режим</label>
-        <select id="modal-queue-mode"><option value="1v1">1 на 1</option><option value="2v2">2 на 2</option><option value="5v5">5 на 5</option></select>
-        <label>Тип</label>
-        <select id="modal-queue-type"><option value="unranked">Обычный</option><option value="ranked">Рейтинговый</option></select>
-        <button id="btn-mode-apply" class="btn-gold">ПРИМЕНИТЬ</button>
-        <button id="btn-mode-close" class="btn-secondary">ЗАКРЫТЬ</button>
-    </div>
-</div>
-
-<script>
-(function() {
-    var myUserId = localStorage.getItem('satoshi_userId') || '';
-    var myUserData = null;
-    var socket = null;
-    var currentTab = 'queue';
-    var inQueue = false;
-    var queueMode = '1v1';
-    var queueType = 'unranked';
-    var currentMatch = null;
-    var matchTimer = null;
-    var matchTimerCount = 15;
-    var topPeriod = 'day';
-    var friendsList = [];
-    var pendingRequests = [];
-
-    function esc(t) { if (!t) return ''; var d = document.createElement('div'); d.textContent = String(t); return d.innerHTML; }
-    function getLevel(m) { m = Number(m) || 100; if (m >= 2001) return { num: 10, name: 'Бог' }; if (m >= 1751) return { num: 9, name: 'Легенда' }; if (m >= 1531) return { num: 8, name: 'Элита' }; if (m >= 1351) return { num: 7, name: 'Мастер' }; if (m >= 1201) return { num: 6, name: 'Бриллиант' }; if (m >= 1051) return { num: 5, name: 'Платина' }; if (m >= 901) return { num: 4, name: 'Золото' }; if (m >= 751) return { num: 3, name: 'Серебро' }; if (m >= 501) return { num: 2, name: 'Бронза' }; return { num: 1, name: 'Новичок' }; }
-    function getRankIcon(l) { var i = { 1: '🔰', 2: '🥉', 3: '🥈', 4: '🥇', 5: '💠', 6: '💎', 7: '👑', 8: '🔮', 9: '🌟', 10: '🔥' }; return i[l] || '❓'; }
-    function showAuthMsg(m, c) { var e = document.getElementById('auth-msg'); if (e) { e.textContent = m; e.className = 'msg ' + (c || ''); } }
-    function setQueueStatus(h) { var e = document.getElementById('queue-status'); if (e) e.innerHTML = h; }
-    function resetQueueUI() { document.getElementById('btn-join-queue').style.display = 'block'; document.getElementById('btn-leave-queue').style.display = 'none'; inQueue = false; }
-    function showScreen(id) { var ss = document.getElementsByClassName('screen'); for (var i = 0; i < ss.length; i++) ss[i].classList.remove('active'); var el = document.getElementById(id); if (el) el.classList.add('active'); }
-
-    function switchTab(tab) {
-        currentTab = tab;
-        var btns = document.querySelectorAll('#tab-bar button');
-        for (var i = 0; i < btns.length; i++) btns[i].classList.remove('active');
-        var btn = document.querySelector('#tab-bar button[data-tab="' + tab + '"]');
-        if (btn) btn.classList.add('active');
-        var cs = document.getElementsByClassName('tab-content');
-        for (var j = 0; j < cs.length; j++) cs[j].style.display = 'none';
-        var c = document.getElementById('tab-content-' + tab);
-        if (c) c.style.display = 'block';
-        if (tab === 'profile') updateProfileStats();
-        if (tab === 'friends') loadFriends();
-        if (tab === 'clan') loadClan();
-        if (tab === 'mvp') loadMVP(topPeriod);
-    }
-
-    function showRegister() { document.getElementById('login-form').style.display = 'none'; document.getElementById('register-form').style.display = 'block'; showAuthMsg('', ''); }
-    function showLogin() { document.getElementById('register-form').style.display = 'none'; document.getElementById('login-form').style.display = 'block'; showAuthMsg('', ''); }
-    function openModeModal() { document.getElementById('modal-queue-mode').value = queueMode; document.getElementById('modal-queue-type').value = queueType; document.getElementById('modal-mode').classList.add('active'); }
-    function closeModeModal() { document.getElementById('modal-mode').classList.remove('active'); }
-    function applyMode() { queueMode = document.getElementById('modal-queue-mode').value; queueType = document.getElementById('modal-queue-type').value; var ms = { '1v1': '1 на 1', '2v2': '2 на 2', '5v5': '5 на 5' }; var ts = { 'unranked': 'Обычный', 'ranked': 'Рейтинговый' }; document.getElementById('btn-mode-select').textContent = ms[queueMode] + ' · ' + ts[queueType] + ' ▾'; closeModeModal(); }
-
-    function login() {
-        var u = document.getElementById('login-username').value.trim();
-        var p = document.getElementById('login-password').value.trim();
-        if (!u || !p) { showAuthMsg('Заполни все поля', 'error'); return; }
-        fetch('/api/login', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p }) })
-        .then(function(r) { return r.json(); }).then(function(d) {
-            if (d.success) { myUserId = d.userData.id; myUserData = d.userData; localStorage.setItem('satoshi_userId', myUserId); enterApp(); }
-            else showAuthMsg(d.message || 'Неверный логин или пароль', 'error');
-        }).catch(function() { showAuthMsg('Сервер недоступен', 'error'); });
-    }
-
-    function register() {
-        var u = document.getElementById('reg-username').value.trim();
-        var p = document.getElementById('reg-password').value.trim();
-        var n = document.getElementById('reg-nick').value.trim();
-        var g = document.getElementById('reg-gameid').value.trim();
-        if (!u || !p || !n || !g) { showAuthMsg('Все поля обязательны', 'error'); return; }
-        fetch('/api/register', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ username: u, password: p, inGameNick: n, inGameId: g }) })
-        .then(function(r) { return r.json(); }).then(function(d) {
-            if (d.success) { showAuthMsg('Аккаунт создан! ID: ' + d.userId, 'success'); document.getElementById('login-username').value = u; document.getElementById('login-password').value = p; setTimeout(showLogin, 1500); }
-            else showAuthMsg(d.message || 'Ошибка регистрации', 'error');
-        }).catch(function() { showAuthMsg('Сервер недоступен', 'error'); });
-    }
-
-    function logout() { if (socket) socket.disconnect(); localStorage.clear(); myUserId = ''; myUserData = null; showScreen('screen-auth'); }
-    function enterApp() { showScreen('screen-main'); document.getElementById('user-nick').textContent = myUserData ? myUserData.inGameNick : myUserId; connectSocket(); switchTab('queue'); }
-
-    function connectSocket() {
-        if (socket) socket.disconnect();
-        socket = io();
-        socket.on('connect', function() { socket.emit('auth', myUserId); });
-        socket.on('queueUpdate', function(q) { displayQueues(q); });
-        socket.on('chatHistory', function(ms) { var b = document.getElementById('chat-box'); if (!b) return; b.innerHTML = ''; if (ms) for (var i = 0; i < ms.length; i++) { var m = ms[i]; addChatMsg(m.user || m.from, m.text || m.message, m.date); } });
-        socket.on('chatMessage', function(m) { addChatMsg(m.user || m.from, m.text || m.message, m.date); });
-        socket.on('matchFound', function(d) { currentMatch = d; matchTimerCount = Math.floor((d.timeout || 15000) / 1000); var i = document.getElementById('match-info'); if (i) i.innerHTML = '<b>Режим:</b> ' + d.mode + ' ' + (d.ranked ? '(Рейтинг)' : '(Обычный)') + '<br><b>Карта:</b> ' + d.map + '<br><b>Игроков:</b> ' + d.participants.length; showScreen('screen-match'); startMatchTimer
+  <script src="/socket.io/socket.io.js"></script>
+  <script src="/client.js"></script>
+  <script>
+    // Переключение вкладок внутри раздела "Друзья"
+    document.querySelectorAll('.friends-tab').forEach(tab => {
+      tab.addEventListener('click', () => {
+        const target = tab.getAttribute('data-tab');
+        document.querySelectorAll('.friends-tab').forEach(t => t.classList.remove('active'));
+        tab.classList.add('active');
+        if (target === 'friends') {
+          document.getElementById('friendsList').style.display = 'block';
+          document.getElementById('friendRequests').style.display = 'none';
+        } else {
+          document.getElementById('friendsList').style.display = 'none';
+          document.getElementById('friendRequests').style.display = 'block';
+        }
+      });
+    });
+  </script>
+</body>
+</html>
