@@ -53,7 +53,7 @@ async function apiCall(url, method, body) {
 
 function getUserAvatar(user) {
   if (user && user.avatar && user.avatar !== '') return user.avatar;
-  return 'https://via.placeholder.com/40?text=Avatar';
+  return 'data:image/svg+xml;charset=UTF-8,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width=80 height=80 viewBox="0 0 80 80"><rect width="80" height="80" rx="40" fill="#1e293b"/><circle cx="40" cy="31" r="13" fill="#64748b"/><path d="M17 68c3-14 13-22 23-22s20 8 23 22" fill="#64748b"/></svg>`);
 }
 
 function getLevelIcon(level) {
@@ -123,12 +123,12 @@ async function leaveParty(partyId) {
 
 function updateUI() {
   if (!currentUser) return;
-  nicknameSpan.innerText = currentUser.username;
+  nicknameSpan.innerText = currentUser.inGameNick || 'Игрок';
   if (avatarImg) avatarImg.src = getUserAvatar(currentUser);
   if (streakCountSpan) streakCountSpan.innerText = currentUser.stats.streak || 0;
 
   if (tooltipSiteId) tooltipSiteId.innerText = currentUser.id;
-  if (tooltipSiteNick) tooltipSiteNick.innerText = currentUser.username;
+  if (tooltipSiteNick) tooltipSiteNick.innerText = 'скрыт';
   if (tooltipGameId) tooltipGameId.innerText = currentUser.inGameId;
   if (tooltipGameNick) tooltipGameNick.innerText = currentUser.inGameNick;
 
@@ -199,8 +199,7 @@ function updateUI() {
 
 function tryAutoLogin() {
   const savedUserId = localStorage.getItem('userId');
-  const loginTime = localStorage.getItem('loginTime');
-  if (savedUserId && loginTime && (Date.now() - parseInt(loginTime) < 24 * 60 * 60 * 1000)) {
+  if (savedUserId) {
     apiCall(`/api/user/${savedUserId}`, 'GET').then(res => {
       if (res.success) {
         currentUser = res.userData;
@@ -390,7 +389,6 @@ async function showUserProfile(userId) {
     <div class="modal-content">
       <h3>Профиль игрока</h3>
       <img src="${getUserAvatar(data)}" style="width:80px;height:80px;border-radius:50%;margin:0 auto;">
-      <p><strong>Логин:</strong> ${escapeHtml(data.username)}</p>
       <p><strong>Ник в игре:</strong> ${escapeHtml(data.inGameNick)}</p>
       <p><strong>ID в игре:</strong> ${escapeHtml(data.inGameId)}</p>
       <p><strong>1x1:</strong> MMR ${data.stats.mmr_1v1} ${getLevelIcon(level1v1)}</p>
@@ -422,7 +420,6 @@ function addAvatarHoverTooltip(element) {
     tooltipDiv = document.createElement('div');
     tooltipDiv.className = 'avatar-tooltip';
     tooltipDiv.innerHTML = `
-      <div><strong>Ник на сайте:</strong> ${escapeHtml(user.userData.username)}</div>
       <div><strong>ID на сайте:</strong> ${user.userData.id}</div>
       <div><strong>Ник в игре:</strong> ${escapeHtml(user.userData.inGameNick)}</div>
       <div><strong>ID в игре:</strong> ${user.userData.inGameId}</div>
@@ -823,7 +820,7 @@ function addChatMessage(msg) {
   div.className = 'chat-message';
   div.innerHTML = `
     <img src="${getUserAvatar({ avatar: msg.avatar })}" class="chat-avatar" data-id="${msg.userId}" style="cursor:pointer;">
-    <strong>${escapeHtml(msg.username)}</strong>:
+    <strong>${escapeHtml(msg.inGameNick || msg.username || 'Игрок')}</strong>:
     <span>${escapeHtml(msg.text)}</span>
     <small>${msg.date}</small>
   `;
@@ -914,6 +911,51 @@ function openPrivateChatModal(userId, userNick) {
     socket.off('privateMessage', privateHandler);
     modal.remove();
   });
+}
+
+async function searchUsers(query) {
+  const q = query.trim();
+  const results = document.getElementById('friendSearchResults');
+  if (!results) return;
+  if (!q) {
+    results.innerHTML = '<p class="muted-text">Введите игровой ник, игровой ID или ID пользователя.</p>';
+    return;
+  }
+  results.innerHTML = '<p class="muted-text">Поиск...</p>';
+  const res = await apiCall(`/api/search-users?q=${encodeURIComponent(q)}`, 'GET');
+  if (!res.success || !res.users.length) {
+    results.innerHTML = '<p class="muted-text">Игроки не найдены.</p>';
+    return;
+  }
+  results.innerHTML = res.users.map(user => `
+    <div class="friend-item friend-search-item">
+      <img src="${getUserAvatar(user)}" class="friend-avatar" data-id="${user.id}">
+      <div class="friend-search-info">
+        <strong>${escapeHtml(user.inGameNick || 'Игрок')}</strong>
+        <small>ID: ${escapeHtml(user.inGameId || user.id)}</small>
+      </div>
+      <button class="add-search-friend" data-id="${user.id}">Добавить</button>
+    </div>
+  `).join('');
+  results.querySelectorAll('.friend-avatar').forEach(img => {
+    img.addEventListener('click', () => showUserProfile(img.dataset.id));
+  });
+  results.querySelectorAll('.add-search-friend').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      await sendFriendRequest(btn.dataset.id);
+      btn.disabled = true;
+      btn.innerText = 'Отправлено';
+    });
+  });
+}
+
+function setupFriendSearch() {
+  const input = document.getElementById('friendSearchInput');
+  const btn = document.getElementById('friendSearchBtn');
+  if (!input || !btn) return;
+  const run = () => searchUsers(input.value);
+  btn.addEventListener('click', run);
+  input.addEventListener('keypress', e => { if (e.key === 'Enter') run(); });
 }
 
 let topPlayersData = null;
@@ -1161,6 +1203,7 @@ function setupNavigation() {
   }));
 }
 setupNavigation();
+setupFriendSearch();
 
 function setupQueueButtons() {
   const joinBtns = document.querySelectorAll('.queue-mode-btn');

@@ -737,1271 +737,196 @@ nav {
 #changeNickBtn {
   margin-left: 10px;
 }
-/* =========================================================
-   STANDKNIFE — MOBILE / TABLET RESPONSIVE
-   ========================================================= */
-
-/* Запрещаем горизонтальный скролл всей страницы */
-html,
-body {
-  width: 100%;
-  max-width: 100%;
-  overflow-x: hidden;
-}
-
-/* Плавнее работа с сенсорными устройствами */
-button,
-input,
-textarea,
-select {
-  touch-action: manipulation;
-}
 
 /* =========================================================
-   ПЛАНШЕТЫ
+   StandKnife — финальные исправления UI
    ========================================================= */
-
-@media (max-width: 900px) {
-
-  #mainScreen {
-    flex-direction: column;
-    min-height: 100vh;
-  }
-
-  /* Боковое меню превращаем в верхнюю часть */
-  .sidebar {
-    width: 100%;
-    min-width: 0;
-    height: auto;
-    padding: 12px;
-    gap: 12px;
-    border-right: none;
-    border-bottom: 1px solid #1e293b;
-  }
-
-  .profile-card {
-    padding: 12px;
-    border-radius: 14px;
-  }
-
-  .profile-header {
-    gap: 12px;
-    margin-bottom: 8px;
-  }
-
-  .avatar-container {
-    width: 58px;
-    height: 58px;
-  }
-
-  #avatar {
-    width: 58px;
-    height: 58px;
-  }
-
-  .avatar-upload-btn {
-    width: 22px;
-    height: 22px;
-  }
-
-  #nickname {
-    font-size: 16px;
-  }
-
-  #logoutBtn {
-    margin-top: 6px;
-    padding: 9px;
-  }
-
-  /* Навигация горизонтально */
-  nav {
-    display: flex;
-    flex-direction: row;
-    gap: 6px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    width: 100%;
-    padding-bottom: 3px;
-    scrollbar-width: none;
-  }
-
-  nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-btn {
-    flex: 0 0 auto;
-    white-space: nowrap;
-    padding: 10px 14px;
-    font-size: 14px;
-    text-align: center;
-  }
-
-  .nav-btn.active {
-    border-left: none;
-    border-bottom: 3px solid #3b82f6;
-  }
-
-  .content {
-    width: 100%;
-    min-width: 0;
-    padding: 20px 16px;
-    overflow-x: hidden;
-  }
-
-  .view {
-    width: 100%;
-    max-width: 100%;
-  }
-
-  .view h2 {
-    font-size: 22px;
-    margin-bottom: 18px;
-  }
-
-  .stats-grid {
-    grid-template-columns: 1fr;
-    gap: 16px;
-  }
-
-  .modes-container {
-    flex-direction: column;
-    gap: 16px;
-  }
-
-  .mode-card {
-    width: 100%;
-    min-width: 0;
-  }
-
-  .top-table {
-    display: block;
-    overflow-x: auto;
-    white-space: nowrap;
-  }
-
-  .chat-messages {
-    height: 50vh;
-    min-height: 280px;
-  }
-}
-
-
-/* =========================================================
-   ТЕЛЕФОНЫ
-   ========================================================= */
-
-@media (max-width: 600px) {
-
-  body {
-    font-size: 14px;
-  }
-
-  /* -------------------------------------------------------
-     ГЛАВНЫЙ ЭКРАН
-     ------------------------------------------------------- */
-
-  #mainScreen {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    min-height: 100dvh;
-  }
-
-  /* -------------------------------------------------------
-     SIDEBAR
-     ------------------------------------------------------- */
-
-  .sidebar {
-    position: relative;
-    width: 100%;
-    max-width: 100%;
-    padding: 10px;
-    gap: 10px;
-    flex-shrink: 0;
-    background: #0f172a;
-  }
-
-  .profile-card {
-    width: 100%;
-    padding: 10px;
-    border-radius: 14px;
-  }
-
-  .profile-header {
-    display: flex;
-    align-items: center;
-    gap: 10px;
-    margin-bottom: 6px;
-  }
-
-  .avatar-container {
-    width: 52px;
-    height: 52px;
-    flex-shrink: 0;
-  }
-
-  #avatar {
-    width: 52px;
-    height: 52px;
-  }
-
-  .avatar-upload-btn {
-    width: 21px;
-    height: 21px;
-    font-size: 10px;
-  }
-
-  .profile-info {
-    min-width: 0;
-  }
-
-  #nickname {
-    font-size: 15px;
-    max-width: 150px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .streak-container {
-    font-size: 10px;
-    padding: 2px 6px;
-  }
-
-  .admin-badge {
-    font-size: 10px;
-    padding: 2px 6px;
-  }
-
-  #logoutBtn {
-    width: 100%;
-    padding: 9px;
-    font-size: 13px;
-    margin-top: 5px;
-  }
-
-  /* -------------------------------------------------------
-     МОБИЛЬНОЕ МЕНЮ
-     ------------------------------------------------------- */
-
-  nav {
-    width: 100%;
-    display: flex;
-    flex-direction: row;
-    gap: 5px;
-    overflow-x: auto;
-    overflow-y: hidden;
-    scrollbar-width: none;
-    padding: 2px 0 5px;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  nav::-webkit-scrollbar {
-    display: none;
-  }
-
-  .nav-btn {
-    flex: 0 0 auto;
-    min-height: 42px;
-    padding: 10px 14px;
-    font-size: 13px;
-    border-radius: 10px;
-    white-space: nowrap;
-  }
-
-  .nav-btn.active {
-    border-left: none;
-    border-bottom: 3px solid #3b82f6;
-    background: #1e293b;
-  }
-
-  /* -------------------------------------------------------
-     ОСНОВНОЙ КОНТЕНТ
-     ------------------------------------------------------- */
-
-  .content {
-    width: 100%;
-    min-width: 0;
-    padding: 16px 10px 30px;
-    overflow-x: hidden;
-    flex: 1;
-  }
-
-  .view {
-    width: 100%;
-    max-width: 100%;
-    margin: 0;
-  }
-
-  .view h2 {
-    font-size: 20px;
-    line-height: 1.25;
-    margin-bottom: 16px;
-  }
-
-  /* -------------------------------------------------------
-     КАРТОЧКИ СТАТИСТИКИ
-     ------------------------------------------------------- */
-
-  .stats-grid {
-    display: grid;
-    grid-template-columns: 1fr;
-    gap: 12px;
-  }
-
-  .stat-card {
-    width: 100%;
-    padding: 15px;
-    border-radius: 14px;
-  }
-
-  .stat-card h3 {
-    font-size: 16px;
-    margin-bottom: 12px;
-  }
-
-  .stat-row {
-    padding: 7px 0;
-    font-size: 13px;
-  }
-
-  /* -------------------------------------------------------
-     РЕЖИМЫ
-     ------------------------------------------------------- */
-
-  .modes-container {
-    display: flex;
-    flex-direction: column;
-    width: 100%;
-    gap: 12px;
-  }
-
-  .mode-card {
-    width: 100%;
-    min-width: 0;
-    padding: 15px;
-    border-radius: 14px;
-  }
-
-  .mode-card h3 {
-    font-size: 16px;
-    margin-bottom: 12px;
-  }
-
-  .mode-buttons {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .mode-buttons button {
-    min-height: 44px;
-    padding: 10px 8px;
-    font-size: 13px;
-  }
-
-  .queue-stats {
-    padding: 9px 10px;
-    font-size: 12px;
-  }
-
-  .leave-queue-btn {
-    min-height: 32px;
-    padding: 5px 9px;
-  }
-
-  /* -------------------------------------------------------
-     КНОПКИ
-     ------------------------------------------------------- */
-
-  button,
-  .nav-btn,
-  .queue-mode-btn,
-  .leave-queue-btn {
-    -webkit-tap-highlight-color: transparent;
-  }
-
-  button {
-    min-height: 42px;
-  }
-
-  /* -------------------------------------------------------
-     ЧАТ
-     ------------------------------------------------------- */
-
-  .chat-messages {
-    width: 100%;
-    height: 55vh;
-    min-height: 260px;
-    max-height: 500px;
-    padding: 12px;
-    border-radius: 14px;
-    margin-bottom: 10px;
-  }
-
-  .chat-message {
-    gap: 8px;
-    padding: 8px 0;
-  }
-
-  .chat-avatar {
-    width: 30px;
-    height: 30px;
-    flex-shrink: 0;
-  }
-
-  .chat-message strong {
-    font-size: 13px;
-  }
-
-  .chat-message small {
-    display: block;
-    margin-left: 0;
-    margin-top: 2px;
-  }
-
-  .chat-input {
-    width: 100%;
-    display: flex;
-    gap: 6px;
-  }
-
-  .chat-input input {
-    min-width: 0;
-    width: 100%;
-    padding: 11px;
-    font-size: 14px;
-  }
-
-  .chat-input button {
-    flex: 0 0 auto;
-    padding: 0 14px;
-    min-width: 70px;
-  }
-
-  /* -------------------------------------------------------
-     ДРУЗЬЯ
-     ------------------------------------------------------- */
-
-  .friends-tabs {
-    width: 100%;
-    gap: 4px;
-    overflow-x: auto;
-    margin-bottom: 14px;
-    scrollbar-width: none;
-  }
-
-  .friends-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .friends-tab {
-    flex: 0 0 auto;
-    padding: 9px 12px;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  .friend-item {
-    width: 100%;
-    padding: 10px;
-    gap: 9px;
-    border-radius: 10px;
-    flex-wrap: wrap;
-  }
-
-  .friend-avatar {
-    width: 38px;
-    height: 38px;
-  }
-
-  .friend-item button {
-    min-height: 34px;
-    padding: 6px 9px;
-    font-size: 11px;
-  }
-
-  /* -------------------------------------------------------
-     ПАТИ
-     ------------------------------------------------------- */
-
-  #partyMembers {
-    width: 100%;
-    padding: 13px;
-    border-radius: 14px;
-  }
-
-  #partyMembersList div {
-    min-height: 40px;
-    padding: 5px 0;
-  }
-
-  .mini-avatar {
-    width: 30px;
-    height: 30px;
-  }
-
-  .add-friend-from-party,
-  .add-friend-lobby {
-    min-height: 32px;
-    padding: 5px 8px;
-  }
-
-  .leave-party-btn {
-    min-height: 42px;
-  }
-
-  /* -------------------------------------------------------
-     ИСТОРИЯ
-     ------------------------------------------------------- */
-
-  #matchList li {
-    padding: 11px;
-    margin: 7px 0;
-    font-size: 13px;
-  }
-
-  /* -------------------------------------------------------
-     ТОП
-     ------------------------------------------------------- */
-
-  .top-tabs {
-    display: flex;
-    gap: 4px;
-    width: 100%;
-    overflow-x: auto;
-    margin-bottom: 14px;
-    scrollbar-width: none;
-  }
-
-  .top-tabs::-webkit-scrollbar {
-    display: none;
-  }
-
-  .top-tab {
-    flex: 0 0 auto;
-    padding: 9px 12px;
-    font-size: 13px;
-    white-space: nowrap;
-  }
-
-  .top-table {
-    width: 100%;
-    display: block;
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-  }
-
-  .top-table th,
-  .top-table td {
-    padding: 8px 6px;
-    font-size: 12px;
-    white-space: nowrap;
-  }
-
-  /* -------------------------------------------------------
-     КЛАН
-     ------------------------------------------------------- */
-
-  .clan-avatar {
-    width: 28px;
-    height: 28px;
-  }
-
-  /* -------------------------------------------------------
-     МОДАЛЬНЫЕ ОКНА
-     ------------------------------------------------------- */
-
-  .modal,
-  .match-found-modal {
-    padding: 10px;
-    align-items: center;
-    justify-content: center;
-  }
-
-  .modal-content,
-  .match-found-content {
-    width: 100%;
-    max-width: 100%;
-    max-height: 90dvh;
-    padding: 16px;
-    border-radius: 18px;
-    overflow-y: auto;
-  }
-
-  .match-found-content {
-    padding: 18px 14px;
-  }
-
-  .match-found-content h2 {
-    font-size: 19px;
-  }
-
-  .participants-list {
-    max-height: 40vh;
-    margin: 12px 0;
-  }
-
-  .participant {
-    padding: 8px;
-    gap: 8px;
-    margin: 6px 0;
-  }
-
-  .participant-avatar {
-    width: 34px;
-    height: 34px;
-    flex-shrink: 0;
-  }
-
-  .match-buttons {
-    display: flex;
-    gap: 8px;
-    width: 100%;
-  }
-
-  .match-buttons button {
-    flex: 1;
-    margin: 0;
-    min-height: 46px;
-    padding: 10px;
-  }
-
-  /* -------------------------------------------------------
-     ЛОББИ
-     ------------------------------------------------------- */
-
-  .lobby-chat {
-    height: 35vh;
-    min-height: 180px;
-    max-height: 350px;
-    padding: 10px;
-  }
-
-  .lobby-input {
-    width: 100%;
-    gap: 6px;
-  }
-
-  .lobby-input input {
-    min-width: 0;
-    width: 100%;
-    padding: 10px;
-  }
-
-  .lobby-input button {
-    min-width: 70px;
-    padding: 8px 12px;
-  }
-
-  #screenshotArea {
-    width: 100%;
-    flex-wrap: wrap;
-  }
-
-  #screenshotUpload {
-    max-width: 100%;
-  }
-
-  #closeLobbyBtn {
-    min-height: 44px;
-  }
-
-  /* -------------------------------------------------------
-     УВЕДОМЛЕНИЯ
-     ------------------------------------------------------- */
-
-  .notification {
-    max-width: calc(100vw - 20px) !important;
-    left: 10px !important;
-    right: 10px !important;
-    width: auto !important;
-  }
-
-  /* -------------------------------------------------------
-     INPUTS
-     ------------------------------------------------------- */
-
-  input,
-  textarea,
-  select {
-    max-width: 100%;
-    font-size: 16px;
-  }
-
-  /* -------------------------------------------------------
-     LOGIN
-     ------------------------------------------------------- */
-
-  .login-container {
-    width: calc(100% - 24px);
-    max-width: 400px;
-    padding: 22px 16px;
-    border-radius: 18px;
-  }
-
-  .login-container h1 {
-    font-size: 24px;
-  }
-
-  .login-container input {
-    padding: 13px 12px;
-    margin: 7px 0;
-  }
-
-  .login-container button {
-    min-height: 46px;
-    padding: 12px;
-  }
-}
-
-
-/* =========================================================
-   ОЧЕНЬ МАЛЕНЬКИЕ ТЕЛЕФОНЫ
-   ========================================================= */
-
-@media (max-width: 380px) {
-
-  .sidebar {
-    padding: 8px;
-  }
-
-  .profile-card {
-    padding: 8px;
-  }
-
-  .avatar-container,
-  #avatar {
-    width: 46px;
-    height: 46px;
-  }
-
-  #nickname {
-    font-size: 14px;
-    max-width: 120px;
-  }
-
-  .nav-btn {
-    padding: 9px 11px;
-    font-size: 12px;
-  }
-
-  .content {
-    padding: 12px 8px 24px;
-  }
-
-  .view h2 {
-    font-size: 18px;
-  }
-
-  .mode-card,
-  .stat-card {
-    padding: 12px;
-  }
-
-  .mode-buttons {
-    flex-direction: column;
-  }
-
-  .mode-buttons button {
-    width: 100%;
-  }
-
-  .chat-input button,
-  .lobby-input button {
-    min-width: 60px;
-    padding-left: 9px;
-    padding-right: 9px;
-  }
-
-  .match-buttons {
-    flex-direction: column;
-  }
-}
-
-
-/* =========================================================
-   LANDSCAPE НА ТЕЛЕФОНЕ
-   ========================================================= */
-
-@media (max-width: 900px) and (orientation: landscape) {
-
-  .sidebar {
-    padding: 8px 12px;
-  }
-
-  .profile-card {
-    padding: 8px;
-  }
-
-  .profile-header {
-    margin-bottom: 4px;
-  }
-
-  nav {
-    padding-bottom: 2px;
-  }
-
-  .nav-btn {
-    min-height: 36px;
-    padding: 7px 12px;
-  }
-
-  .content {
-    padding: 14px;
-  }
-
-  .chat-messages {
-    height: 45vh;
-  }
-
-  .modal-content,
-  .match-found-content {
-    max-height: 94dvh;
-  }
-}
-/* =========================================================
-   STANDKNIFE — FINAL UI POLISH
-   Добавить В КОНЕЦ текущего CSS
-   ========================================================= */
-
-/* ---------------------------------------------------------
-   1. Базовый стиль браузерных элементов
-   --------------------------------------------------------- */
-
 html {
   color-scheme: dark;
-  -webkit-text-size-adjust: 100%;
 }
-
-body {
-  background: #0f172a;
-  color: #e2e8f0;
-}
-
-/* Убираем стандартные outline браузера,
-   но оставляем нормальный focus */
-button,
-input,
-textarea,
-select {
-  font: inherit;
-  outline: none;
-}
-
-button:focus-visible,
-input:focus-visible,
-textarea:focus-visible,
-select:focus-visible {
-  outline: 2px solid rgba(59, 130, 246, 0.55);
-  outline-offset: 2px;
-}
-
-/* ---------------------------------------------------------
-   2. Все поля сайта
-   --------------------------------------------------------- */
 
 input,
 textarea,
 select {
-  background-color: #0f172a;
-  color: #e2e8f0;
-  border: 1px solid #334155;
-  border-radius: 8px;
-  caret-color: #3b82f6;
-  transition:
-    border-color 0.2s ease,
-    box-shadow 0.2s ease,
-    background-color 0.2s ease;
+  color-scheme: dark;
 }
 
-input::placeholder,
-textarea::placeholder {
-  color: #64748b;
+/* Кнопка смены аватарки: маленькая, круглая, снаружи аватара */
+.avatar-container {
+  position: relative;
+  overflow: visible;
 }
 
-input:hover,
-textarea:hover,
-select:hover {
-  border-color: #475569;
+.avatar-upload-btn,
+#changeAvatarBtn {
+  position: absolute !important;
+  width: 20px !important;
+  min-width: 20px !important;
+  max-width: 20px !important;
+  height: 20px !important;
+  min-height: 20px !important;
+  max-height: 20px !important;
+  padding: 0 !important;
+  margin: 0 !important;
+  right: -5px !important;
+  bottom: -5px !important;
+  border-radius: 50% !important;
+  border: 2px solid #0f172a !important;
+  background: #334155 !important;
+  color: #e2e8f0 !important;
+  display: flex !important;
+  align-items: center !important;
+  justify-content: center !important;
+  font-size: 9px !important;
+  line-height: 1 !important;
+  z-index: 10 !important;
+  box-shadow: 0 2px 7px rgba(0,0,0,.45) !important;
+  transform: none !important;
 }
 
-input:focus,
-textarea:focus,
-select:focus {
-  border-color: #3b82f6;
-  background-color: #111c31;
-  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+.avatar-upload-btn:hover,
+#changeAvatarBtn:hover {
+  transform: scale(1.08) !important;
+  background: #475569 !important;
+  box-shadow: 0 0 8px rgba(59,130,246,.35) !important;
 }
 
-/* ---------------------------------------------------------
-   3. Select
-   --------------------------------------------------------- */
-
-select {
-  appearance: none;
-  -webkit-appearance: none;
-  cursor: pointer;
-  padding-right: 36px;
-
-  background-image:
-    linear-gradient(45deg, transparent 50%, #94a3b8 50%),
-    linear-gradient(135deg, #94a3b8 50%, transparent 50%);
-  background-position:
-    calc(100% - 16px) 50%,
-    calc(100% - 11px) 50%;
-  background-size:
-    5px 5px,
-    5px 5px;
-  background-repeat: no-repeat;
+/* Глобальный чат: аватарка — именно изображение, а не стилизованная кнопка */
+.chat-avatar,
+.participant-avatar,
+.lobby-avatar,
+.friend-avatar,
+.mini-avatar,
+.top-avatar,
+.clan-avatar {
+  padding: 0 !important;
+  margin-top: 0 !important;
+  background: transparent !important;
+  border: 1px solid #3b82f6 !important;
+  object-fit: cover !important;
+  flex: 0 0 auto;
 }
 
-select option {
-  background: #1e293b;
-  color: #e2e8f0;
+.chat-avatar {
+  width: 34px !important;
+  height: 34px !important;
+  min-width: 34px !important;
+  min-height: 34px !important;
 }
 
-/* ---------------------------------------------------------
-   4. File input
-   --------------------------------------------------------- */
+.chat-message {
+  display: flex;
+  align-items: flex-start;
+}
 
-input[type="file"] {
-  width: 100%;
+.chat-message > span:not(.chat-avatar),
+.chat-message > strong {
   min-width: 0;
-  padding: 7px;
-  background: #0f172a;
+}
+
+/* Друзья — поиск */
+.friend-search-box {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.friend-search-box input {
+  flex: 1;
+  min-width: 0;
+}
+
+.friend-search-box button {
+  flex: 0 0 auto;
+}
+
+.friend-search-item {
+  align-items: center;
+}
+
+.friend-search-info {
+  min-width: 0;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.friend-search-info strong {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.friend-search-info small,
+.muted-text {
+  color: #94a3b8;
+  font-size: 12px;
+}
+
+.add-search-friend {
+  flex: 0 0 auto;
+}
+
+/* Профиль игрока — логин никогда не показываем */
+.profile-modal .modal-content p {
+  margin: 7px 0;
+}
+
+/* Системные элементы ввода */
+input[type="file"] {
   color: #cbd5e1;
+  background: #0f172a;
   border: 1px solid #334155;
-  border-radius: 8px;
-  cursor: pointer;
 }
 
 input[type="file"]::file-selector-button {
-  margin-right: 10px;
-  padding: 7px 12px;
-  border: none;
-  border-radius: 6px;
-  background: #1e293b;
   color: #e2e8f0;
-  cursor: pointer;
-  transition:
-    background-color 0.2s ease,
-    transform 0.2s ease;
-}
-
-input[type="file"]::file-selector-button:hover {
-  background: #334155;
-  transform: translateY(-1px);
-}
-
-/* ---------------------------------------------------------
-   5. Checkbox / Radio
-   --------------------------------------------------------- */
-
-input[type="checkbox"],
-input[type="radio"] {
-  accent-color: #3b82f6;
-  cursor: pointer;
-}
-
-/* ---------------------------------------------------------
-   6. СМЕНА АВАТАРА
-   Маленькая кнопка справа-снизу,
-   НЕ закрывает аватар
-   --------------------------------------------------------- */
-
-.avatar-container {
-  position: relative;
-  width: 80px;
-  height: 80px;
-  flex: 0 0 80px;
-}
-
-#avatar {
-  display: block;
-  width: 80px;
-  height: 80px;
-  border-radius: 50%;
-  object-fit: cover;
-}
-
-/*
-   Важно:
-   кнопка теперь находится немного снаружи
-   аватара справа/снизу.
-*/
-.avatar-upload-btn {
-  position: absolute;
-
-  width: 22px;
-  height: 22px;
-
-  right: -5px;
-  bottom: -5px;
-
-  padding: 0;
-
-  display: flex;
-  align-items: center;
-  justify-content: center;
-
-  border-radius: 50%;
-  border: 2px solid #0f172a;
-
   background: #1e293b;
-  color: #cbd5e1;
-
-  font-size: 10px;
-  line-height: 1;
-
-  z-index: 3;
-
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
-
-  transition:
-    transform 0.2s ease,
-    background-color 0.2s ease,
-    border-color 0.2s ease,
-    box-shadow 0.2s ease;
+  border: 1px solid #334155;
+  border-radius: 6px;
+  padding: 6px 10px;
 }
 
-.avatar-upload-btn:hover {
-  transform: scale(1.08);
-  background: #334155;
-  border-color: #3b82f6;
-  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
-}
-
-.avatar-upload-btn:active {
-  transform: scale(0.94);
-}
-
-/* ---------------------------------------------------------
-   7. Мобильный аватар
-   --------------------------------------------------------- */
-
-@media (max-width: 900px) {
-
-  .avatar-container {
-    width: 58px;
-    height: 58px;
-    flex: 0 0 58px;
-  }
-
-  #avatar {
-    width: 58px;
-    height: 58px;
-  }
-
-  .avatar-upload-btn {
-    width: 20px;
-    height: 20px;
-    right: -5px;
-    bottom: -5px;
-    font-size: 9px;
-  }
+select,
+select option {
+  background-color: #0f172a;
+  color: #e2e8f0;
 }
 
 @media (max-width: 600px) {
-
-  .avatar-container {
-    width: 52px;
-    height: 52px;
-    flex: 0 0 52px;
+  .avatar-upload-btn,
+  #changeAvatarBtn {
+    width: 18px !important;
+    min-width: 18px !important;
+    max-width: 18px !important;
+    height: 18px !important;
+    min-height: 18px !important;
+    max-height: 18px !important;
+    right: -5px !important;
+    bottom: -5px !important;
+    font-size: 8px !important;
+    border-width: 1.5px !important;
   }
 
-  #avatar {
-    width: 52px;
-    height: 52px;
+  .friend-search-box {
+    flex-direction: column;
   }
 
-  .avatar-upload-btn {
-    width: 19px;
-    height: 19px;
-    right: -5px;
-    bottom: -5px;
-    border-width: 1.5px;
-    font-size: 8px;
+  .friend-search-box button {
+    width: 100%;
   }
 }
 
 @media (max-width: 380px) {
-
-  .avatar-container {
-    width: 46px;
-    height: 46px;
-    flex: 0 0 46px;
-  }
-
-  #avatar {
-    width: 46px;
-    height: 46px;
-  }
-
-  .avatar-upload-btn {
-    width: 18px;
-    height: 18px;
-    right: -5px;
-    bottom: -5px;
-    font-size: 8px;
+  .avatar-upload-btn,
+  #changeAvatarBtn {
+    width: 17px !important;
+    min-width: 17px !important;
+    max-width: 17px !important;
+    height: 17px !important;
+    min-height: 17px !important;
+    max-height: 17px !important;
+    font-size: 7px !important;
   }
 }
-
-/* ---------------------------------------------------------
-   8. Скроллбары — стиль StandKnife
-   --------------------------------------------------------- */
-
-* {
-  scrollbar-width: thin;
-  scrollbar-color: #334155 #0f172a;
-}
-
-*::-webkit-scrollbar {
-  width: 7px;
-  height: 7px;
-}
-
-*::-webkit-scrollbar-track {
-  background: #0f172a;
-}
-
-*::-webkit-scrollbar-thumb {
-  background: #334155;
-  border-radius: 10px;
-}
-
-*::-webkit-scrollbar-thumb:hover {
-  background: #475569;
-}
-
-/* ---------------------------------------------------------
-   9. Убираем слишком резкие browser-эффекты
-   --------------------------------------------------------- */
-
-button,
-input,
-textarea,
-select,
-.nav-btn,
-.friends-tab,
-.top-tab {
-  -webkit-tap-highlight-color: transparent;
-}
-
-/* ---------------------------------------------------------
-   10. Кнопки — немного аккуратнее
-   --------------------------------------------------------- */
-
-button {
-  -webkit-user-select: none;
-  user-select: none;
-}
-
-button:disabled {
-  cursor: not-allowed;
-  opacity: 0.55;
-  transform: none !important;
-  box-shadow: none !important;
-}
-
-/* ---------------------------------------------------------
-   11. Ссылки
-   --------------------------------------------------------- */
-
-a {
-  color: #60a5fa;
-  text-decoration: none;
-  transition: color 0.2s ease;
-}
-
-a:hover {
-  color: #93c5fd;
-}
-
-/* ---------------------------------------------------------
-   12. Модалки — без белых областей
-   --------------------------------------------------------- */
-
-.modal *,
-.match-found-modal * {
-  color-scheme: dark;
-}
-
-.modal-content,
-.match-found-content {
-  background: #1e293b;
-  color: #e2e8f0;
-  border: 1px solid #334155;
-}
-
-/* ---------------------------------------------------------
-   13. Лёгкая визуальная глубина
-   Без чрезмерных эффектов
-   --------------------------------------------------------- */
-
-.profile-card,
-.stat-card,
-.mode-card,
-#partyMembers,
-.chat-messages,
-.modal-content,
-.match-found-content {
-  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
-}
-
-/* ---------------------------------------------------------
-   14. Уведомления
-   --------------------------------------------------------- */
-
-.notification {
-  background: #1e293b !important;
-  color: #e2e8f0 !important;
-  border: 1px solid #334155;
-  border-radius: 10px;
-  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-}
-
-/* ---------------------------------------------------------
-   15. Очень маленькие экраны
-   --------------------------------------------------------- */
-
-@media (max-width: 380px) {
-
-  .profile-header {
-    gap: 8px;
-  }
-
-  .profile-info {
-    min-width: 0;
-  }
-
-  #nickname {
-    max-width: 115px;
-  }
-
-  .avatar-upload-btn {
-    right: -4px;
-    bottom: -4px;
-  }
-}
-
-/* ---------------------------------------------------------
-   16. Уважение системной настройки уменьшения анимаций
-   --------------------------------------------------------- */
-
-@media (prefers-reduced-motion: reduce) {
-
-  *,
-  *::before,
-  *::after {
-    animation-duration: 0.01ms !important;
-    animation-iteration-count: 1 !important;
-    transition-duration: 0.01ms !important;
-    scroll-behavior: auto !important;
-  }
-}
-
-/* =========================================================
-   STANDKNIFE
-   ========================================================= */
