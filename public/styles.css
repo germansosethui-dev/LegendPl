@@ -1561,3 +1561,447 @@ select {
     max-height: 94dvh;
   }
 }
+/* =========================================================
+   STANDKNIFE — FINAL UI POLISH
+   Добавить В КОНЕЦ текущего CSS
+   ========================================================= */
+
+/* ---------------------------------------------------------
+   1. Базовый стиль браузерных элементов
+   --------------------------------------------------------- */
+
+html {
+  color-scheme: dark;
+  -webkit-text-size-adjust: 100%;
+}
+
+body {
+  background: #0f172a;
+  color: #e2e8f0;
+}
+
+/* Убираем стандартные outline браузера,
+   но оставляем нормальный focus */
+button,
+input,
+textarea,
+select {
+  font: inherit;
+  outline: none;
+}
+
+button:focus-visible,
+input:focus-visible,
+textarea:focus-visible,
+select:focus-visible {
+  outline: 2px solid rgba(59, 130, 246, 0.55);
+  outline-offset: 2px;
+}
+
+/* ---------------------------------------------------------
+   2. Все поля сайта
+   --------------------------------------------------------- */
+
+input,
+textarea,
+select {
+  background-color: #0f172a;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  caret-color: #3b82f6;
+  transition:
+    border-color 0.2s ease,
+    box-shadow 0.2s ease,
+    background-color 0.2s ease;
+}
+
+input::placeholder,
+textarea::placeholder {
+  color: #64748b;
+}
+
+input:hover,
+textarea:hover,
+select:hover {
+  border-color: #475569;
+}
+
+input:focus,
+textarea:focus,
+select:focus {
+  border-color: #3b82f6;
+  background-color: #111c31;
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.12);
+}
+
+/* ---------------------------------------------------------
+   3. Select
+   --------------------------------------------------------- */
+
+select {
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  padding-right: 36px;
+
+  background-image:
+    linear-gradient(45deg, transparent 50%, #94a3b8 50%),
+    linear-gradient(135deg, #94a3b8 50%, transparent 50%);
+  background-position:
+    calc(100% - 16px) 50%,
+    calc(100% - 11px) 50%;
+  background-size:
+    5px 5px,
+    5px 5px;
+  background-repeat: no-repeat;
+}
+
+select option {
+  background: #1e293b;
+  color: #e2e8f0;
+}
+
+/* ---------------------------------------------------------
+   4. File input
+   --------------------------------------------------------- */
+
+input[type="file"] {
+  width: 100%;
+  min-width: 0;
+  padding: 7px;
+  background: #0f172a;
+  color: #cbd5e1;
+  border: 1px solid #334155;
+  border-radius: 8px;
+  cursor: pointer;
+}
+
+input[type="file"]::file-selector-button {
+  margin-right: 10px;
+  padding: 7px 12px;
+  border: none;
+  border-radius: 6px;
+  background: #1e293b;
+  color: #e2e8f0;
+  cursor: pointer;
+  transition:
+    background-color 0.2s ease,
+    transform 0.2s ease;
+}
+
+input[type="file"]::file-selector-button:hover {
+  background: #334155;
+  transform: translateY(-1px);
+}
+
+/* ---------------------------------------------------------
+   5. Checkbox / Radio
+   --------------------------------------------------------- */
+
+input[type="checkbox"],
+input[type="radio"] {
+  accent-color: #3b82f6;
+  cursor: pointer;
+}
+
+/* ---------------------------------------------------------
+   6. СМЕНА АВАТАРА
+   Маленькая кнопка справа-снизу,
+   НЕ закрывает аватар
+   --------------------------------------------------------- */
+
+.avatar-container {
+  position: relative;
+  width: 80px;
+  height: 80px;
+  flex: 0 0 80px;
+}
+
+#avatar {
+  display: block;
+  width: 80px;
+  height: 80px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+/*
+   Важно:
+   кнопка теперь находится немного снаружи
+   аватара справа/снизу.
+*/
+.avatar-upload-btn {
+  position: absolute;
+
+  width: 22px;
+  height: 22px;
+
+  right: -5px;
+  bottom: -5px;
+
+  padding: 0;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  border-radius: 50%;
+  border: 2px solid #0f172a;
+
+  background: #1e293b;
+  color: #cbd5e1;
+
+  font-size: 10px;
+  line-height: 1;
+
+  z-index: 3;
+
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45);
+
+  transition:
+    transform 0.2s ease,
+    background-color 0.2s ease,
+    border-color 0.2s ease,
+    box-shadow 0.2s ease;
+}
+
+.avatar-upload-btn:hover {
+  transform: scale(1.08);
+  background: #334155;
+  border-color: #3b82f6;
+  box-shadow: 0 0 10px rgba(59, 130, 246, 0.25);
+}
+
+.avatar-upload-btn:active {
+  transform: scale(0.94);
+}
+
+/* ---------------------------------------------------------
+   7. Мобильный аватар
+   --------------------------------------------------------- */
+
+@media (max-width: 900px) {
+
+  .avatar-container {
+    width: 58px;
+    height: 58px;
+    flex: 0 0 58px;
+  }
+
+  #avatar {
+    width: 58px;
+    height: 58px;
+  }
+
+  .avatar-upload-btn {
+    width: 20px;
+    height: 20px;
+    right: -5px;
+    bottom: -5px;
+    font-size: 9px;
+  }
+}
+
+@media (max-width: 600px) {
+
+  .avatar-container {
+    width: 52px;
+    height: 52px;
+    flex: 0 0 52px;
+  }
+
+  #avatar {
+    width: 52px;
+    height: 52px;
+  }
+
+  .avatar-upload-btn {
+    width: 19px;
+    height: 19px;
+    right: -5px;
+    bottom: -5px;
+    border-width: 1.5px;
+    font-size: 8px;
+  }
+}
+
+@media (max-width: 380px) {
+
+  .avatar-container {
+    width: 46px;
+    height: 46px;
+    flex: 0 0 46px;
+  }
+
+  #avatar {
+    width: 46px;
+    height: 46px;
+  }
+
+  .avatar-upload-btn {
+    width: 18px;
+    height: 18px;
+    right: -5px;
+    bottom: -5px;
+    font-size: 8px;
+  }
+}
+
+/* ---------------------------------------------------------
+   8. Скроллбары — стиль StandKnife
+   --------------------------------------------------------- */
+
+* {
+  scrollbar-width: thin;
+  scrollbar-color: #334155 #0f172a;
+}
+
+*::-webkit-scrollbar {
+  width: 7px;
+  height: 7px;
+}
+
+*::-webkit-scrollbar-track {
+  background: #0f172a;
+}
+
+*::-webkit-scrollbar-thumb {
+  background: #334155;
+  border-radius: 10px;
+}
+
+*::-webkit-scrollbar-thumb:hover {
+  background: #475569;
+}
+
+/* ---------------------------------------------------------
+   9. Убираем слишком резкие browser-эффекты
+   --------------------------------------------------------- */
+
+button,
+input,
+textarea,
+select,
+.nav-btn,
+.friends-tab,
+.top-tab {
+  -webkit-tap-highlight-color: transparent;
+}
+
+/* ---------------------------------------------------------
+   10. Кнопки — немного аккуратнее
+   --------------------------------------------------------- */
+
+button {
+  -webkit-user-select: none;
+  user-select: none;
+}
+
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.55;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* ---------------------------------------------------------
+   11. Ссылки
+   --------------------------------------------------------- */
+
+a {
+  color: #60a5fa;
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: #93c5fd;
+}
+
+/* ---------------------------------------------------------
+   12. Модалки — без белых областей
+   --------------------------------------------------------- */
+
+.modal *,
+.match-found-modal * {
+  color-scheme: dark;
+}
+
+.modal-content,
+.match-found-content {
+  background: #1e293b;
+  color: #e2e8f0;
+  border: 1px solid #334155;
+}
+
+/* ---------------------------------------------------------
+   13. Лёгкая визуальная глубина
+   Без чрезмерных эффектов
+   --------------------------------------------------------- */
+
+.profile-card,
+.stat-card,
+.mode-card,
+#partyMembers,
+.chat-messages,
+.modal-content,
+.match-found-content {
+  box-shadow: 0 6px 20px rgba(0, 0, 0, 0.18);
+}
+
+/* ---------------------------------------------------------
+   14. Уведомления
+   --------------------------------------------------------- */
+
+.notification {
+  background: #1e293b !important;
+  color: #e2e8f0 !important;
+  border: 1px solid #334155;
+  border-radius: 10px;
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+}
+
+/* ---------------------------------------------------------
+   15. Очень маленькие экраны
+   --------------------------------------------------------- */
+
+@media (max-width: 380px) {
+
+  .profile-header {
+    gap: 8px;
+  }
+
+  .profile-info {
+    min-width: 0;
+  }
+
+  #nickname {
+    max-width: 115px;
+  }
+
+  .avatar-upload-btn {
+    right: -4px;
+    bottom: -4px;
+  }
+}
+
+/* ---------------------------------------------------------
+   16. Уважение системной настройки уменьшения анимаций
+   --------------------------------------------------------- */
+
+@media (prefers-reduced-motion: reduce) {
+
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
+
+/* =========================================================
+   STANDKNIFE
+   ========================================================= */
