@@ -930,3 +930,90 @@ select option {
     font-size: 7px !important;
   }
 }
+
+
+/* StandKnife final mobile layout */
+.mobile-menu-btn { display:none; }
+body.menu-open { overflow:hidden; }
+
+@media (max-width: 900px) {
+  #mainScreen { display:flex; min-height:100vh; }
+  .sidebar { width:260px; flex:0 0 260px; }
+  .content { padding:24px 18px; }
+}
+
+@media (max-width: 700px) {
+  #mainScreen { display:block !important; }
+  .sidebar {
+    position:fixed;
+    inset:0 auto 0 0;
+    width:min(86vw, 300px);
+    height:100dvh;
+    padding:16px 12px;
+    overflow-y:auto;
+    transform:translateX(-105%);
+    transition:transform .22s ease;
+    z-index:10001;
+    box-shadow:10px 0 30px rgba(0,0,0,.45);
+  }
+  .sidebar.mobile-open { transform:translateX(0); }
+  .content { width:100%; min-height:100dvh; padding:64px 12px 20px; overflow-x:hidden; }
+  .view { width:100%; max-width:none; }
+  .view h2 { font-size:20px; margin-bottom:16px; }
+  .stats-grid { grid-template-columns:1fr; gap:12px; }
+  .modes-container { flex-direction:column; gap:12px; }
+  .mode-card { min-width:0; width:100%; padding:14px; }
+  .mode-buttons { gap:8px; }
+  .mode-buttons button { min-width:0; padding:9px 8px; }
+  .chat-messages { height:calc(100dvh - 190px); min-height:280px; }
+  .chat-input { gap:7px; }
+  .chat-input button { padding:0 12px; }
+  .friends-tabs { gap:4px; overflow-x:auto; scrollbar-width:none; }
+  .friends-tabs::-webkit-scrollbar { display:none; }
+  .friends-tab { flex:0 0 auto; font-size:13px; padding:8px 10px; }
+  .friend-item { align-items:center; flex-wrap:wrap; padding:10px; }
+  .friend-item > div { width:100%; margin-left:52px; display:flex; flex-wrap:wrap; gap:5px; }
+  .friend-item button { margin-left:0; }
+  .friend-search-box { flex-direction:row !important; }
+  .friend-search-box button { width:auto !important; }
+  .login-container { width:calc(100vw - 24px); max-width:360px; padding:22px 16px; }
+  .match-found-content, .modal-content { width:calc(100vw - 24px); max-width:none; padding:18px; border-radius:16px; }
+  .lobby-input { flex-wrap:wrap; }
+  .lobby-input input { min-width:0; width:100%; }
+  .lobby-input button { flex:1; }
+  .admin-button { right:12px !important; bottom:12px !important; }
+  .mobile-menu-btn {
+    display:flex;
+    position:fixed;
+    top:12px;
+    left:12px;
+    width:42px;
+    height:42px;
+    align-items:center;
+    justify-content:center;
+    padding:0;
+    border:1px solid #334155;
+    border-radius:12px;
+    background:#1e293b;
+    color:#e2e8f0;
+    font-size:21px;
+    z-index:10000;
+    box-shadow:0 6px 20px rgba(0,0,0,.3);
+  }
+  .mobile-menu-btn:hover { transform:none; background:#334155; }
+  .profile-header { align-items:flex-start; }
+  .avatar-container { flex:0 0 80px; }
+  .avatar-upload-btn, #changeAvatarBtn {
+    width:22px !important;
+    min-width:22px !important;
+    max-width:22px !important;
+    height:22px !important;
+    min-height:22px !important;
+    max-height:22px !important;
+    right:-6px !important;
+    bottom:-6px !important;
+    font-size:10px !important;
+    z-index:20 !important;
+  }
+  input, textarea, select { max-width:100%; }
+}
