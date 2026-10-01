@@ -2,7 +2,7 @@
 
 /*
 =========================================================
-StandKnife | Satoshi
+StandKnife | Legend Pl
 Frontend client
 
 Основные функции:
@@ -524,54 +524,106 @@ function showRegisterForm() {
 }
 
 
-function doLogin() {
-
-  const username =
-    $("loginUsername").value.trim();
-
-  const password =
-    $("loginPassword").value;
+async function doLogin() {
+  const username = $("loginUsername")?.value.trim();
+  const password = $("loginPassword")?.value || "";
 
   if (!username || !password) {
-
-    showMessage(
-      "Введите логин и пароль",
-      "error"
-    );
-
+    showMessage("Введите логин и пароль", "error");
     return;
   }
 
-  showMessage(
-    "Выполняется вход..."
-  );
+  const button = $("doLoginBtn");
 
-  socket.emit(
-    "login",
-    {
-      username,
-      password
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Вход...";
+  }
+
+  showMessage("Выполняется вход...");
+
+  try {
+    const response = await fetch("/api/login", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        username,
+        password
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      showMessage(
+        data.message || "Неверный логин или пароль",
+        "error"
+      );
+
+      return;
     }
-  );
+
+    /*
+     * Сервер возвращает пользователя именно в userData.
+     */
+    const user = normalizeUser(data.userData);
+
+    if (!user || !user.id) {
+      showMessage(
+        "Сервер не вернул данные пользователя",
+        "error"
+      );
+
+      return;
+    }
+
+    currentUser = user;
+
+    saveSession();
+
+    /*
+     * Очень важно:
+     * REST отвечает за вход,
+     * Socket отвечает за онлайн-состояние,
+     * очередь, пати, чат и матчмейкинг.
+     */
+    if (socket.connected) {
+      socket.emit("auth", currentUser.id);
+    } else {
+      socket.once("connect", () => {
+        if (currentUser?.id) {
+          socket.emit("auth", currentUser.id);
+        }
+      });
+    }
+
+    enterMainScreen();
+
+  } catch (error) {
+    console.error("Ошибка входа:", error);
+
+    showMessage(
+      "Ошибка соединения с сервером",
+      "error"
+    );
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Войти";
+    }
+  }
 }
 
 
-function doRegister() {
-
-  const username =
-    $("regUsername").value.trim();
-
-  const password =
-    $("regPassword").value;
-
-  const confirm =
-    $("regPasswordConfirm").value;
-
-  const inGameNick =
-    $("regInGameNick").value.trim();
-
-  const inGameId =
-    $("regInGameId").value.trim();
+async function doRegister() {
+  const username = $("regUsername")?.value.trim();
+  const password = $("regPassword")?.value || "";
+  const confirm = $("regPasswordConfirm")?.value || "";
+  const inGameNick = $("regInGameNick")?.value.trim();
+  const inGameId = $("regInGameId")?.value.trim();
 
   if (
     !username ||
@@ -580,34 +632,75 @@ function doRegister() {
     !inGameNick ||
     !inGameId
   ) {
-
-    showMessage(
-      "Заполните все поля",
-      "error"
-    );
-
+    showMessage("Заполните все поля", "error");
     return;
   }
 
   if (password !== confirm) {
-
-    showMessage(
-      "Пароли не совпадают",
-      "error"
-    );
-
+    showMessage("Пароли не совпадают", "error");
     return;
   }
 
-  socket.emit(
-    "register",
-    {
-      username,
-      password,
-      inGameNick,
-      inGameId
+  const button = $("doRegisterBtn");
+
+  if (button) {
+    button.disabled = true;
+    button.textContent = "Регистрация...";
+  }
+
+  try {
+    const response = await fetch("/api/register", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json"
+      },
+      body: JSON.stringify({
+        username,
+        password,
+        inGameNick,
+        inGameId
+      })
+    });
+
+    const data = await response.json();
+
+    if (!response.ok || !data.success) {
+      showMessage(
+        data.message || "Ошибка регистрации",
+        "error"
+      );
+      return;
     }
-  );
+
+    showMessage(
+      data.message || "Регистрация успешна. Теперь войдите.",
+      "success"
+    );
+
+    $("regPassword").value = "";
+    $("regPasswordConfirm").value = "";
+
+    setTimeout(() => {
+      showLoginForm();
+
+      $("loginUsername").value = username;
+      $("loginPassword").focus();
+    }, 700);
+
+  } catch (error) {
+    console.error("Ошибка регистрации:", error);
+
+    showMessage(
+      "Ошибка соединения с сервером",
+      "error"
+    );
+
+  } finally {
+    if (button) {
+      button.disabled = false;
+      button.textContent = "Зарегистрироваться";
+    }
+  }
 }
 
 
