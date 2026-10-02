@@ -2,22 +2,17 @@
   box-sizing: border-box;
   margin: 0;
   padding: 0;
-  font-family:
-    Inter,
-    -apple-system,
-    BlinkMacSystemFont,
-    "Segoe UI",
-    sans-serif;
 }
 
 html,
 body {
   min-height: 100%;
-}
-
-body {
-  background: #08111f;
-  color: #e5edf8;
+  background: #080d18;
+  color: #e5e7eb;
+  font-family:
+    Inter,
+    Arial,
+    sans-serif;
 }
 
 button,
@@ -29,1257 +24,644 @@ button {
   cursor: pointer;
 }
 
-a {
-  color: #60a5fa;
-  text-decoration: none;
-}
-
-a:hover {
-  text-decoration: underline;
-}
-
-/* =========================================================
-   LOGIN
-========================================================= */
-
-.screen {
-  min-height: 100vh;
-}
-
-#loginScreen {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 20px;
-
-  background:
-    radial-gradient(
-      circle at 50% 30%,
-      rgba(37, 99, 235, .16),
-      transparent 40%
-    ),
-    #08111f;
-}
-
-.login-container {
-  width: min(420px, 100%);
-  padding: 34px;
-
-  border-radius: 24px;
-
-  background: rgba(30, 41, 59, .94);
-
-  border: 1px solid #334155;
-
-  box-shadow:
-    0 30px 80px rgba(0, 0, 0, .45);
-
-  text-align: center;
-}
-
-.login-container h1 {
-  margin-bottom: 28px;
-
-  font-size: 42px;
-
-  color: #3b82f6;
-}
-
-.login-container input {
+input {
   width: 100%;
-
-  margin-bottom: 12px;
-
-  padding: 15px;
-
-  border: 1px solid #334155;
-
-  border-radius: 12px;
-
+  padding: 12px;
+  border: 1px solid #26334a;
+  border-radius: 10px;
+  background: #0d1525;
+  color: #fff;
   outline: none;
-
-  background: #111c2e;
-  color: white;
 }
 
-.login-container input:focus {
+input:focus {
   border-color: #3b82f6;
 }
 
-.login-container button {
-  width: 100%;
-
-  padding: 14px;
-
-  margin-top: 5px;
-
+button {
+  padding: 11px 16px;
   border: 0;
-  border-radius: 12px;
-
-  background: #3b82f6;
-  color: white;
-
-  font-weight: 700;
-}
-
-.login-container button:hover {
+  border-radius: 10px;
   background: #2563eb;
+  color: #fff;
+  font-weight: 600;
 }
 
-.login-container p {
+button:hover {
+  filter: brightness(1.12);
+}
+
+.screen {
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.login-box {
+  width: 360px;
+  padding: 32px;
+  background: #101827;
+  border: 1px solid #26334a;
+  border-radius: 22px;
+  box-shadow: 0 20px 60px #0008;
+  text-align: center;
+}
+
+.login-box h1 {
+  color: #3b82f6;
+  margin-bottom: 25px;
+}
+
+.login-box input {
+  margin-bottom: 12px;
+}
+
+.login-box > div > button:not(.link-btn) {
+  width: 100%;
+}
+
+.login-box p {
   margin-top: 18px;
   color: #94a3b8;
 }
 
-.auth-message {
-  min-height: 24px;
-  margin-top: 15px;
+.link-btn {
+  padding: 0;
+  background: transparent;
+  color: #60a5fa;
 }
 
-/* =========================================================
-   MAIN
-========================================================= */
+.auth-message {
+  margin-top: 15px;
+  min-height: 20px;
+}
 
 #mainScreen {
-  display: flex;
   min-height: 100vh;
+  display: flex;
 }
 
-.sidebar {
-  width: 280px;
-  flex: 0 0 280px;
-
+#sidebar {
+  width: 270px;
   min-height: 100vh;
-
   padding: 20px;
-
-  background: #0b1424;
-
-  border-right: 1px solid #1e293b;
-}
-
-.content {
-  flex: 1;
-
-  min-width: 0;
-
-  padding: 30px;
-
-  overflow-x: hidden;
-}
-
-.view {
-  width: min(1100px, 100%);
-  margin: 0 auto;
-}
-
-.view h2 {
-  display: inline-block;
-
-  margin-bottom: 25px;
-
-  padding-bottom: 7px;
-
-  border-bottom: 2px solid #3b82f6;
-
-  font-size: 28px;
-}
-
-/* =========================================================
-   PROFILE SIDEBAR
-========================================================= */
-
-.profile-card {
-  padding: 15px;
-
-  margin-bottom: 25px;
-
-  border-radius: 18px;
-
-  background: #162238;
-
-  border: 1px solid #263750;
-}
-
-.profile-header {
+  background: #0b1220;
+  border-right: 1px solid #1d293d;
   display: flex;
-  gap: 12px;
-  align-items: center;
+  flex-direction: column;
 }
 
-.avatar-container {
+.brand {
+  font-size: 25px;
+  color: #3b82f6;
+  margin-bottom: 25px;
+}
+
+.profile-mini {
   position: relative;
-
-  width: 72px;
-  height: 72px;
-
-  flex: 0 0 72px;
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px;
+  margin-bottom: 20px;
+  background: #111b2d;
+  border-radius: 15px;
 }
 
-.main-avatar {
-  width: 72px;
-  height: 72px;
-
-  object-fit: cover;
-
+.profile-mini .avatar {
+  width: 55px;
+  height: 55px;
   border-radius: 50%;
-
+  object-fit: cover;
   border: 2px solid #3b82f6;
+}
 
+.profile-mini-info {
+  min-width: 0;
+  flex: 1;
+}
+
+.my-nick {
+  font-weight: 700;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+#myLevel {
+  font-size: 12px;
+  color: #94a3b8;
+  margin-top: 4px;
+}
+
+#mySticker {
+  display: inline;
+}
+
+#avatarBtn {
+  position: absolute;
+  right: 7px;
+  bottom: 7px;
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  border-radius: 50%;
   background: #1e293b;
 }
-
-.avatar-upload-btn {
-  position: absolute;
-
-  right: -4px;
-  bottom: -4px;
-
-  width: 25px;
-  height: 25px;
-
-  padding: 0;
-
-  border-radius: 50%;
-  border: 2px solid #0b1424;
-
-  background: #334155;
-  color: white;
-}
-
-.profile-info {
-  min-width: 0;
-}
-
-.nickname-container {
-  display: flex;
-  align-items: center;
-  gap: 5px;
-
-  margin-top: 6px;
-}
-
-#nickname {
-  max-width: 150px;
-
-  overflow: hidden;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-}
-
-.info-icon {
-  border: 0;
-  background: transparent;
-  color: #94a3b8;
-
-  padding: 2px;
-}
-
-.streak-container {
-  display: inline-block;
-
-  padding: 3px 9px;
-
-  border-radius: 20px;
-
-  background: #0f1a2c;
-
-  color: #fbbf24;
-}
-
-.logout-btn {
-  width: 100%;
-
-  margin-top: 14px;
-
-  padding: 9px;
-
-  border: 0;
-  border-radius: 9px;
-
-  background: #26364e;
-  color: white;
-}
-
-/* =========================================================
-   NAV
-========================================================= */
 
 nav {
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 7px;
 }
 
 .nav-btn {
   width: 100%;
-
-  padding: 12px 15px;
-
-  border: 0;
-  border-radius: 10px;
-
-  background: transparent;
-
-  color: #aab7ca;
-
   text-align: left;
-}
-
-.nav-btn:hover {
-  background: #162238;
-  color: white;
+  background: transparent;
+  color: #aebbd0;
 }
 
 .nav-btn.active {
-  background: #172b49;
+  background: #17243a;
   color: #60a5fa;
-
-  border-left: 3px solid #3b82f6;
 }
 
-/* =========================================================
-   PARTY
-========================================================= */
-
-.party-controls {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 8px;
-
-  margin-bottom: 20px;
+.admin-nav {
+  color: #f87171;
 }
 
-.party-controls input {
-  min-width: 170px;
+.logout-btn {
+  margin-top: auto;
+  background: #7f1d1d;
+}
+
+.content {
   flex: 1;
-
-  padding: 10px;
-
-  border: 1px solid #334155;
-  border-radius: 9px;
-
-  background: #111c2e;
-  color: white;
+  min-width: 0;
+  padding: 30px;
+  overflow-y: auto;
 }
 
-.party-controls button,
-.party-status button {
-  padding: 10px 14px;
+.view {
+  max-width: 1100px;
+  margin: auto;
+}
 
-  border: 0;
-  border-radius: 9px;
+.view h2 {
+  margin-bottom: 25px;
+}
 
-  background: #1e3a63;
-  color: white;
+.card {
+  background: #101827;
+  border: 1px solid #26334a;
+  border-radius: 16px;
+  padding: 18px;
+  margin-bottom: 20px;
 }
 
 .party-status {
-  margin-bottom: 12px;
+  font-size: 17px;
+  margin-bottom: 15px;
+}
+
+.party-actions {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.party-actions input {
+  width: 220px;
 }
 
 .party-members {
-  margin-bottom: 20px;
-
-  padding: 15px;
-
-  border-radius: 14px;
-
-  background: #111c2e;
-
-  border: 1px solid #263750;
-}
-
-.party-members h3 {
-  margin-bottom: 12px;
+  margin-top: 15px;
 }
 
 .party-member {
   display: flex;
-
   align-items: center;
-
   gap: 10px;
-
   padding: 8px;
-
-  border-bottom: 1px solid #243147;
+  background: #0b1220;
+  border-radius: 9px;
+  margin-top: 6px;
 }
 
-.party-member:last-child {
-  border-bottom: 0;
-}
-
-.mini-avatar {
-  width: 36px;
-  height: 36px;
-
-  object-fit: cover;
-
+.party-member img {
+  width: 35px;
+  height: 35px;
   border-radius: 50%;
-
-  border: 1px solid #3b82f6;
+  object-fit: cover;
 }
 
-/* =========================================================
-   MODES
-========================================================= */
-
-.modes-container {
+.modes {
   display: grid;
-
   grid-template-columns:
-    repeat(
-      auto-fit,
-      minmax(270px, 1fr)
-    );
-
+    repeat(3, minmax(0, 1fr));
   gap: 18px;
 }
 
 .mode-card {
-  padding: 20px;
-
+  background: #101827;
+  border: 1px solid #26334a;
   border-radius: 17px;
-
-  background: #111c2e;
-
-  border: 1px solid #263750;
+  padding: 20px;
 }
 
 .mode-card h3 {
-  margin-bottom: 16px;
-
+  margin-bottom: 18px;
   color: #60a5fa;
 }
 
 .mode-buttons {
-  display: grid;
-
-  grid-template-columns: 1fr 1fr;
-
+  display: flex;
   gap: 8px;
-
-  margin-bottom: 15px;
 }
 
 .mode-buttons button {
-  padding: 10px 5px;
-
-  border: 0;
-  border-radius: 9px;
-
-  background: #1d2b42;
-  color: white;
+  flex: 1;
+  background: #162238;
 }
 
-.mode-buttons button:hover {
-  background: #2563eb;
+.queue-info {
+  margin-top: 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  color: #94a3b8;
 }
 
-.queue-row {
-  display: grid;
-
-  grid-template-columns: 50px 1fr auto;
-
-  align-items: center;
-
-  gap: 7px;
-
-  margin-top: 8px;
-
-  padding: 9px;
-
-  border-radius: 9px;
-
-  background: #0a1424;
-
-  font-size: 13px;
-}
-
-.queue-row b {
+.queue-info b {
   color: #60a5fa;
 }
 
-.leave-queue-btn {
-  display: none;
-
-  padding: 4px 7px;
-
-  border: 0;
-  border-radius: 6px;
-
-  background: #7f1d1d;
-  color: white;
-
-  font-size: 11px;
+.leave-queue {
+  width: 100%;
+  margin-top: 12px;
+  background: #334155;
 }
 
-/* =========================================================
-   STATS
-========================================================= */
-
-.stats-grid {
+.profile-grid {
   display: grid;
-
   grid-template-columns:
-    repeat(
-      auto-fit,
-      minmax(270px, 1fr)
-    );
-
+    repeat(3, minmax(0, 1fr));
   gap: 15px;
+  margin-bottom: 20px;
 }
 
 .stat-card {
-  padding: 18px;
-
+  background: #101827;
+  border: 1px solid #26334a;
   border-radius: 15px;
-
-  background: #111c2e;
-
-  border: 1px solid #263750;
+  padding: 18px;
 }
 
 .stat-card h3 {
-  margin-bottom: 15px;
-
   color: #60a5fa;
+  margin-bottom: 12px;
 }
 
 .stat-row {
   display: flex;
-
   justify-content: space-between;
-
+  gap: 15px;
   padding: 8px 0;
-
-  border-bottom: 1px solid #263750;
+  border-bottom: 1px solid #202d42;
 }
 
-.change-nick-box {
-  margin-top: 20px;
-
-  padding: 18px;
-
-  border-radius: 15px;
-
-  background: #111c2e;
-
-  border: 1px solid #263750;
+.stat-row:last-child {
+  border-bottom: 0;
 }
 
-.change-nick-box input {
-  margin-top: 12px;
-
-  padding: 11px;
-
-  border: 1px solid #334155;
-
-  border-radius: 8px;
-
-  background: #0b1424;
-
-  color: white;
-}
-
-.change-nick-box button {
-  padding: 11px;
-
-  border: 0;
-
-  border-radius: 8px;
-
-  background: #2563eb;
-
-  color: white;
-}
-
-/* =========================================================
-   FRIENDS
-========================================================= */
-
-.friends-tabs {
+.friends-search {
   display: flex;
-
-  gap: 7px;
-
-  margin-bottom: 18px;
+  gap: 10px;
+  margin-bottom: 20px;
 }
 
-.friends-tab {
-  padding: 9px 13px;
-
-  border: 0;
-
-  border-radius: 8px;
-
-  background: #162238;
-
-  color: #aab7ca;
-}
-
-.friends-tab.active {
-  background: #2563eb;
-  color: white;
-}
-
-.friend-item {
-  display: flex;
-
-  align-items: center;
-
-  gap: 12px;
-
+.friend-card,
+.search-result,
+.admin-user,
+.report-card,
+.admin-match {
+  background: #101827;
+  border: 1px solid #26334a;
+  border-radius: 13px;
   padding: 12px;
-
-  margin-bottom: 8px;
-
-  border-radius: 12px;
-
-  background: #111c2e;
-
-  border: 1px solid #263750;
+  margin: 8px 0;
 }
 
-.friend-avatar {
-  width: 44px;
-  height: 44px;
+.friend-card,
+.search-result {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
 
+.friend-card img,
+.search-result img,
+.admin-user img {
+  width: 45px;
+  height: 45px;
   object-fit: cover;
-
   border-radius: 50%;
-
-  border: 1px solid #3b82f6;
 }
 
 .friend-info {
   flex: 1;
-
-  min-width: 0;
 }
-
-.friend-info strong {
-  display: block;
-
-  overflow: hidden;
-
-  text-overflow: ellipsis;
-
-  white-space: nowrap;
-}
-
-.friend-actions {
-  display: flex;
-
-  flex-wrap: wrap;
-
-  gap: 5px;
-}
-
-.friend-actions button {
-  padding: 7px 9px;
-
-  border: 0;
-
-  border-radius: 7px;
-
-  background: #26364e;
-
-  color: white;
-}
-
-.search-row {
-  display: flex;
-
-  gap: 8px;
-
-  margin-bottom: 12px;
-}
-
-.search-row input {
-  flex: 1;
-
-  padding: 11px;
-
-  border: 1px solid #334155;
-
-  border-radius: 9px;
-
-  background: #111c2e;
-
-  color: white;
-}
-
-/* =========================================================
-   CHAT
-========================================================= */
 
 .chat-messages {
-  height: 55vh;
-
-  min-height: 300px;
-
-  padding: 15px;
-
-  margin-bottom: 12px;
-
+  height: 500px;
   overflow-y: auto;
-
+  background: #0b1220;
+  border: 1px solid #26334a;
   border-radius: 15px;
-
-  background: #0b1424;
-
-  border: 1px solid #263750;
+  padding: 15px;
 }
 
 .chat-message {
   display: flex;
-
-  align-items: flex-start;
-
-  gap: 9px;
-
-  padding: 8px 0;
-
-  border-bottom: 1px solid #1d2a3e;
+  gap: 10px;
+  padding: 9px 0;
+  border-bottom: 1px solid #182235;
 }
 
-.chat-avatar {
-  width: 34px;
-  height: 34px;
-
-  flex: 0 0 34px;
-
-  object-fit: cover;
-
+.chat-message img {
+  width: 36px;
+  height: 36px;
   border-radius: 50%;
-
-  border: 1px solid #3b82f6;
+  object-fit: cover;
 }
 
-.chat-text {
-  flex: 1;
-
+.chat-message-content {
   min-width: 0;
-
-  word-break: break-word;
 }
 
 .chat-name {
-  color: #60a5fa;
-
   font-weight: 700;
+  color: #60a5fa;
 }
 
-.chat-date {
-  display: block;
-
-  color: #64748b;
-
-  font-size: 11px;
+.admin-prefix {
+  color: #ef4444;
+  font-weight: 800;
+  margin-right: 5px;
 }
 
-.chat-input {
+.chat-send {
   display: flex;
-
-  gap: 8px;
+  gap: 10px;
+  margin-top: 10px;
 }
 
-.chat-input input {
+.chat-send input {
   flex: 1;
-
-  padding: 13px;
-
-  border: 1px solid #334155;
-
-  border-radius: 10px;
-
-  background: #111c2e;
-
-  color: white;
 }
 
-.chat-input button {
-  padding: 0 18px;
-
-  border: 0;
-
-  border-radius: 10px;
-
-  background: #2563eb;
-
-  color: white;
+.top-tabs {
+  display: flex;
+  gap: 8px;
+  margin-bottom: 15px;
 }
 
-/* =========================================================
-   TOP
-========================================================= */
-
-.top-table {
-  width: 100%;
-
-  border-collapse: collapse;
-
-  overflow: hidden;
-
-  border-radius: 12px;
-}
-
-.top-table th,
-.top-table td {
-  padding: 12px;
-
-  text-align: left;
-
-  border-bottom: 1px solid #263750;
-}
-
-.top-table th {
+.top-mode {
   background: #162238;
+}
+
+.top-mode.active {
+  background: #2563eb;
 }
 
 .top-player {
   display: flex;
-
   align-items: center;
-
-  gap: 9px;
-}
-
-.top-avatar {
-  width: 38px;
-  height: 38px;
-
-  object-fit: cover;
-
-  border-radius: 50%;
-}
-
-/* =========================================================
-   CLAN
-========================================================= */
-
-.clan-card,
-.about-card {
-  padding: 22px;
-
-  border-radius: 16px;
-
-  background: #111c2e;
-
-  border: 1px solid #263750;
-}
-
-.clan-member {
-  display: flex;
-
-  align-items: center;
-
-  gap: 10px;
-
-  padding: 9px 0;
-
-  border-bottom: 1px solid #263750;
-}
-
-.clan-actions {
-  display: flex;
-
-  flex-wrap: wrap;
-
-  gap: 8px;
-
-  margin-top: 18px;
-}
-
-.clan-actions input {
-  padding: 10px;
-
-  border: 1px solid #334155;
-
-  border-radius: 8px;
-
-  background: #0b1424;
-
-  color: white;
-}
-
-.clan-actions button {
-  padding: 10px 13px;
-
-  border: 0;
-
-  border-radius: 8px;
-
-  background: #2563eb;
-
-  color: white;
-}
-
-/* =========================================================
-   ABOUT
-========================================================= */
-
-.about-card p {
-  margin-top: 12px;
-
-  color: #aab7ca;
-}
-
-.creator-card {
-  display: flex;
-
-  flex-direction: column;
-
-  gap: 9px;
-
-  margin-top: 25px;
-
-  padding: 18px;
-
+  gap: 12px;
+  background: #101827;
+  border: 1px solid #26334a;
   border-radius: 12px;
-
-  background: #0b1424;
+  padding: 10px;
+  margin-bottom: 8px;
 }
 
-/* =========================================================
-   MODALS
-========================================================= */
+.top-player img {
+  width: 45px;
+  height: 45px;
+  border-radius: 50%;
+  object-fit: cover;
+}
+
+.top-player-info {
+  flex: 1;
+}
+
+.top-elo {
+  color: #60a5fa;
+  font-weight: 800;
+}
 
 .modal {
   position: fixed;
-
   inset: 0;
-
-  z-index: 5000;
-
+  background: #000b;
+  backdrop-filter: blur(8px);
   display: flex;
-
-  align-items: center;
-
   justify-content: center;
-
+  align-items: center;
   padding: 15px;
-
-  background: rgba(0, 0, 0, .78);
-
-  backdrop-filter: blur(5px);
+  z-index: 1000;
 }
 
-.modal-content {
-  width: min(650px, 100%);
-
+.modal-box {
+  position: relative;
+  width: min(700px, 100%);
   max-height: 90vh;
-
   overflow-y: auto;
-
-  padding: 25px;
-
-  border-radius: 18px;
-
-  background: #162238;
-
+  background: #101827;
   border: 1px solid #334155;
+  border-radius: 20px;
+  padding: 25px;
+  box-shadow: 0 20px 80px #000;
 }
 
-.modal-content h2,
-.modal-content h3 {
-  margin-bottom: 15px;
-}
-
-.modal-close {
-  margin-top: 15px;
-
-  padding: 10px 15px;
-
-  border: 0;
-
-  border-radius: 8px;
-
+.close-modal {
+  position: absolute;
+  top: 12px;
+  right: 12px;
   background: #334155;
-
-  color: white;
 }
 
-.match-participant {
-  display: flex;
-
-  align-items: center;
-
-  gap: 10px;
-
-  padding: 9px;
-
-  margin-top: 7px;
-
-  border-radius: 10px;
-
-  background: #0b1424;
-}
-
-.match-avatar {
-  width: 42px;
-  height: 42px;
-
-  object-fit: cover;
-
-  border-radius: 50%;
-
-  border: 1px solid #3b82f6;
-}
-
-.match-timer {
-  margin: 20px 0;
-
+.big-timer {
   text-align: center;
-
-  font-size: 30px;
-
+  font-size: 55px;
   font-weight: 800;
-
   color: #60a5fa;
+  margin: 15px;
 }
 
-.match-buttons {
+.modal-buttons {
   display: flex;
-
-  gap: 8px;
-}
-
-.match-buttons button {
-  flex: 1;
-
-  padding: 12px;
-
-  border: 0;
-
-  border-radius: 9px;
-
-  color: white;
-}
-
-.accept-btn {
-  background: #16a34a;
-}
-
-.decline-btn {
-  background: #dc2626;
-}
-
-.team-box {
-  padding: 14px;
-
-  margin-top: 10px;
-
-  border-radius: 12px;
-
-  background: #0b1424;
-}
-
-.team-box h4 {
-  margin-bottom: 8px;
-
-  color: #60a5fa;
-}
-
-/* =========================================================
-   ADMIN
-========================================================= */
-
-.admin-user {
-  display: grid;
-
-  grid-template-columns: 1fr auto;
-
   gap: 10px;
+  margin-top: 20px;
+}
 
+.modal-buttons button {
+  flex: 1;
+}
+
+.success {
+  background: #15803d !important;
+}
+
+.danger {
+  background: #991b1b !important;
+}
+
+.teams {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 15px;
+  margin: 20px 0;
+}
+
+.team {
+  background: #0b1220;
+  border-radius: 12px;
+  padding: 12px;
+}
+
+.team-player {
+  display: flex;
   align-items: center;
-
-  padding: 10px 0;
-
-  border-bottom: 1px solid #263750;
-}
-
-.admin-actions {
-  display: flex;
-
-  flex-wrap: wrap;
-
-  gap: 5px;
-}
-
-.admin-actions button {
-  padding: 6px 8px;
-
-  border: 0;
-
-  border-radius: 6px;
-
-  background: #26364e;
-
-  color: white;
-}
-
-/* =========================================================
-   NOTIFICATIONS
-========================================================= */
-
-#notifications {
-  position: fixed;
-
-  right: 15px;
-  top: 15px;
-
-  z-index: 10000;
-
-  display: flex;
-
-  flex-direction: column;
-
   gap: 8px;
-
-  width: min(350px, calc(100vw - 30px));
+  padding: 7px;
+  background: #101827;
+  border-radius: 8px;
+  margin: 5px 0;
 }
 
-.notification {
-  padding: 12px 15px;
+.team-player img {
+  width: 38px;
+  height: 38px;
+  border-radius: 50%;
+  object-fit: cover;
+}
 
+.result-upload {
+  margin-top: 20px;
+  padding: 15px;
+  background: #0b1220;
+  border-radius: 12px;
+}
+
+.result-upload input {
+  margin: 12px 0;
+}
+
+.screenshot-preview {
+  display: inline-block;
+  margin: 8px;
+}
+
+.screenshot-preview img {
+  width: 180px;
+  max-height: 130px;
+  object-fit: cover;
+  border-radius: 9px;
+}
+
+.admin-match {
+  padding: 18px;
+}
+
+.admin-match h4 {
+  margin-bottom: 10px;
+}
+
+.admin-team {
+  padding: 10px;
+  background: #0b1220;
   border-radius: 10px;
-
-  background: #162238;
-
-  border-left: 4px solid #3b82f6;
-
-  box-shadow:
-    0 10px 30px rgba(0,0,0,.35);
+  margin: 8px 0;
 }
 
-.notification.success {
-  border-left-color: #22c55e;
+.admin-player {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin: 5px 0;
 }
 
-.notification.error {
-  border-left-color: #ef4444;
+.admin-player img {
+  width: 35px;
+  height: 35px;
+  border-radius: 50%;
+  object-fit: cover;
 }
 
-/* =========================================================
-   MOBILE
-========================================================= */
-
-.mobile-menu-btn {
-  display: none;
+.report-card {
+  padding: 15px;
 }
 
-@media (max-width: 800px) {
+.report-card .report-status {
+  color: #fbbf24;
+}
 
+.about-card a {
+  color: #60a5fa;
+}
+
+@media (max-width: 900px) {
+  #sidebar {
+    width: 220px;
+  }
+
+  .modes {
+    grid-template-columns: 1fr;
+  }
+
+  .profile-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 700px) {
   #mainScreen {
     display: block;
   }
 
-  .sidebar {
-    position: fixed;
-
-    z-index: 4000;
-
-    top: 0;
-    left: 0;
-    bottom: 0;
-
-    width: min(300px, 85vw);
-
-    transform: translateX(-105%);
-
-    transition: .2s;
-
-    box-shadow:
-      15px 0 40px rgba(0,0,0,.45);
+  #sidebar {
+    width: 100%;
+    min-height: auto;
+    border-right: 0;
+    border-bottom: 1px solid #1d293d;
   }
 
-  .sidebar.mobile-open {
-    transform: translateX(0);
+  nav {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
   }
 
   .content {
-    padding: 70px 12px 20px;
+    padding: 18px 12px;
   }
 
-  .mobile-menu-btn {
-    display: flex;
-
-    position: fixed;
-
-    z-index: 4500;
-
-    top: 12px;
-    left: 12px;
-
-    width: 45px;
-    height: 45px;
-
-    align-items: center;
-    justify-content: center;
-
-    border: 1px solid #334155;
-
-    border-radius: 12px;
-
-    background: #162238;
-
-    color: white;
-
-    font-size: 20px;
-  }
-
-  .login-container {
-    padding: 25px 18px;
-  }
-
-  .login-container h1 {
-    font-size: 34px;
-  }
-
-  .party-controls {
+  .friends-search,
+  .chat-send {
     flex-direction: column;
   }
 
-  .party-controls input {
+  .teams {
+    grid-template-columns: 1fr;
+  }
+
+  .party-actions {
+    flex-direction: column;
+  }
+
+  .party-actions input {
     width: 100%;
-  }
-
-  .queue-row {
-    grid-template-columns: 55px 1fr;
-  }
-
-  .leave-queue-btn {
-    grid-column: 1 / -1;
-  }
-
-  .friend-item {
-    align-items: flex-start;
-    flex-wrap: wrap;
-  }
-
-  .friend-actions {
-    width: 100%;
-    padding-left: 56px;
-  }
-
-  .chat-input {
-    flex-direction: column;
-  }
-
-  .chat-input button {
-    padding: 12px;
-  }
-
-  .match-buttons {
-    flex-direction: column;
-  }
-
-  .search-row {
-    flex-direction: column;
   }
 }

@@ -1,232 +1,262 @@
-const socket = io();
+"use strict";
+
+/* =========================================================
+   LEGEND PL CLIENT
+========================================================= */
+
+const socket = io({
+  transports: ["websocket", "polling"],
+  reconnection: true,
+  reconnectionAttempts: Infinity
+});
 
 let currentUser = null;
 let currentParty = null;
 let currentMatch = null;
 
-let queueState = {};
-
 let matchTimer = null;
+let currentTopMode = "1v1";
 
 const $ = id =>
   document.getElementById(id);
 
-/* =========================================================
-   HELPERS
-========================================================= */
-
-function escapeHtml(value) {
-  return String(value ?? '')
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#039;');
+function escapeHTML(value) {
+  return String(
+    value ?? ""
+  )
+    .replaceAll("&", "&amp;")
+    .replaceAll("<", "&lt;")
+    .replaceAll(">", "&gt;")
+    .replaceAll('"', "&quot;")
+    .replaceAll("'", "&#039;");
 }
 
-function text(value) {
-  return String(value ?? '');
+function avatar(user) {
+  return (
+    user?.avatar ||
+    "data:image/svg+xml;charset=UTF-8," +
+    encodeURIComponent(`
+      <svg xmlns="http://www.w3.org/2000/svg"
+           width="100"
+           height="100">
+        <rect width="100" height="100"
+              rx="50"
+              fill="#26334a"/>
+        <text x="50"
+              y="58"
+              text-anchor="middle"
+              fill="#94a3b8"
+              font-size="40">
+          ?
+        </text>
+      </svg>
+    `)
+  );
+}
+
+function notify(text) {
+  const el =
+    $("notification");
+
+  el.textContent = String(text);
+
+  el.className = "show";
+
+  clearTimeout(
+    el._timer
+  );
+
+  el._timer =
+    setTimeout(() => {
+      el.className = "";
+    }, 3000);
 }
 
 async function api(
   url,
-  method = 'GET',
-  body = null
+  options = {}
 ) {
-  try {
-    const options = {
-      method,
-      headers: {}
-    };
+  const response =
+    await fetch(
+      url,
+      options
+    );
 
-    if (body !== null) {
-      options.headers['Content-Type'] =
-        'application/json';
+  const data =
+    await response.json();
 
-      options.body =
-        JSON.stringify(body);
+  if (!response.ok) {
+    throw new Error(
+      data.message ||
+      "Ошибка сервера"
+    );
+  }
+
+  return data;
+}
+
+async function post(
+  url,
+  body
+) {
+  return api(
+    url,
+    {
+      method: "POST",
+
+      headers: {
+        "Content-Type":
+          "application/json"
+      },
+
+      body:
+        JSON.stringify(body)
     }
-
-    const response =
-      await fetch(url, options);
-
-    return await response.json();
-
-  } catch (err) {
-
-    console.error(err);
-
-    return {
-      success: false,
-      message:
-        'Ошибка соединения с сервером'
-    };
-  }
-}
-
-function avatar(user) {
-
-  if (
-    user &&
-    user.avatar &&
-    String(user.avatar).trim()
-  ) {
-    return user.avatar;
-  }
-
-  return 'data:image/svg+xml;charset=UTF-8,' +
-    encodeURIComponent(`
-      <svg xmlns="http://www.w3.org/2000/svg"
-           width="80"
-           height="80">
-        <rect width="80"
-              height="80"
-              rx="40"
-              fill="#263750"/>
-        <text x="40"
-              y="48"
-              text-anchor="middle"
-              fill="#94a3b8"
-              font-size="30">
-          ?
-        </text>
-      </svg>
-    `);
-}
-
-function showNotification(
-  message,
-  type = 'info'
-) {
-
-  let box =
-    $('notifications');
-
-  if (!box) {
-    box =
-      document.createElement('div');
-
-    box.id =
-      'notifications';
-
-    document.body.appendChild(box);
-  }
-
-  const item =
-    document.createElement('div');
-
-  item.className =
-    `notification ${type}`;
-
-  item.textContent =
-    String(message);
-
-  box.appendChild(item);
-
-  setTimeout(() => {
-    item.remove();
-  }, 4500);
+  );
 }
 
 /* =========================================================
-   LEVEL
+   SESSION
 ========================================================= */
 
-function getLevel(mmr) {
+function saveSession() {
+  if (!currentUser) return;
 
-  if (mmr >= 2000) return 10;
-  if (mmr >= 1800) return 9;
-  if (mmr >= 1600) return 8;
-  if (mmr >= 1400) return 7;
-  if (mmr >= 1250) return 6;
-  if (mmr >= 1100) return 5;
-  if (mmr >= 950) return 4;
-  if (mmr >= 800) return 3;
-  if (mmr >= 650) return 2;
+  localStorage.setItem(
+    "legendpl_user",
+    currentUser.id
+  );
+}
 
-  return 1;
+function clearSession() {
+  localStorage.removeItem(
+    "legendpl_user"
+  );
+}
+
+async function restoreSession() {
+  const id =
+    localStorage.getItem(
+      "legendpl_user"
+    );
+
+  if (!id) return;
+
+  try {
+    const data =
+      await api(
+        `/api/me?userId=${encodeURIComponent(id)}`
+      );
+
+    currentUser =
+      data.user;
+
+    currentParty =
+      data.party;
+
+    saveSession();
+
+    showMain();
+
+    renderEverything();
+
+    socket.emit(
+      "auth",
+      currentUser.id
+    );
+  } catch {
+    clearSession();
+  }
 }
 
 /* =========================================================
    AUTH
 ========================================================= */
 
-function showLogin() {
+$("showRegister").onclick =
+  () => {
+    $("loginForm").style.display =
+      "none";
 
-  $('loginForm').style.display =
-    'block';
+    $("registerForm").style.display =
+      "block";
+  };
 
-  $('registerForm').style.display =
-    'none';
-}
+$("showLogin").onclick =
+  () => {
+    $("registerForm").style.display =
+      "none";
 
-function showRegister() {
+    $("loginForm").style.display =
+      "block";
+  };
 
-  $('loginForm').style.display =
-    'none';
+$("loginBtn").onclick =
+  login;
 
-  $('registerForm').style.display =
-    'block';
-}
+$("registerBtn").onclick =
+  register;
 
 async function login() {
-
   const username =
-    $('loginUsername').value.trim();
+    $("loginUsername").value.trim();
 
   const password =
-    $('loginPassword').value;
+    $("loginPassword").value;
 
   if (!username || !password) {
-    $('authMessage').textContent =
-      'Введите логин и пароль';
+    $("authMessage").textContent =
+      "Введите логин и пароль.";
 
     return;
   }
 
-  $('authMessage').textContent =
-    'Выполняется вход...';
+  try {
+    const data =
+      await post(
+        "/api/login",
+        {
+          username,
+          password
+        }
+      );
 
-  const result =
-    await api(
-      '/api/login',
-      'POST',
-      {
-        username,
-        password
-      }
+    currentUser =
+      data.user;
+
+    saveSession();
+
+    showMain();
+
+    socket.emit(
+      "auth",
+      currentUser.id
     );
 
-  if (!result.success) {
+    await refreshMe();
 
-    $('authMessage').textContent =
-      result.message ||
-      'Ошибка входа';
-
-    return;
+    notify("Вход выполнен.");
+  } catch (err) {
+    $("authMessage").textContent =
+      err.message;
   }
-
-  await enterAccount(
-    result.userData
-  );
 }
 
 async function register() {
-
   const username =
-    $('regUsername').value.trim();
+    $("regUsername").value.trim();
 
   const password =
-    $('regPassword').value;
+    $("regPassword").value;
 
-  const confirm =
-    $('regPasswordConfirm').value;
+  const password2 =
+    $("regPassword2").value;
 
   const inGameNick =
-    $('regInGameNick').value.trim();
+    $("regGameNick").value.trim();
 
   const inGameId =
-    $('regInGameId').value.trim();
+    $("regGameId").value.trim();
 
   if (
     !username ||
@@ -234,23 +264,22 @@ async function register() {
     !inGameNick ||
     !inGameId
   ) {
-    $('authMessage').textContent =
-      'Заполните все поля';
+    $("authMessage").textContent =
+      "Заполните все поля.";
 
     return;
   }
 
-  if (password !== confirm) {
-    $('authMessage').textContent =
-      'Пароли не совпадают';
+  if (password !== password2) {
+    $("authMessage").textContent =
+      "Пароли не совпадают.";
 
     return;
   }
 
-  const result =
-    await api(
-      '/api/register',
-      'POST',
+  try {
+    await post(
+      "/api/register",
       {
         username,
         password,
@@ -259,1483 +288,1225 @@ async function register() {
       }
     );
 
-  $('authMessage').textContent =
-    result.message || '';
+    $("authMessage").textContent =
+      "Регистрация успешна. Теперь войдите.";
 
-  if (result.success) {
+    $("registerForm").style.display =
+      "none";
 
-    $('loginUsername').value =
-      username;
+    $("loginForm").style.display =
+      "block";
 
-    showLogin();
-  }
-}
-
-async function enterAccount(user) {
-
-  currentUser = user;
-
-  localStorage.setItem(
-    'userId',
-    user.id
-  );
-
-  $('loginScreen').style.display =
-    'none';
-
-  $('mainScreen').style.display =
-    'flex';
-
-  updateUI();
-
-  socket.emit(
-    'auth',
-    user.id
-  );
-
-  await restoreParty();
-
-  await loadFriends();
-
-  await loadTop();
-
-  await loadClan();
-
-  await loadChat();
-}
-
-async function tryAutoLogin() {
-
-  const id =
-    localStorage.getItem(
-      'userId'
-    );
-
-  if (!id) return;
-
-  const result =
-    await api(
-      `/api/user/${encodeURIComponent(id)}`
-    );
-
-  if (
-    result.success &&
-    result.userData
-  ) {
-    await enterAccount(
-      result.userData
-    );
-  } else {
-    localStorage.removeItem(
-      'userId'
-    );
+  } catch (err) {
+    $("authMessage").textContent =
+      err.message;
   }
 }
 
 /* =========================================================
-   UI
+   MAIN
 ========================================================= */
 
-function updateUI() {
+function showMain() {
+  $("loginScreen").style.display =
+    "none";
 
+  $("mainScreen").style.display =
+    "flex";
+}
+
+function showLogin() {
+  $("mainScreen").style.display =
+    "none";
+
+  $("loginScreen").style.display =
+    "flex";
+}
+
+async function refreshMe() {
   if (!currentUser) return;
 
-  $('nickname').textContent =
-    currentUser.inGameNick;
+  const data =
+    await api(
+      `/api/me?userId=${encodeURIComponent(
+        currentUser.id
+      )}`
+    );
 
-  $('avatar').src =
+  currentUser =
+    data.user;
+
+  currentParty =
+    data.party;
+
+  saveSession();
+
+  renderEverything();
+}
+
+function renderEverything() {
+  renderCurrentUser();
+  renderParty();
+  renderProfile();
+
+  if (
+    currentUser?.isAdmin
+  ) {
+    $("adminNavBtn").style.display =
+      "block";
+
+    $("adminStickerBox").style.display =
+      "block";
+  }
+}
+
+/* =========================================================
+   CURRENT USER
+========================================================= */
+
+function renderCurrentUser() {
+  if (!currentUser) return;
+
+  $("myAvatar").src =
     avatar(currentUser);
 
-  $('streakCount').textContent =
-    currentUser.stats.streak || 0;
+  $("myNick").textContent =
+    currentUser.inGameNick ||
+    "Игрок";
 
-  renderProfile();
-  renderHistory();
+  $("mySticker").textContent =
+    currentUser.sticker || "";
+
+  const elo =
+    currentUser.stats?.["1v1"]?.elo ||
+    100;
+
+  $("myLevel").textContent =
+    `Уровень ${getLevel(elo)}`;
 }
 
-function renderProfile() {
+function getLevel(elo) {
+  elo = Number(elo) || 100;
 
-  if (!currentUser) return;
+  if (elo >= 2001) return 10;
+  if (elo >= 1751) return 9;
+  if (elo >= 1531) return 8;
+  if (elo >= 1351) return 7;
+  if (elo >= 1201) return 6;
+  if (elo >= 1051) return 5;
+  if (elo >= 901) return 4;
+  if (elo >= 751) return 3;
+  if (elo >= 501) return 2;
 
-  const stats =
-    currentUser.stats;
-
-  $('profileHeader').innerHTML = `
-    <div class="stat-card">
-      <h3>${escapeHtml(currentUser.inGameNick)}</h3>
-
-      <div class="stat-row">
-        <span>Ник на сайте</span>
-        <strong>${escapeHtml(currentUser.username)}</strong>
-      </div>
-
-      <div class="stat-row">
-        <span>ID на сайте</span>
-        <strong>${currentUser.id}</strong>
-      </div>
-
-      <div class="stat-row">
-        <span>ID в игре</span>
-        <strong>${escapeHtml(currentUser.inGameId)}</strong>
-      </div>
-
-      <div class="stat-row">
-        <span>Общие матчи</span>
-        <strong>${stats.totalMatches}</strong>
-      </div>
-
-      <div class="stat-row">
-        <span>Победы</span>
-        <strong>${stats.totalWins}</strong>
-      </div>
-
-      <div class="stat-row">
-        <span>Поражения</span>
-        <strong>${stats.totalLosses}</strong>
-      </div>
-
-      <div class="stat-row">
-        <span>Стрик</span>
-        <strong>🔥 ${stats.streak}</strong>
-      </div>
-    </div>
-  `;
-
-  $('profileStats').innerHTML =
-    ['1v1', '2v2', '5v5']
-      .map(mode => {
-
-        const s =
-          stats[mode];
-
-        const kd =
-          s.deaths > 0
-            ? (
-              s.kills /
-              s.deaths
-            ).toFixed(2)
-            : s.kills.toFixed(2);
-
-        const winrate =
-          s.matches
-            ? Math.round(
-                s.wins /
-                s.matches *
-                100
-              )
-            : 0;
-
-        return `
-          <div class="stat-card">
-
-            <h3>${mode}</h3>
-
-            <div class="stat-row">
-              <span>Рейтинг (ELO)</span>
-              <strong>${s.mmr}</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>Уровень</span>
-              <strong>${getLevel(s.mmr)}</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>Матчи</span>
-              <strong>${s.matches}</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>Победы</span>
-              <strong>${s.wins}</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>Поражения</span>
-              <strong>${s.losses}</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>Winrate</span>
-              <strong>${winrate}%</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>Стрик</span>
-              <strong>${s.streak}</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>Лучший стрик</span>
-              <strong>${s.bestStreak}</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>K/D</span>
-              <strong>${kd}</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>Обычные победы</span>
-              <strong>${s.unrankedWins}</strong>
-            </div>
-
-            <div class="stat-row">
-              <span>Ранговые победы</span>
-              <strong>${s.rankedWins}</strong>
-            </div>
-
-          </div>
-        `;
-      })
-      .join('');
-}
-
-function renderHistory() {
-
-  const list =
-    currentUser?.stats?.matchHistory ||
-    [];
-
-  if (!list.length) {
-
-    $('matchList').innerHTML =
-      '<div class="stat-card">Матчей пока нет.</div>';
-
-    return;
-  }
-
-  $('matchList').innerHTML =
-    list.map(match => `
-      <div class="stat-card">
-        <strong>
-          ${escapeHtml(match.mode)}
-          ${match.ranked ? ' • Ранговый' : ' • Обычный'}
-        </strong>
-
-        <div class="stat-row">
-          <span>Карта</span>
-          <span>${escapeHtml(match.map)}</span>
-        </div>
-
-        <div class="stat-row">
-          <span>Результат</span>
-          <strong>${escapeHtml(match.result)}</strong>
-        </div>
-
-        <small>
-          ${escapeHtml(match.date)}
-        </small>
-      </div>
-    `)
-    .join('');
+  return 1;
 }
 
 /* =========================================================
    NAVIGATION
 ========================================================= */
 
-function setupNavigation() {
+document
+  .querySelectorAll(".nav-btn")
+  .forEach(button => {
 
-  const views = [
-    'play',
-    'profile',
-    'history',
-    'friends',
-    'chat',
-    'top',
-    'clan',
-    'about'
-  ];
+    button.onclick = () => {
+      switchView(
+        button.dataset.view
+      );
+    };
 
+  });
+
+function switchView(view) {
   document
-    .querySelectorAll('.nav-btn')
-    .forEach(button => {
-
-      button.addEventListener(
-        'click',
-        async () => {
-
-          const target =
-            button.dataset.view;
-
-          document
-            .querySelectorAll('.nav-btn')
-            .forEach(btn =>
-              btn.classList.remove(
-                'active'
-              )
-            );
-
-          button.classList.add(
-            'active'
-          );
-
-          for (
-            const view
-            of views
-          ) {
-
-            const element =
-              $(`${view}View`);
-
-            if (element) {
-              element.style.display =
-                view === target
-                  ? 'block'
-                  : 'none';
-            }
-          }
-
-          document
-            .querySelector(
-              '.sidebar'
-            )
-            ?.classList.remove(
-              'mobile-open'
-            );
-
-          if (target === 'friends') {
-            await loadFriends();
-          }
-
-          if (target === 'top') {
-            await loadTop();
-          }
-
-          if (target === 'clan') {
-            await loadClan();
-          }
-
-          if (target === 'chat') {
-            await loadChat();
-          }
-        }
+    .querySelectorAll(".nav-btn")
+    .forEach(btn => {
+      btn.classList.toggle(
+        "active",
+        btn.dataset.view === view
       );
     });
+
+  document
+    .querySelectorAll(".view")
+    .forEach(el => {
+      el.style.display =
+        "none";
+    });
+
+  const target =
+    $(`${view}View`);
+
+  if (target) {
+    target.style.display =
+      "block";
+  }
+
+  if (view === "friends") {
+    loadFriends();
+  }
+
+  if (view === "top") {
+    loadTop();
+  }
+
+  if (view === "clan") {
+    loadClan();
+  }
+
+  if (view === "admin") {
+    if (!currentUser?.isAdmin) {
+      notify(
+        "Нет доступа."
+      );
+
+      return;
+    }
+
+    loadAdmin();
+  }
 }
+
+/* =========================================================
+   AVATAR
+========================================================= */
+
+$("avatarBtn").onclick =
+  () =>
+    $("avatarInput").click();
+
+$("avatarInput").onchange =
+  async event => {
+
+    const file =
+      event.target.files[0];
+
+    if (!file) return;
+
+    const form =
+      new FormData();
+
+    form.append(
+      "avatar",
+      file
+    );
+
+    form.append(
+      "userId",
+      currentUser.id
+    );
+
+    try {
+      await api(
+        "/api/upload-avatar",
+        {
+          method: "POST",
+          body: form
+        }
+      );
+
+      await refreshMe();
+
+      notify(
+        "Аватар обновлён."
+      );
+
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+/* =========================================================
+   PROFILE
+========================================================= */
+
+function renderProfile() {
+  if (!currentUser) return;
+
+  const stats =
+    currentUser.stats;
+
+  $("profileContent").innerHTML =
+    `
+    <div class="stat-card">
+      <h3>Основное</h3>
+
+      <div class="stat-row">
+        <span>Ник</span>
+        <b>${escapeHTML(
+          currentUser.inGameNick
+        )}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>ID игры</span>
+        <b>${escapeHTML(
+          currentUser.inGameId
+        )}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>ID сайта</span>
+        <b>${escapeHTML(
+          currentUser.id
+        )}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>Логин</span>
+        <b>${escapeHTML(
+          currentUser.username
+        )}</b>
+      </div>
+    </div>
+
+    ${profileMode(
+      "1v1",
+      stats["1v1"]
+    )}
+
+    ${profileMode(
+      "2v2",
+      stats["2v2"]
+    )}
+
+    ${profileMode(
+      "5v5",
+      stats["5v5"]
+    )}
+  `;
+
+  $("adminSticker").value =
+    currentUser.sticker || "";
+}
+
+function profileMode(
+  mode,
+  stats
+) {
+  const kd =
+    stats.deaths > 0
+      ? (
+          stats.kills /
+          stats.deaths
+        ).toFixed(2)
+      : stats.kills;
+
+  return `
+    <div class="stat-card">
+
+      <h3>${mode}</h3>
+
+      <div class="stat-row">
+        <span>ELO</span>
+        <b>${stats.elo}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>Уровень</span>
+        <b>${getLevel(
+          stats.elo
+        )}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>Матчи</span>
+        <b>${stats.matches}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>Победы</span>
+        <b>${stats.wins}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>Поражения</span>
+        <b>${stats.losses}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>Стрик</span>
+        <b>${stats.streak}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>К/Д</span>
+        <b>${kd}</b>
+      </div>
+
+    </div>
+  `;
+}
+
+$("changeNickBtn").onclick =
+  async () => {
+
+    const newNick =
+      $("newNick").value.trim();
+
+    if (!newNick) {
+      notify(
+        "Введите новый ник."
+      );
+
+      return;
+    }
+
+    try {
+      const data =
+        await post(
+          "/api/change-nick",
+          {
+            userId:
+              currentUser.id,
+
+            newNick
+          }
+        );
+
+      currentUser =
+        data.user;
+
+      renderEverything();
+
+      $("newNick").value = "";
+
+      notify(
+        "Ник изменён."
+      );
+
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+/* =========================================================
+   ADMIN STICKER
+========================================================= */
+
+$("saveStickerBtn").onclick =
+  async () => {
+
+    try {
+      const data =
+        await post(
+          "/api/admin/sticker",
+          {
+            adminId:
+              currentUser.id,
+
+            sticker:
+              $("adminSticker")
+                .value
+                .trim()
+          }
+        );
+
+      currentUser =
+        data.user;
+
+      renderEverything();
+
+      notify(
+        "Стикер сохранён."
+      );
+
+    } catch (err) {
+      notify(err.message);
+    }
+  };
 
 /* =========================================================
    PARTY
 ========================================================= */
 
-async function restoreParty() {
-
-  if (!currentUser) return;
-
-  const result =
-    await api(
-      `/api/my-party?userId=${encodeURIComponent(currentUser.id)}`
-    );
-
-  if (
-    result.success &&
-    result.party
-  ) {
-
-    currentParty =
-      result.party;
-
-    renderParty();
-  }
-}
-
-async function createParty() {
-
-  const result =
-    await api(
-      '/api/create-party',
-      'POST',
-      {
-        leaderId:
-          currentUser.id
-      }
-    );
-
-  if (!result.success) {
-
-    if (result.party) {
-      currentParty =
-        result.party;
-
-      renderParty();
-    }
-
-    showNotification(
-      result.message,
-      'error'
-    );
-
-    return;
-  }
-
-  currentParty =
-    result.party;
-
-  renderParty();
-
-  showNotification(
-    `Пати создана. Код: ${currentParty.id}`,
-    'success'
-  );
-}
-
-async function joinParty() {
-
-  const code =
-    $('joinPartyCode')
-      .value
-      .trim()
-      .toUpperCase();
-
-  if (!code) return;
-
-  const result =
-    await api(
-      '/api/join-party',
-      'POST',
-      {
-        partyId: code,
-        userId: currentUser.id
-      }
-    );
-
-  if (!result.success) {
-
-    showNotification(
-      result.message,
-      'error'
-    );
-
-    return;
-  }
-
-  currentParty =
-    result.party;
-
-  renderParty();
-
-  showNotification(
-    'Вы вошли в пати',
-    'success'
-  );
-}
-
-async function leaveParty() {
-
-  if (!currentParty) return;
-
-  const result =
-    await api(
-      '/api/leave-party',
-      'POST',
-      {
-        partyId:
-          currentParty.id,
-
-        userId:
-          currentUser.id
-      }
-    );
-
-  if (result.success) {
-
-    currentParty = null;
-
-    renderParty();
-
-    showNotification(
-      'Вы вышли из пати',
-      'success'
-    );
-  }
-}
-
 function renderParty() {
+  const box =
+    $("partyMembers");
 
   if (!currentParty) {
+    $("partyStatus").textContent =
+      "Вы не состоите в пати";
 
-    $('partyStatus').innerHTML =
-      '';
+    box.innerHTML = "";
 
-    $('partyMembers').style.display =
-      'none';
+    $("createPartyBtn").style.display =
+      "block";
+
+    $("partyCodeInput").style.display =
+      "block";
+
+    $("joinPartyBtn").style.display =
+      "block";
+
+    $("leavePartyBtn").style.display =
+      "none";
 
     return;
   }
 
-  $('partyStatus').innerHTML = `
-    <div class="party-status">
-      Вы в пати.
-      Участников:
-      <strong>${currentParty.members.length}/5</strong>
+  $("partyStatus").innerHTML =
+    `Вы в пати · <b>${escapeHTML(
+      currentParty.code
+    )}</b>`;
 
-      <br>
+  $("createPartyBtn").style.display =
+    "none";
 
-      Код:
-      <strong>${escapeHtml(currentParty.id)}</strong>
+  $("partyCodeInput").style.display =
+    "none";
 
-      <button id="copyPartyBtn">
-        Копировать
-      </button>
+  $("joinPartyBtn").style.display =
+    "none";
 
-      <button id="leavePartyBtn">
-        Выйти
-      </button>
-    </div>
-  `;
+  $("leavePartyBtn").style.display =
+    "block";
 
-  $('copyPartyBtn')
-    .onclick = async () => {
+  box.innerHTML =
+    currentParty.members
+      .map(member => `
+        <div class="party-member">
 
-      await navigator.clipboard
-        ?.writeText(
-          currentParty.id
-        );
+          <img src="${avatar(
+            member
+          )}">
 
-      showNotification(
-        'Код скопирован',
-        'success'
-      );
-    };
+          <span>
+            ${escapeHTML(
+              member.inGameNick
+            )}
+          </span>
 
-  $('leavePartyBtn')
-    .onclick =
-      leaveParty;
+          ${
+            member.id ===
+            currentParty.leaderId
+              ? "<b>👑</b>"
+              : ""
+          }
 
-  $('partyMembers').style.display =
-    'block';
+          ${
+            member.id !==
+            currentUser.id
+              ? `
+                <button
+                  onclick="openPlayerProfile('${member.id}')"
+                >
+                  Профиль
+                </button>
+              `
+              : ""
+          }
 
-  const list =
-    $('partyMembersList');
-
-  list.innerHTML = '';
-
-  currentParty.members
-    .forEach(async userId => {
-
-      const result =
-        await api(
-          `/api/user/${encodeURIComponent(userId)}`
-        );
-
-      if (!result.success) return;
-
-      const user =
-        result.userData;
-
-      const div =
-        document.createElement('div');
-
-      div.className =
-        'party-member';
-
-      div.innerHTML = `
-        <img
-          src="${avatar(user)}"
-          class="mini-avatar"
-          data-profile-id="${user.id}"
-        >
-
-        <div style="flex:1;">
-          <strong>
-            ${escapeHtml(user.inGameNick)}
-          </strong>
-
-          <small>
-            ID: ${escapeHtml(user.inGameId)}
-          </small>
         </div>
-
-        ${
-          user.id !== currentUser.id
-            ? `
-              <button
-                class="add-party-friend"
-                data-user-id="${user.id}"
-              >
-                Добавить в друзья
-              </button>
-            `
-            : ''
-        }
-      `;
-
-      list.appendChild(div);
-    });
+      `)
+      .join("");
 }
+
+$("createPartyBtn").onclick =
+  async () => {
+
+    try {
+      const data =
+        await post(
+          "/api/create-party",
+          {
+            userId:
+              currentUser.id
+          }
+        );
+
+      currentParty =
+        data.party;
+
+      renderParty();
+
+      notify(
+        `Пати создана: ${currentParty.code}`
+      );
+
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+$("joinPartyBtn").onclick =
+  async () => {
+
+    const partyId =
+      $("partyCodeInput")
+        .value
+        .trim();
+
+    if (!partyId) {
+      notify(
+        "Введите код пати."
+      );
+
+      return;
+    }
+
+    try {
+      const data =
+        await post(
+          "/api/join-party",
+          {
+            userId:
+              currentUser.id,
+
+            partyId
+          }
+        );
+
+      currentParty =
+        data.party;
+
+      renderParty();
+
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+$("leavePartyBtn").onclick =
+  async () => {
+
+    if (!currentParty) return;
+
+    try {
+      await post(
+        "/api/leave-party",
+        {
+          userId:
+            currentUser.id,
+
+          partyId:
+            currentParty.id
+        }
+      );
+
+      currentParty =
+        null;
+
+      renderParty();
+
+    } catch (err) {
+      notify(err.message);
+    }
+  };
 
 /* =========================================================
    QUEUE
 ========================================================= */
 
-function updateQueueUI() {
+document
+  .querySelectorAll(".queue-btn")
+  .forEach(button => {
 
-  if (!currentUser) return;
+    button.onclick =
+      () => {
+
+        socket.emit(
+          "joinQueue",
+          {
+            mode:
+              button.dataset.mode,
+
+            ranked:
+              button.dataset.ranked ===
+              "true",
+
+            partyId:
+              currentParty?.id
+          }
+        );
+
+      };
+
+  });
+
+document
+  .querySelectorAll(".leave-queue")
+  .forEach(button => {
+
+    button.onclick =
+      () => {
+
+        socket.emit(
+          "leaveQueue",
+          {
+            mode:
+              button.dataset.mode,
+
+            ranked:
+              button.dataset.ranked ===
+              "true"
+          }
+        );
+
+      };
+
+  });
+
+socket.on(
+  "queueUpdate",
+  renderQueue
+);
+
+function renderQueue(data) {
+  if (!data) return;
 
   for (
-    const mode
-    of ['1v1', '2v2', '5v5']
+    const mode of [
+      "1v1",
+      "2v2",
+      "5v5"
+    ]
   ) {
 
-    for (
-      const ranked
-      of [false, true]
-    ) {
+    const normal =
+      data[mode]?.unranked || 0;
 
-      const key =
-        `${mode}_${ranked ? 'ranked' : 'unranked'}`;
+    const ranked =
+      data[mode]?.ranked || 0;
 
-      const queue =
-        queueState[key] || [];
+    const normalMax =
+      mode === "1v1"
+        ? 2
+        : mode === "2v2"
+          ? 4
+          : 10;
 
-      const needed =
-        mode === '1v1'
-          ? 2
-          : mode === '2v2'
-            ? 4
-            : 10;
+    $(
+      `queue-${mode}-unranked`
+    ).textContent =
+      `${normal}/${normalMax}`;
 
-      const count =
-        $(
-          `queue-count-${mode}-${ranked ? 'ranked' : 'unranked'}`
-        );
-
-      const status =
-        $(
-          `queue-status-${mode}-${ranked ? 'ranked' : 'unranked'}`
-        );
-
-      const leave =
-        document.querySelector(
-          `.leave-queue-btn[data-mode="${mode}"][data-ranked="${ranked}"]`
-        );
-
-      if (count) {
-        count.textContent =
-          `${queue.length}/${needed}`;
-      }
-
-      const inQueue =
-        queue.some(
-          item =>
-            item.userId ===
-            currentUser.id
-        );
-
-      if (status) {
-        status.textContent =
-          inQueue
-            ? 'В очереди'
-            : 'Не в очереди';
-      }
-
-      if (leave) {
-        leave.style.display =
-          inQueue
-            ? 'block'
-            : 'none';
-      }
-    }
+    $(
+      `queue-${mode}-ranked`
+    ).textContent =
+      `${ranked}/${normalMax}`;
   }
-}
-
-function joinQueue(
-  mode,
-  ranked
-) {
-
-  socket.emit(
-    'joinQueue',
-    {
-      mode,
-      ranked,
-      partyId:
-        currentParty?.id ||
-        null
-    }
-  );
-}
-
-function leaveQueue(
-  mode,
-  ranked
-) {
-
-  socket.emit(
-    'leaveQueue',
-    {
-      mode,
-      ranked
-    }
-  );
 }
 
 /* =========================================================
    MATCH FOUND
 ========================================================= */
 
-function closeMatchModal() {
+socket.on(
+  "matchFound",
+  data => {
 
-  const modal =
-    $('matchModal');
+    currentMatch = data;
 
-  if (modal) {
-    modal.remove();
-  }
-
-  if (matchTimer) {
-    clearInterval(
-      matchTimer
+    openMatchModal(
+      data
     );
-
-    matchTimer = null;
   }
-}
+);
 
-async function showMatchFound(match) {
+function openMatchModal(
+  match
+) {
+  $("matchModal").style.display =
+    "flex";
 
-  closeMatchModal();
-
-  currentMatch =
-    match;
-
-  const modal =
-    document.createElement('div');
-
-  modal.id =
-    'matchModal';
-
-  modal.className =
-    'modal';
-
-  modal.innerHTML = `
-    <div class="modal-content">
-
-      <h2>🎮 Матч найден!</h2>
-
+  $("matchInfo").innerHTML =
+    `
       <p>
-        Режим:
-        <strong>
-          ${escapeHtml(match.mode)}
-          ${match.ranked ? ' — Ранговый' : ' — Обычный'}
-        </strong>
+        <b>ID матча:</b>
+        ${escapeHTML(
+          match.matchId
+        )}
       </p>
 
       <p>
-        Карта:
-        <strong>
-          ${escapeHtml(match.map)}
-        </strong>
+        <b>Режим:</b>
+        ${escapeHTML(
+          match.mode
+        )}
       </p>
 
-      <div id="matchParticipants"></div>
+      <p>
+        <b>Карта:</b>
+        ${escapeHTML(
+          match.map
+        )}
+      </p>
 
-      <div class="match-timer">
-        <span id="matchTimer">
-          20
-        </span>
-        сек
-      </div>
+      <div class="teams">
 
-      <div class="match-buttons">
+        <div class="team">
+          ${match.participants
+            .slice(
+              0,
+              Math.ceil(
+                match.participants.length /
+                  2
+              )
+            )
+            .map(playerCard)
+            .join("")}
+        </div>
 
-        <button
-          id="acceptMatchBtn"
-          class="accept-btn"
-        >
-          Принять
-        </button>
+        <div class="team">
+          ${match.participants
+            .slice(
+              Math.ceil(
+                match.participants.length /
+                  2
+              )
+            )
+            .map(playerCard)
+            .join("")}
+        </div>
 
-        <button
-          id="declineMatchBtn"
-          class="decline-btn"
-        >
-          Отклонить
-        </button>
-
-      </div>
-
-    </div>
-  `;
-
-  document.body.appendChild(
-    modal
-  );
-
-  const participants =
-    $('matchParticipants');
-
-  for (
-    const id
-    of match.participants
-  ) {
-
-    const result =
-      await api(
-        `/api/user/${encodeURIComponent(id)}`
-      );
-
-    if (!result.success) continue;
-
-    const user =
-      result.userData;
-
-    const div =
-      document.createElement('div');
-
-    div.className =
-      'match-participant';
-
-    div.innerHTML = `
-      <img
-        src="${avatar(user)}"
-        class="match-avatar"
-        data-profile-id="${user.id}"
-      >
-
-      <div>
-        <strong>
-          ${escapeHtml(user.inGameNick)}
-        </strong>
-
-        <br>
-
-        <small>
-          ID: ${escapeHtml(user.inGameId)}
-        </small>
       </div>
     `;
 
-    participants.appendChild(
-      div
-    );
-  }
+  startMatchTimer(
+    Number(match.timeout) || 20
+  );
+}
 
-  let seconds = 20;
+function playerCard(
+  player
+) {
+  return `
+    <div
+      class="team-player"
+      onclick="openPlayerProfile('${escapeHTML(
+        player.id
+      )}')"
+    >
+
+      <img
+        src="${avatar(player)}"
+      >
+
+      <span>
+        ${escapeHTML(
+          player.inGameNick
+        )}
+      </span>
+
+    </div>
+  `;
+}
+
+function startMatchTimer(
+  seconds
+) {
+  clearInterval(
+    matchTimer
+  );
+
+  let left = seconds;
+
+  $("matchTimer")
+    .textContent = left;
 
   matchTimer =
     setInterval(() => {
 
-      seconds--;
+      left--;
 
-      const timer =
-        $('matchTimer');
+      $("matchTimer")
+        .textContent =
+        Math.max(
+          0,
+          left
+        );
 
-      if (timer) {
-        timer.textContent =
-          Math.max(
-            0,
-            seconds
-          );
-      }
-
-      if (seconds <= 0) {
+      if (left <= 0) {
         clearInterval(
           matchTimer
         );
-
-        matchTimer = null;
-
-        socket.emit(
-          'declineMatch',
-          {
-            matchId:
-              match.matchId
-          }
-        );
-
-        closeMatchModal();
       }
 
     }, 1000);
-
-  $('acceptMatchBtn')
-    .onclick = () => {
-
-      socket.emit(
-        'acceptMatch',
-        {
-          matchId:
-            match.matchId
-        }
-      );
-
-      $('acceptMatchBtn')
-        .disabled = true;
-
-      $('acceptMatchBtn')
-        .textContent =
-        'Ожидание остальных...';
-    };
-
-  $('declineMatchBtn')
-    .onclick = () => {
-
-      socket.emit(
-        'declineMatch',
-        {
-          matchId:
-            match.matchId
-        }
-      );
-
-      closeMatchModal();
-    };
 }
+
+$("acceptMatchBtn").onclick =
+  () => {
+
+    if (!currentMatch) return;
+
+    socket.emit(
+      "acceptMatch",
+      {
+        matchId:
+          currentMatch.matchId
+      }
+    );
+
+    $("acceptMatchBtn")
+      .disabled = true;
+  };
+
+$("declineMatchBtn").onclick =
+  () => {
+
+    if (!currentMatch) return;
+
+    socket.emit(
+      "declineMatch",
+      {
+        matchId:
+          currentMatch.matchId
+      }
+    );
+
+    closeMatchModal();
+  };
+
+socket.on(
+  "matchAcceptedUpdate",
+  data => {
+    notify(
+      `Приняли: ${data.accepted}/${data.total}`
+    );
+  }
+);
+
+socket.on(
+  "matchCancelled",
+  data => {
+
+    closeMatchModal();
+
+    notify(
+      data.reason ||
+      "Матч отменён."
+    );
+
+  }
+);
 
 /* =========================================================
    MATCH LOBBY
 ========================================================= */
 
-async function openMatchLobby(
+socket.on(
+  "matchLobby",
+  data => {
+
+    currentMatch =
+      data;
+
+    closeMatchModal();
+
+    openGameModal(
+      data
+    );
+  }
+);
+
+function closeMatchModal() {
+  clearInterval(
+    matchTimer
+  );
+
+  $("matchModal").style.display =
+    "none";
+
+  $("acceptMatchBtn")
+    .disabled = false;
+}
+
+function openGameModal(
   match
 ) {
+  $("gameModal").style.display =
+    "flex";
 
-  closeMatchModal();
+  $("gameMatchId").textContent =
+    `ID матча: ${match.matchId}`;
 
-  currentMatch =
-    match;
+  $("gameMap").textContent =
+    `Карта: ${match.map}`;
 
-  const old =
-    $('lobbyModal');
+  $("teamA").innerHTML =
+    match.teamA
+      .map(playerCard)
+      .join("");
 
-  old?.remove();
+  $("teamB").innerHTML =
+    match.teamB
+      .map(playerCard)
+      .join("");
 
-  const modal =
-    document.createElement('div');
-
-  modal.id =
-    'lobbyModal';
-
-  modal.className =
-    'modal';
-
-  modal.innerHTML = `
-    <div class="modal-content">
-
-      <h2>🎮 Матч начался</h2>
-
-      <p>
-        ${escapeHtml(match.mode)}
-        —
-        ${match.ranked ? 'Ранговый' : 'Обычный'}
-      </p>
-
-      <p>
-        Карта:
-        <strong>
-          ${escapeHtml(match.map)}
-        </strong>
-      </p>
-
-      <div class="team-box">
-        <h4>Команда A</h4>
-        <div id="teamA"></div>
-      </div>
-
-      <div class="team-box">
-        <h4>Команда B</h4>
-        <div id="teamB"></div>
-      </div>
-
-      <div
-        id="lobbyMessages"
-        class="chat-messages"
-        style="height:250px;margin-top:15px;"
-      ></div>
-
-      <div class="chat-input">
-
-        <input
-          id="lobbyInput"
-          placeholder="Сообщение..."
-        >
-
-        <button id="lobbySend">
-          Отправить
-        </button>
-
-      </div>
-
-      <div
-        class="team-box"
-        style="margin-top:15px;"
-      >
-
-        <strong>
-          Завершение матча
-        </strong>
-
-        <p style="margin-top:7px;">
-          После завершения выберите победившую команду.
-        </p>
-
-        <div class="match-buttons">
-
-          <button
-            id="winTeamA"
-            class="accept-btn"
-          >
-            Победа команды A
-          </button>
-
-          <button
-            id="winTeamB"
-            class="accept-btn"
-          >
-            Победа команды B
-          </button>
-
-        </div>
-
-      </div>
-
-    </div>
-  `;
-
-  document.body.appendChild(
-    modal
+  renderScreenshots(
+    match.screenshots || []
   );
-
-  await renderTeam(
-    'teamA',
-    match.teamA || []
-  );
-
-  await renderTeam(
-    'teamB',
-    match.teamB || []
-  );
-
-  $('lobbySend').onclick =
-    sendLobbyMessage;
-
-  $('lobbyInput')
-    .addEventListener(
-      'keydown',
-      e => {
-        if (e.key === 'Enter') {
-          sendLobbyMessage();
-        }
-      }
-    );
-
-  $('winTeamA').onclick =
-    () => finishMatch('A');
-
-  $('winTeamB').onclick =
-    () => finishMatch('B');
 }
 
-async function renderTeam(
-  elementId,
-  ids
-) {
+$("closeGameBtn").onclick =
+  () => {
+    $("gameModal").style.display =
+      "none";
+  };
 
-  const container =
-    $(elementId);
+$("uploadScreenshotBtn").onclick =
+  async () => {
 
-  if (!container) return;
+    const file =
+      $("screenshotInput")
+        .files[0];
 
-  container.innerHTML = '';
-
-  for (
-    const id
-    of ids
-  ) {
-
-    const result =
-      await api(
-        `/api/user/${encodeURIComponent(id)}`
+    if (!file) {
+      notify(
+        "Выберите скриншот."
       );
 
-    if (!result.success) continue;
-
-    const user =
-      result.userData;
-
-    const div =
-      document.createElement('div');
-
-    div.className =
-      'match-participant';
-
-    div.innerHTML = `
-      <img
-        src="${avatar(user)}"
-        class="match-avatar"
-        data-profile-id="${user.id}"
-      >
-
-      <strong>
-        ${escapeHtml(user.inGameNick)}
-      </strong>
-    `;
-
-    container.appendChild(
-      div
-    );
-  }
-}
-
-function sendLobbyMessage() {
-
-  const input =
-    $('lobbyInput');
-
-  const value =
-    input?.value.trim();
-
-  if (!value) return;
-
-  socket.emit(
-    'lobbyChat',
-    {
-      matchId:
-        currentMatch.matchId,
-
-      text:
-        value
+      return;
     }
-  );
 
-  input.value = '';
-}
+    if (!currentMatch) {
+      return;
+    }
 
-async function finishMatch(
-  winnerTeam
+    const form =
+      new FormData();
+
+    form.append(
+      "screenshot",
+      file
+    );
+
+    form.append(
+      "userId",
+      currentUser.id
+    );
+
+    try {
+      const data =
+        await api(
+          `/api/match/${encodeURIComponent(
+            currentMatch.matchId
+          )}/screenshot`,
+          {
+            method: "POST",
+            body: form
+          }
+        );
+
+      renderScreenshots([
+        ...(currentMatch.screenshots || []),
+        data.screenshot
+      ]);
+
+      currentMatch.screenshots ||= [];
+
+      currentMatch.screenshots.push(
+        data.screenshot
+      );
+
+      notify(
+        "Скриншот отправлен администратору."
+      );
+
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+function renderScreenshots(
+  screenshots
 ) {
+  $("uploadedScreenshots")
+    .innerHTML =
+      screenshots
+        .map(
+          shot => `
+            <div class="screenshot-preview">
 
-  if (!currentMatch) return;
+              <a
+                href="${shot.url}"
+                target="_blank"
+              >
+                <img
+                  src="${shot.url}"
+                >
+              </a>
 
-  const result =
-    await api(
-      '/api/finish-match',
-      'POST',
-      {
-        matchId:
-          currentMatch.matchId,
+              <div>
+                ${escapeHTML(
+                  shot.nickname
+                )}
+              </div>
 
-        winnerTeam
-      }
-    );
-
-  if (!result.success) {
-
-    showNotification(
-      result.message,
-      'error'
-    );
-
-    return;
-  }
-
-  document
-    .getElementById(
-      'lobbyModal'
-    )
-    ?.remove();
-
-  currentMatch =
-    null;
-
-  const fresh =
-    await api(
-      `/api/user/${currentUser.id}`
-    );
-
-  if (fresh.success) {
-
-    currentUser =
-      fresh.userData;
-
-    updateUI();
-  }
-
-  showNotification(
-    'Результат матча сохранён',
-    'success'
-  );
+            </div>
+          `
+        )
+        .join("");
 }
 
 /* =========================================================
-   FRIENDS
+   MATCH RESOLVED
 ========================================================= */
 
-async function loadFriends() {
+socket.on(
+  "matchResolved",
+  async data => {
 
-  if (!currentUser) return;
+    notify(
+      `Матч ${data.matchId} обработан администратором.`
+    );
 
-  $('friendsList').innerHTML =
-    '';
+    $("gameModal").style.display =
+      "none";
 
-  for (
-    const id
-    of currentUser.friends || []
-  ) {
-
-    const result =
-      await api(
-        `/api/user/${encodeURIComponent(id)}`
-      );
-
-    if (!result.success) continue;
-
-    const user =
-      result.userData;
-
-    const div =
-      document.createElement('div');
-
-    div.className =
-      'friend-item';
-
-    div.innerHTML = `
-      <img
-        src="${avatar(user)}"
-        class="friend-avatar"
-        data-profile-id="${user.id}"
-      >
-
-      <div class="friend-info">
-
-        <strong>
-          ${escapeHtml(user.inGameNick)}
-        </strong>
-
-        <small>
-          ID: ${escapeHtml(user.inGameId)}
-        </small>
-
-      </div>
-
-      <div class="friend-actions">
-
-        <button
-          class="friend-profile-btn"
-          data-user-id="${user.id}"
-        >
-          Профиль
-        </button>
-
-        <button
-          class="invite-btn"
-          data-user-id="${user.id}"
-        >
-          В пати
-        </button>
-
-        <button
-          class="remove-friend-btn"
-          data-user-id="${user.id}"
-        >
-          Удалить
-        </button>
-
-      </div>
-    `;
-
-    $('friendsList')
-      .appendChild(div);
+    await refreshMe();
   }
+);
 
-  await loadFriendRequests();
+/* =========================================================
+   PLAYER PROFILE
+========================================================= */
 
-  bindFriendButtons();
-}
-
-async function loadFriendRequests() {
-
-  $('friendRequests').innerHTML =
-    '';
-
-  for (
-    const id
-    of currentUser.pendingRequests || []
-  ) {
-
-    const result =
-      await api(
-        `/api/user/${encodeURIComponent(id)}`
-      );
-
-    if (!result.success) continue;
-
-    const user =
-      result.userData;
-
-    const div =
-      document.createElement('div');
-
-    div.className =
-      'friend-item';
-
-    div.innerHTML = `
-      <img
-        src="${avatar(user)}"
-        class="friend-avatar"
-      >
-
-      <div class="friend-info">
-        <strong>
-          ${escapeHtml(user.inGameNick)}
-        </strong>
-
-        <small>
-          ID: ${escapeHtml(user.inGameId)}
-        </small>
-      </div>
-
-      <div class="friend-actions">
-
-        <button
-          class="accept-friend-btn"
-          data-user-id="${user.id}"
-        >
-          Принять
-        </button>
-
-        <button
-          class="reject-friend-btn"
-          data-user-id="${user.id}"
-        >
-          Отклонить
-        </button>
-
-      </div>
-    `;
-
-    $('friendRequests')
-      .appendChild(div);
-  }
-
-  document
-    .querySelectorAll(
-      '.accept-friend-btn'
-    )
-    .forEach(btn => {
-
-      btn.onclick = () =>
-        acceptFriend(
-          btn.dataset.userId
-        );
-    });
-
-  document
-    .querySelectorAll(
-      '.reject-friend-btn'
-    )
-    .forEach(btn => {
-
-      btn.onclick = () =>
-        rejectFriend(
-          btn.dataset.userId
-        );
-    });
-}
-
-function bindFriendButtons() {
-
-  document
-    .querySelectorAll(
-      '.friend-profile-btn'
-    )
-    .forEach(btn => {
-
-      btn.onclick = () =>
-        showProfile(
-          btn.dataset.userId
-        );
-    });
-
-  document
-    .querySelectorAll(
-      '.invite-btn'
-    )
-    .forEach(btn => {
-
-      btn.onclick = () => {
-
-        if (!currentParty) {
-
-          showNotification(
-            'Сначала создайте пати',
-            'error'
-          );
-
-          return;
-        }
-
-        socket.emit(
-          'inviteToParty',
-          {
-            partyId:
-              currentParty.id,
-
-            targetUserId:
-              btn.dataset.userId
-          }
-        );
-
-        showNotification(
-          'Приглашение отправлено',
-          'success'
-        );
-      };
-    });
-
-  document
-    .querySelectorAll(
-      '.remove-friend-btn'
-    )
-    .forEach(btn => {
-
-      btn.onclick =
-        async () => {
-
-          const result =
-            await api(
-              '/api/remove-friend',
-              'POST',
-              {
-                userId:
-                  currentUser.id,
-
-                friendId:
-                  btn.dataset.userId
-              }
-            );
-
-          if (result.success) {
-
-            currentUser.friends =
-              currentUser.friends
-                .filter(
-                  id =>
-                    id !==
-                    btn.dataset.userId
-                );
-
-            await loadFriends();
-
-            showNotification(
-              'Друг удалён',
-              'success'
-            );
-          }
-        };
-    });
-}
-
-async function sendFriendRequest(
+async function openPlayerProfile(
   userId
 ) {
+  try {
+    const data =
+      await api(
+        `/api/user/${encodeURIComponent(
+          userId
+        )}`
+      );
 
-  const result =
-    await api(
-      '/api/send-friend-request',
-      'POST',
+    const user =
+      data.user;
+
+    const s =
+      user.stats;
+
+    $("playerProfile")
+      .innerHTML =
+      `
+      <div style="text-align:center">
+
+        <img
+          src="${avatar(user)}"
+          style="
+            width:100px;
+            height:100px;
+            border-radius:50%;
+            object-fit:cover;
+            border:2px solid #3b82f6;
+          "
+        >
+
+        <h2>
+          ${
+            user.isAdmin
+              ? '<span class="admin-prefix">ADMIN</span>'
+              : ""
+          }
+
+          ${escapeHTML(
+            user.inGameNick
+          )}
+
+          ${escapeHTML(
+            user.sticker || ""
+          )}
+        </h2>
+
+        <p>
+          ID игры:
+          ${escapeHTML(
+            user.inGameId
+          )}
+        </p>
+
+        <p>
+          ID сайта:
+          ${escapeHTML(
+            user.id
+          )}
+        </p>
+
+      </div>
+
+      <div class="profile-grid">
+
+        ${profileMode(
+          "1v1",
+          s["1v1"]
+        )}
+
+        ${profileMode(
+          "2v2",
+          s["2v2"]
+        )}
+
+        ${profileMode(
+          "5v5",
+          s["5v5"]
+        )}
+
+      </div>
+
+      ${
+        user.id !==
+        currentUser.id
+          ? `
+            <button
+              onclick="addFriend('${user.id}')"
+            >
+              Добавить в друзья
+            </button>
+
+            <button
+              onclick="reportPlayer('${user.id}')"
+              class="danger"
+            >
+              Пожаловаться
+            </button>
+          `
+          : ""
+      }
+
+      <br><br>
+
+      <button
+        id="playerCloseButton"
+        class="close-profile-btn"
+      >
+        Выйти
+      </button>
+    `;
+
+    $("playerModal").style.display =
+      "flex";
+
+    $("playerCloseButton").onclick =
+      () => {
+        $("playerModal").style.display =
+          "none";
+      };
+
+  } catch (err) {
+    notify(err.message);
+  }
+}
+
+window.openPlayerProfile =
+  openPlayerProfile;
+
+$("closePlayerModal").onclick =
+  () => {
+    $("playerModal").style.display =
+      "none";
+  };
+
+async function addFriend(
+  userId
+) {
+  try {
+    await post(
+      "/api/friend-request",
       {
         fromUserId:
           currentUser.id,
@@ -1745,619 +1516,501 @@ async function sendFriendRequest(
       }
     );
 
-  showNotification(
-    result.message ||
-      (
-        result.success
-          ? 'Заявка отправлена'
-          : 'Ошибка'
-      ),
-    result.success
-      ? 'success'
-      : 'error'
-  );
-}
-
-async function acceptFriend(
-  userId
-) {
-
-  const result =
-    await api(
-      '/api/accept-friend',
-      'POST',
-      {
-        userId:
-          currentUser.id,
-
-        friendId:
-          userId
-      }
+    notify(
+      "Заявка отправлена."
     );
 
-  if (result.success) {
-
-    currentUser.friends.push(
-      userId
-    );
-
-    currentUser.pendingRequests =
-      currentUser.pendingRequests
-        .filter(
-          id =>
-            id !== userId
-        );
-
-    await loadFriends();
-
-    showNotification(
-      'Заявка принята',
-      'success'
-    );
+  } catch (err) {
+    notify(err.message);
   }
 }
 
-async function rejectFriend(
+window.addFriend =
+  addFriend;
+
+async function reportPlayer(
   userId
 ) {
+  const reason =
+    prompt(
+      "Причина жалобы:"
+    );
 
-  const result =
-    await api(
-      '/api/reject-friend',
-      'POST',
+  if (!reason) return;
+
+  try {
+    await post(
+      "/api/report",
       {
-        userId:
+        reporterId:
           currentUser.id,
 
-        friendId:
-          userId
+        targetId:
+          userId,
+
+        reason
       }
     );
 
-  if (result.success) {
+    notify(
+      "Жалоба отправлена."
+    );
 
-    currentUser.pendingRequests =
-      currentUser.pendingRequests
-        .filter(
-          id =>
-            id !== userId
-        );
-
-    await loadFriends();
+  } catch (err) {
+    notify(err.message);
   }
 }
+
+window.reportPlayer =
+  reportPlayer;
 
 /* =========================================================
-   FRIEND SEARCH
+   FRIENDS
 ========================================================= */
 
-async function searchFriends() {
+$("friendSearchBtn").onclick =
+  searchFriends;
 
+async function searchFriends() {
   const q =
-    $('friendSearchInput')
+    $("friendSearchInput")
       .value
       .trim();
 
   if (!q) return;
 
-  const result =
-    await api(
-      `/api/search-users?q=${encodeURIComponent(q)}`
-    );
+  try {
+    const data =
+      await api(
+        `/api/search-users?q=${encodeURIComponent(
+          q
+        )}`
+      );
 
-  const box =
-    $('friendSearchResults');
+    $("friendSearchResults")
+      .innerHTML =
+      data.users
+        .map(
+          user => `
+            <div class="search-result">
 
-  box.innerHTML =
-    '';
+              <img src="${avatar(
+                user
+              )}">
 
-  if (
-    !result.success ||
-    !result.users.length
-  ) {
+              <div class="friend-info">
 
-    box.innerHTML =
-      '<div class="stat-card">Игроки не найдены.</div>';
+                <b>
+                  ${escapeHTML(
+                    user.inGameNick
+                  )}
+                </b>
 
-    return;
-  }
-
-  result.users
-    .filter(
-      user =>
-        user.id !==
-        currentUser.id
-    )
-    .forEach(user => {
-
-      const div =
-        document.createElement('div');
-
-      div.className =
-        'friend-item';
-
-      div.innerHTML = `
-        <img
-          src="${avatar(user)}"
-          class="friend-avatar"
-          data-profile-id="${user.id}"
-        >
-
-        <div class="friend-info">
-
-          <strong>
-            ${escapeHtml(user.inGameNick)}
-          </strong>
-
-          <small>
-            ID: ${escapeHtml(user.inGameId)}
-          </small>
-
-        </div>
-
-        <div class="friend-actions">
-
-          <button
-            class="search-profile"
-            data-user-id="${user.id}"
-          >
-            Профиль
-          </button>
-
-          <button
-            class="search-add"
-            data-user-id="${user.id}"
-          >
-            Добавить в друзья
-          </button>
-
-        </div>
-      `;
-
-      box.appendChild(div);
-    });
-
-  box
-    .querySelectorAll(
-      '.search-profile'
-    )
-    .forEach(btn => {
-
-      btn.onclick = () =>
-        showProfile(
-          btn.dataset.userId
-        );
-    });
-
-  box
-    .querySelectorAll(
-      '.search-add'
-    )
-    .forEach(btn => {
-
-      btn.onclick = () =>
-        sendFriendRequest(
-          btn.dataset.userId
-        );
-    });
-}
-
-/* =========================================================
-   PROFILE OF PLAYER
-========================================================= */
-
-async function showProfile(
-  userId
-) {
-
-  const result =
-    await api(
-      `/api/user/${encodeURIComponent(userId)}`
-    );
-
-  if (!result.success) {
-    showNotification(
-      'Игрок не найден',
-      'error'
-    );
-
-    return;
-  }
-
-  const user =
-    result.userData;
-
-  const modal =
-    document.createElement('div');
-
-  modal.className =
-    'modal';
-
-  modal.innerHTML = `
-    <div class="modal-content">
-
-      <div style="text-align:center;">
-
-        <img
-          src="${avatar(user)}"
-          style="
-            width:90px;
-            height:90px;
-            object-fit:cover;
-            border-radius:50%;
-            border:2px solid #3b82f6;
-          "
-        >
-
-        <h2 style="margin-top:12px;">
-          ${escapeHtml(user.inGameNick)}
-        </h2>
-
-        <p>
-          ID в игре:
-          ${escapeHtml(user.inGameId)}
-        </p>
-
-      </div>
-
-      <div class="stats-grid">
-
-        ${['1v1', '2v2', '5v5']
-          .map(mode => {
-
-            const s =
-              user.stats[mode];
-
-            return `
-              <div class="stat-card">
-
-                <h3>${mode}</h3>
-
-                <div class="stat-row">
-                  <span>ELO</span>
-                  <strong>${s.mmr}</strong>
-                </div>
-
-                <div class="stat-row">
-                  <span>Уровень</span>
-                  <strong>${getLevel(s.mmr)}</strong>
-                </div>
-
-                <div class="stat-row">
-                  <span>Матчи</span>
-                  <strong>${s.matches}</strong>
-                </div>
-
-                <div class="stat-row">
-                  <span>Победы</span>
-                  <strong>${s.wins}</strong>
-                </div>
-
-                <div class="stat-row">
-                  <span>Поражения</span>
-                  <strong>${s.losses}</strong>
-                </div>
-
-                <div class="stat-row">
-                  <span>Стрик</span>
-                  <strong>${s.streak}</strong>
-                </div>
-
-                <div class="stat-row">
-                  <span>K/D</span>
-                  <strong>
-                    ${
-                      s.deaths
-                        ? (
-                          s.kills /
-                          s.deaths
-                        ).toFixed(2)
-                        : s.kills
-                    }
-                  </strong>
-                </div>
+                <small>
+                  ID:
+                  ${escapeHTML(
+                    user.inGameId
+                  )}
+                </small>
 
               </div>
-            `;
-          })
-          .join('')}
 
-      </div>
+              <button
+                onclick="openPlayerProfile('${user.id}')"
+              >
+                Профиль
+              </button>
 
-      ${
-        user.id !== currentUser.id
-          ? `
-            <button
-              id="profileAddFriend"
-              style="
-                width:100%;
-                margin-top:15px;
-                padding:12px;
-                border:0;
-                border-radius:9px;
-                background:#2563eb;
-                color:white;
-              "
-            >
-              Добавить в друзья
-            </button>
+              <button
+                onclick="addFriend('${user.id}')"
+              >
+                Добавить
+              </button>
+
+            </div>
           `
-          : ''
-      }
+        )
+        .join("");
 
-      <button
-        class="modal-close"
-        id="closeProfile"
-      >
-        Закрыть
-      </button>
-
-    </div>
-  `;
-
-  document.body.appendChild(
-    modal
-  );
-
-  $('closeProfile')
-    .onclick = () =>
-      modal.remove();
-
-  if (
-    user.id !==
-    currentUser.id
-  ) {
-
-    $('profileAddFriend')
-      ?.addEventListener(
-        'click',
-        async () => {
-
-          await sendFriendRequest(
-            user.id
-          );
-
-          modal.remove();
-        }
-      );
+  } catch (err) {
+    notify(err.message);
   }
 }
+
+async function loadFriends() {
+  try {
+    const data =
+      await api(
+        `/api/friends?userId=${currentUser.id}`
+      );
+
+    $("friendsList")
+      .innerHTML =
+      data.friends.length
+        ? data.friends
+            .map(
+              friend => `
+                <div class="friend-card">
+
+                  <img
+                    src="${avatar(
+                      friend
+                    )}"
+                  >
+
+                  <div class="friend-info">
+
+                    <b>
+                      ${escapeHTML(
+                        friend.inGameNick
+                      )}
+                    </b>
+
+                  </div>
+
+                  <button
+                    onclick="openPlayerProfile('${friend.id}')"
+                  >
+                    Профиль
+                  </button>
+
+                </div>
+              `
+            )
+            .join("")
+        : "<p>Друзей пока нет.</p>";
+
+    $("friendRequests")
+      .innerHTML =
+      data.requests.length
+        ? data.requests
+            .map(
+              user => `
+                <div class="friend-card">
+
+                  <img
+                    src="${avatar(
+                      user
+                    )}"
+                  >
+
+                  <div class="friend-info">
+                    ${escapeHTML(
+                      user.inGameNick
+                    )}
+                  </div>
+
+                  <button
+                    onclick="acceptFriend('${user.id}')"
+                  >
+                    Принять
+                  </button>
+
+                  <button
+                    class="danger"
+                    onclick="rejectFriend('${user.id}')"
+                  >
+                    Отклонить
+                  </button>
+
+                </div>
+              `
+            )
+            .join("")
+        : "<p>Заявок нет.</p>";
+
+  } catch (err) {
+    notify(err.message);
+  }
+}
+
+async function acceptFriend(
+  friendId
+) {
+  try {
+    await post(
+      "/api/friend-accept",
+      {
+        userId:
+          currentUser.id,
+
+        friendId
+      }
+    );
+
+    loadFriends();
+
+  } catch (err) {
+    notify(err.message);
+  }
+}
+
+window.acceptFriend =
+  acceptFriend;
+
+async function rejectFriend(
+  friendId
+) {
+  try {
+    await post(
+      "/api/friend-reject",
+      {
+        userId:
+          currentUser.id,
+
+        friendId
+      }
+    );
+
+    loadFriends();
+
+  } catch (err) {
+    notify(err.message);
+  }
+}
+
+window.rejectFriend =
+  rejectFriend;
+
+socket.on(
+  "friendChanged",
+  loadFriends
+);
+
+socket.on(
+  "friendRequest",
+  () => {
+    notify(
+      "Новая заявка в друзья."
+    );
+
+    loadFriends();
+  }
+);
 
 /* =========================================================
    CHAT
 ========================================================= */
 
-function renderChatMessage(
-  message
-) {
+$("chatSendBtn").onclick =
+  sendChat;
 
-  if (!message) return;
-
-  const msg = {
-    userId:
-      text(message.userId),
-
-    username:
-      text(
-        message.username ||
-        message.inGameNick ||
-        'Игрок'
-      ),
-
-    text:
-      text(message.text),
-
-    avatar:
-      text(message.avatar),
-
-    date:
-      text(message.date)
+$("chatInput").onkeydown =
+  event => {
+    if (
+      event.key === "Enter"
+    ) {
+      sendChat();
+    }
   };
 
-  const div =
-    document.createElement('div');
-
-  div.className =
-    'chat-message';
-
-  div.innerHTML = `
-    <img
-      src="${avatar({
-        avatar: msg.avatar
-      })}"
-      class="chat-avatar"
-      data-profile-id="${escapeHtml(msg.userId)}"
-    >
-
-    <div class="chat-text">
-
-      <span class="chat-name">
-        ${escapeHtml(msg.username)}
-      </span>
-
-      <span>
-        :
-        ${escapeHtml(msg.text)}
-      </span>
-
-      <small class="chat-date">
-        ${escapeHtml(msg.date)}
-      </small>
-
-    </div>
-  `;
-
-  $('chatMessages')
-    .appendChild(div);
-
-  div
-    .querySelector(
-      '.chat-avatar'
-    )
-    ?.addEventListener(
-      'click',
-      () =>
-        showProfile(
-          msg.userId
-        )
-    );
-}
-
 function sendChat() {
+  const text =
+    $("chatInput")
+      .value
+      .trim();
 
-  const input =
-    $('chatInput');
-
-  const value =
-    input.value.trim();
-
-  if (!value) return;
+  if (!text) return;
 
   socket.emit(
-    'chatMessage',
-    value
+    "chatMessage",
+    text
   );
 
-  input.value = '';
+  $("chatInput").value =
+    "";
 }
 
-async function loadChat() {
+socket.on(
+  "chatHistory",
+  messages => {
 
-  const result =
-    await api(
-      '/api/chat-history'
+    $("chatMessages")
+      .innerHTML = "";
+
+    messages.forEach(
+      renderChatMessage
+    );
+  }
+);
+
+socket.on(
+  "chatMessage",
+  renderChatMessage
+);
+
+function renderChatMessage(
+  msg
+) {
+  if (!msg) return;
+
+  let text =
+    msg.text;
+
+  if (
+    typeof text === "object" &&
+    text !== null
+  ) {
+    text =
+      text.text ||
+      text.message ||
+      "";
+  }
+
+  const name =
+    msg.nickname ||
+    msg.inGameNick ||
+    msg.username ||
+    "Игрок";
+
+  const prefix =
+    msg.isAdmin
+      ? '<span class="admin-prefix">ADMIN</span>'
+      : "";
+
+  const sticker =
+    msg.sticker || "";
+
+  const html =
+    `
+      <div class="chat-message">
+
+        <img
+          src="${avatar(msg)}"
+        >
+
+        <div class="chat-message-content">
+
+          <div>
+            ${prefix}
+
+            <span class="chat-name">
+              ${escapeHTML(
+                name
+              )}
+            </span>
+
+            ${escapeHTML(
+              sticker
+            )}
+          </div>
+
+          <div>
+            ${escapeHTML(
+              String(text || "")
+            )}
+          </div>
+
+        </div>
+
+      </div>
+    `;
+
+  $("chatMessages")
+    .insertAdjacentHTML(
+      "beforeend",
+      html
     );
 
-  if (!result.success) return;
-
-  $('chatMessages')
-    .innerHTML = '';
-
-  result.messages.forEach(
-    renderChatMessage
-  );
+  $("chatMessages")
+    .scrollTop =
+    $("chatMessages")
+      .scrollHeight;
 }
 
 /* =========================================================
    TOP
 ========================================================= */
 
-async function loadTop() {
+document
+  .querySelectorAll(
+    ".top-mode"
+  )
+  .forEach(button => {
 
-  const result =
-    await api(
-      '/api/top-players'
-    );
+    button.onclick =
+      () => {
 
-  if (!result.success) return;
+        document
+          .querySelectorAll(
+            ".top-mode"
+          )
+          .forEach(
+            b =>
+              b.classList.remove(
+                "active"
+              )
+          );
 
-  const players =
-    result.players || [];
-
-  if (!players.length) {
-
-    $('topContent').innerHTML =
-      '<div class="stat-card">Пока нет игроков.</div>';
-
-    return;
-  }
-
-  $('topContent').innerHTML = `
-    <table class="top-table">
-
-      <thead>
-
-        <tr>
-          <th>#</th>
-          <th>Игрок</th>
-          <th>1x1</th>
-          <th>2x2</th>
-          <th>5x5</th>
-          <th>Общий ELO</th>
-        </tr>
-
-      </thead>
-
-      <tbody>
-
-        ${players
-          .map((user, index) => {
-
-            const total =
-              user.stats['1v1'].mmr +
-              user.stats['2v2'].mmr +
-              user.stats['5v5'].mmr;
-
-            return `
-              <tr>
-
-                <td>
-                  ${index + 1}
-                </td>
-
-                <td>
-
-                  <div class="top-player">
-
-                    <img
-                      src="${avatar(user)}"
-                      class="top-avatar"
-                    >
-
-                    <button
-                      style="
-                        background:none;
-                        border:0;
-                        color:#60a5fa;
-                      "
-                      data-top-profile="${user.id}"
-                    >
-                      ${escapeHtml(user.inGameNick)}
-                    </button>
-
-                  </div>
-
-                </td>
-
-                <td>
-                  ${user.stats['1v1'].mmr}
-                </td>
-
-                <td>
-                  ${user.stats['2v2'].mmr}
-                </td>
-
-                <td>
-                  ${user.stats['5v5'].mmr}
-                </td>
-
-                <td>
-                  <strong>
-                    ${total}
-                  </strong>
-                </td>
-
-              </tr>
-            `;
-          })
-          .join('')}
-
-      </tbody>
-
-    </table>
-  `;
-
-  document
-    .querySelectorAll(
-      '[data-top-profile]'
-    )
-    .forEach(btn => {
-
-      btn.onclick = () =>
-        showProfile(
-          btn.dataset.topProfile
+        button.classList.add(
+          "active"
         );
-    });
+
+        currentTopMode =
+          button.dataset.mode;
+
+        loadTop();
+      };
+
+  });
+
+async function loadTop() {
+  try {
+    const data =
+      await api(
+        `/api/top?mode=${currentTopMode}`
+      );
+
+    $("topList")
+      .innerHTML =
+      data.users
+        .map(
+          (user, index) => `
+            <div class="top-player">
+
+              <b>
+                #${index + 1}
+              </b>
+
+              <img
+                src="${avatar(
+                  user
+                )}"
+              >
+
+              <div class="top-player-info">
+
+                <b>
+                  ${
+                    user.isAdmin
+                      ? '<span class="admin-prefix">ADMIN</span>'
+                      : ""
+                  }
+
+                  ${escapeHTML(
+                    user.inGameNick
+                  )}
+                </b>
+
+                <div>
+                  Уровень
+                  ${user.level}
+                </div>
+
+              </div>
+
+              <div class="top-elo">
+                ${user.elo} ELO
+              </div>
+
+            </div>
+          `
+        )
+        .join("");
+
+  } catch (err) {
+    notify(err.message);
+  }
 }
 
 /* =========================================================
@@ -2365,1225 +2018,565 @@ async function loadTop() {
 ========================================================= */
 
 async function loadClan() {
-
-  const result =
-    await api(
-      `/api/clan-info?userId=${encodeURIComponent(currentUser.id)}`
-    );
-
-  if (
-    !result.success ||
-    !result.clan
-  ) {
-
-    $('clanContent').innerHTML = `
-      <div class="clan-card">
-
-        <h3>Вы не состоите в клане</h3>
-
-        <p style="margin-top:10px;">
-          Создайте свой клан или присоединитесь
-          к существующему.
-        </p>
-
-        <div class="clan-actions">
-
-          <input
-            id="clanTag"
-            maxlength="5"
-            placeholder="Тег"
-          >
-
-          <input
-            id="clanName"
-            maxlength="32"
-            placeholder="Название"
-          >
-
-          <button id="createClan">
-            Создать клан
-          </button>
-
-        </div>
-
-        <div class="clan-actions">
-
-          <input
-            id="joinClanId"
-            placeholder="ID клана"
-          >
-
-          <button id="joinClan">
-            Присоединиться
-          </button>
-
-        </div>
-
-      </div>
-    `;
-
-    $('createClan').onclick =
-      createClan;
-
-    $('joinClan').onclick =
-      joinClan;
-
-    return;
-  }
-
-  const clan =
-    result.clan;
-
-  $('clanContent').innerHTML = `
-    <div class="clan-card">
-
-      <h2>
-        [${escapeHtml(clan.tag)}]
-        ${escapeHtml(clan.name)}
-      </h2>
-
-      <p>
-        Участники:
-        ${clan.members.length}/${clan.maxMembers}
-      </p>
-
-      <p>
-        ID клана:
-        <strong>${clan.id}</strong>
-      </p>
-
-      <div style="margin-top:18px;">
-
-        ${clan.members
-          .map(member => `
-            <div class="clan-member">
-
-              <img
-                src="${avatar(member)}"
-                class="mini-avatar"
-                data-profile-id="${member.id}"
-              >
-
-              <button
-                style="
-                  background:none;
-                  border:0;
-                  color:#60a5fa;
-                "
-                data-clan-profile="${member.id}"
-              >
-                ${escapeHtml(member.inGameNick)}
-              </button>
-
-            </div>
-          `)
-          .join('')}
-
-      </div>
-
-      <button
-        id="leaveClan"
-        style="
-          margin-top:18px;
-          padding:10px 15px;
-          border:0;
-          border-radius:8px;
-          background:#7f1d1d;
-          color:white;
-        "
-      >
-        Покинуть клан
-      </button>
-
-    </div>
-  `;
-
-  $('leaveClan').onclick =
-    async () => {
-
-      const response =
-        await api(
-          '/api/leave-clan',
-          'POST',
-          {
-            userId:
-              currentUser.id
-          }
-        );
-
-      if (response.success) {
-        await loadClan();
-
-        const fresh =
-          await api(
-            `/api/user/${currentUser.id}`
-          );
-
-        if (fresh.success) {
-          currentUser =
-            fresh.userData;
-
-          updateUI();
-        }
-      }
-    };
-
-  document
-    .querySelectorAll(
-      '[data-clan-profile]'
-    )
-    .forEach(btn => {
-
-      btn.onclick = () =>
-        showProfile(
-          btn.dataset.clanProfile
-        );
-    });
-}
-
-async function createClan() {
-
-  const tag =
-    $('clanTag')
-      .value
-      .trim();
-
-  const name =
-    $('clanName')
-      .value
-      .trim();
-
-  const result =
-    await api(
-      '/api/create-clan',
-      'POST',
-      {
-        userId:
-          currentUser.id,
-
-        clanTag:
-          tag,
-
-        clanName:
-          name
-      }
-    );
-
-  showNotification(
-    result.message ||
-      (
-        result.success
-          ? 'Клан создан'
-          : 'Ошибка'
-      ),
-    result.success
-      ? 'success'
-      : 'error'
-  );
-
-  if (result.success) {
-    await loadClan();
-  }
-}
-
-async function joinClan() {
-
-  const clanId =
-    $('joinClanId')
-      .value
-      .trim();
-
-  const result =
-    await api(
-      '/api/join-clan',
-      'POST',
-      {
-        userId:
-          currentUser.id,
-
-        clanId
-      }
-    );
-
-  showNotification(
-    result.message ||
-      (
-        result.success
-          ? 'Вы вошли в клан'
-          : 'Ошибка'
-      ),
-    result.success
-      ? 'success'
-      : 'error'
-  );
-
-  if (result.success) {
-    await loadClan();
-  }
-}
-
-/* =========================================================
-   NICK
-========================================================= */
-
-async function changeNick() {
-
-  const nick =
-    $('newNickInput')
-      .value
-      .trim();
-
-  if (!nick) return;
-
-  const result =
-    await api(
-      '/api/change-nick',
-      'POST',
-      {
-        userId:
-          currentUser.id,
-
-        newNick:
-          nick
-      }
-    );
-
-  if (!result.success) {
-
-    showNotification(
-      result.message,
-      'error'
-    );
-
-    return;
-  }
-
-  currentUser =
-    result.userData;
-
-  updateUI();
-
-  $('newNickInput').value =
-    '';
-
-  showNotification(
-    'Ник изменён',
-    'success'
-  );
-}
-
-/* =========================================================
-   AVATAR
-========================================================= */
-
-async function uploadAvatar() {
-
-  const file =
-    $('avatarUpload')
-      .files[0];
-
-  if (!file) return;
-
-  if (!file.type.startsWith('image/')) {
-
-    showNotification(
-      'Можно загружать только изображения',
-      'error'
-    );
-
-    return;
-  }
-
-  const form =
-    new FormData();
-
-  form.append(
-    'avatar',
-    file
-  );
-
-  form.append(
-    'userId',
-    currentUser.id
-  );
-
   try {
-
-    const response =
-      await fetch(
-        '/api/upload-avatar',
-        {
-          method: 'POST',
-          body: form
-        }
+    const data =
+      await api(
+        `/api/clan?userId=${currentUser.id}`
       );
 
-    const result =
-      await response.json();
+    if (!data.clan) {
+      $("clanContent")
+        .innerHTML =
+        `
+          <h3>Вы не состоите в клане</h3>
 
-    if (!result.success) {
+          <p>
+            Система кланов уже подключена.
+          </p>
 
-      showNotification(
-        result.message ||
-          'Ошибка загрузки',
-        'error'
-      );
+          <p>
+            Создание клана можно расширить
+            через админ-панель.
+          </p>
+        `;
 
       return;
     }
 
-    currentUser.avatar =
-      result.avatarUrl;
+    $("clanContent")
+      .innerHTML =
+      `
+        <h3>
+          [${escapeHTML(
+            data.clan.tag
+          )}]
+          ${escapeHTML(
+            data.clan.name
+          )}
+        </h3>
 
-    currentUser.stats.avatar =
-      result.avatarUrl;
+        <p>
+          Участников:
+          ${data.clan.members.length}
+        </p>
 
-    $('avatar').src =
-      result.avatarUrl;
+        ${data.clan.members
+          .map(
+            member => `
+              <div class="party-member">
 
-    showNotification(
-      'Аватарка установлена',
-      'success'
-    );
+                <img
+                  src="${avatar(
+                    member
+                  )}"
+                >
+
+                ${escapeHTML(
+                  member.inGameNick
+                )}
+
+              </div>
+            `
+          )
+          .join("")}
+      `;
 
   } catch (err) {
-
-    showNotification(
-      'Не удалось загрузить аватарку',
-      'error'
-    );
+    notify(err.message);
   }
-
-  $('avatarUpload').value =
-    '';
 }
 
 /* =========================================================
-   ADMIN PANEL
+   ADMIN
 ========================================================= */
 
-async function openAdminPanel() {
-
-  const check =
-    await api(
-      `/api/check-admin?userId=${encodeURIComponent(currentUser.id)}`
-    );
-
-  if (!check.isAdmin) {
-
-    showNotification(
-      'У вас нет прав администратора',
-      'error'
-    );
-
+async function loadAdmin() {
+  if (!currentUser?.isAdmin) {
     return;
   }
 
-  const modal =
-    document.createElement('div');
+  try {
+    const stats =
+      await api(
+        `/api/admin/stats?adminId=${currentUser.id}`
+      );
 
-  modal.className =
-    'modal';
-
-  modal.innerHTML = `
-    <div class="modal-content">
-
-      <h2>⚙️ Админ-панель</h2>
-
-      <div id="adminUsers">
-        Загрузка...
-      </div>
-
-      <button
-        id="closeAdmin"
-        class="modal-close"
-      >
-        Закрыть
-      </button>
-
-    </div>
-  `;
-
-  document.body.appendChild(
-    modal
-  );
-
-  $('closeAdmin').onclick =
-    () => modal.remove();
-
-  const result =
-    await api(
-      `/api/admin/users?adminId=${encodeURIComponent(currentUser.id)}`
-    );
-
-  if (!result.success) {
-
-    $('adminUsers').textContent =
-      result.message;
-
-    return;
-  }
-
-  $('adminUsers').innerHTML =
-    result.users
-      .map(user => `
-        <div class="admin-user">
-
-          <div>
-
-            <strong>
-              ${escapeHtml(user.inGameNick)}
-            </strong>
-
-            <br>
-
-            <small>
-              ${escapeHtml(user.inGameId)}
-              • ID ${user.id}
-            </small>
-
-            <br>
-
-            ${
-              user.banned
-                ? '<small style="color:#ef4444;">БАН</small>'
-                : ''
-            }
-
-            ${
-              user.muted
-                ? '<small style="color:#f59e0b;">МУТ</small>'
-                : ''
-            }
-
-          </div>
-
-          <div class="admin-actions">
-
-            <button
-              data-admin-action="ban"
-              data-user-id="${user.id}"
-            >
-              Бан
-            </button>
-
-            <button
-              data-admin-action="mute"
-              data-user-id="${user.id}"
-            >
-              Мут
-            </button>
-
-            <button
-              data-admin-action="unban"
-              data-user-id="${user.id}"
-            >
-              Снять бан
-            </button>
-
-            <button
-              data-admin-action="unmute"
-              data-user-id="${user.id}"
-            >
-              Снять мут
-            </button>
-
-          </div>
-
+    $("adminStats")
+      .innerHTML =
+      `
+        <div class="stat-card">
+          <h3>Онлайн</h3>
+          <b>${stats.online}</b>
         </div>
-      `)
-      .join('');
 
-  document
-    .querySelectorAll(
-      '[data-admin-action]'
-    )
-    .forEach(btn => {
+        <div class="stat-card">
+          <h3>Пользователи</h3>
+          <b>${stats.users}</b>
+        </div>
 
-      btn.onclick =
-        () =>
-          adminAction(
-            btn.dataset.adminAction,
-            btn.dataset.userId
-          );
-    });
-}
+        <div class="stat-card">
+          <h3>Репорты</h3>
+          <b>${stats.reports}</b>
+        </div>
+      `;
 
-async function adminAction(
-  action,
-  targetUserId
-) {
+    await loadAdminMatches();
+    await loadAdminReports();
+    await loadAdminUsers();
 
-  const reason =
-    prompt(
-      'Причина:',
-      'Нарушение правил'
-    ) || '';
-
-  const duration =
-    prompt(
-      'Срок в часах:',
-      '24'
-    ) || '24';
-
-  const result =
-    await api(
-      '/api/admin-action',
-      'POST',
-      {
-        adminId:
-          currentUser.id,
-
-        targetUserId,
-
-        action,
-
-        reason,
-
-        durationHours:
-          Number(duration)
-      }
-    );
-
-  showNotification(
-    result.message ||
-      (
-        result.success
-          ? 'Готово'
-          : 'Ошибка'
-      ),
-    result.success
-      ? 'success'
-      : 'error'
-  );
-}
-
-/* =========================================================
-   EVENTS
-========================================================= */
-
-$('doLoginBtn')
-  .onclick =
-  login;
-
-$('doRegisterBtn')
-  .onclick =
-  register;
-
-$('showRegisterLink')
-  .onclick =
-  e => {
-    e.preventDefault();
-    showRegister();
-  };
-
-$('showLoginLink')
-  .onclick =
-  e => {
-    e.preventDefault();
-    showLogin();
-  };
-
-$('logoutBtn')
-  .onclick =
-  () => {
-
-    localStorage.removeItem(
-      'userId'
-    );
-
-    location.reload();
-  };
-
-$('createPartyBtn')
-  .onclick =
-  createParty;
-
-$('joinPartyBtn')
-  .onclick =
-  joinParty;
-
-$('chatSendBtn')
-  .onclick =
-  sendChat;
-
-$('chatInput')
-  .addEventListener(
-    'keydown',
-    e => {
-
-      if (e.key === 'Enter') {
-        sendChat();
-      }
-    }
-  );
-
-$('changeNickBtn')
-  .onclick =
-  changeNick;
-
-$('changeAvatarBtn')
-  .onclick =
-  () =>
-    $('avatarUpload').click();
-
-$('avatarUpload')
-  .onchange =
-  uploadAvatar;
-
-$('mobileMenuBtn')
-  .onclick =
-  () =>
-    document
-      .querySelector('.sidebar')
-      ?.classList.toggle(
-        'mobile-open'
-      );
-
-$('friendSearchBtn')
-  .onclick =
-  searchFriends;
-
-/* =========================================================
-   FRIEND TABS
-========================================================= */
-
-document
-  .querySelectorAll(
-    '.friends-tab'
-  )
-  .forEach(tab => {
-
-    tab.onclick =
-      async () => {
-
-        document
-          .querySelectorAll(
-            '.friends-tab'
-          )
-          .forEach(t =>
-            t.classList.remove(
-              'active'
-            )
-          );
-
-        tab.classList.add(
-          'active'
-        );
-
-        const type =
-          tab.dataset.tab;
-
-        $('friendsList')
-          .style.display =
-          type === 'friends'
-            ? 'block'
-            : 'none';
-
-        $('friendRequests')
-          .style.display =
-          type === 'requests'
-            ? 'block'
-            : 'none';
-
-        $('friendSearch')
-          .style.display =
-          type === 'search'
-            ? 'block'
-            : 'none';
-
-        if (type === 'friends') {
-          await loadFriends();
-        }
-
-        if (type === 'requests') {
-          await loadFriendRequests();
-        }
-      };
-  });
-
-/* =========================================================
-   QUEUE BUTTONS
-========================================================= */
-
-document
-  .querySelectorAll(
-    '.queue-mode-btn'
-  )
-  .forEach(btn => {
-
-    btn.onclick =
-      () => {
-
-        joinQueue(
-          btn.dataset.mode,
-          btn.dataset.ranked ===
-            'true'
-        );
-      };
-  });
-
-document
-  .querySelectorAll(
-    '.leave-queue-btn'
-  )
-  .forEach(btn => {
-
-    btn.onclick =
-      () => {
-
-        leaveQueue(
-          btn.dataset.mode,
-          btn.dataset.ranked ===
-            'true'
-        );
-      };
-  });
-
-/* =========================================================
-   PARTY / PROFILE CLICK DELEGATION
-========================================================= */
-
-document.addEventListener(
-  'click',
-  e => {
-
-    const profile =
-      e.target.closest(
-        '[data-profile-id]'
-      );
-
-    if (
-      profile &&
-      profile.dataset.profileId
-    ) {
-
-      showProfile(
-        profile.dataset.profileId
-      );
-    }
-
-    const addParty =
-      e.target.closest(
-        '.add-party-friend'
-      );
-
-    if (
-      addParty &&
-      addParty.dataset.userId
-    ) {
-
-      sendFriendRequest(
-        addParty.dataset.userId
-      );
-    }
+  } catch (err) {
+    notify(err.message);
   }
-);
+}
+
+async function loadAdminMatches() {
+  const data =
+    await api(
+      `/api/admin/matches?adminId=${currentUser.id}`
+    );
+
+  $("adminMatches")
+    .innerHTML =
+    data.matches
+      .map(
+        match => `
+          <div class="admin-match">
+
+            <h4>
+              Матч:
+              ${escapeHTML(
+                match.id
+              )}
+            </h4>
+
+            <p>
+              ${match.mode}
+              ·
+              ${
+                match.ranked
+                  ? "Ранговый"
+                  : "Обычный"
+              }
+            </p>
+
+            <div class="admin-team">
+
+              <b>Команда A</b>
+
+              ${match.teamA
+                .map(
+                  player => `
+                    <div class="admin-player">
+
+                      <img
+                        src="${avatar(
+                          player
+                        )}"
+                      >
+
+                      ${escapeHTML(
+                        player.inGameNick
+                      )}
+
+                    </div>
+                  `
+                )
+                .join("")}
+
+            </div>
+
+            <div class="admin-team">
+
+              <b>Команда B</b>
+
+              ${match.teamB
+                .map(
+                  player => `
+                    <div class="admin-player">
+
+                      <img
+                        src="${avatar(
+                          player
+                        )}"
+                      >
+
+                      ${escapeHTML(
+                        player.inGameNick
+                      )}
+
+                    </div>
+                  `
+                )
+                .join("")}
+
+            </div>
+
+            <h4>
+              Скриншоты
+            </h4>
+
+            ${
+              match.screenshots
+                ?.map(
+                  shot => `
+                    <div
+                      class="screenshot-preview"
+                    >
+
+                      <a
+                        href="${shot.url}"
+                        target="_blank"
+                      >
+
+                        <img
+                          src="${shot.url}"
+                        >
+
+                      </a>
+
+                      <div>
+                        ${escapeHTML(
+                          shot.nickname
+                        )}
+                      </div>
+
+                    </div>
+                  `
+                )
+                .join("") ||
+              "<p>Скриншотов пока нет.</p>"
+            }
+
+            ${
+              !match.resolved
+                ? `
+                  <div
+                    style="
+                      display:flex;
+                      gap:8px;
+                      margin-top:12px;
+                    "
+                  >
+
+                    <button
+                      class="success"
+                      onclick="resolveAdminMatch('${match.id}', 'A')"
+                    >
+                      Победа команды A
+                    </button>
+
+                    <button
+                      class="success"
+                      onclick="resolveAdminMatch('${match.id}', 'B')"
+                    >
+                      Победа команды B
+                    </button>
+
+                  </div>
+                `
+                : `
+                  <p>
+                    Матч уже обработан.
+                    Победитель:
+                    ${match.winnerTeam}
+                  </p>
+                `
+            }
+
+          </div>
+        `
+      )
+      .join("");
+}
+
+window.resolveAdminMatch =
+  async function (
+    matchId,
+    winnerTeam
+  ) {
+    if (
+      !confirm(
+        `Подтвердить победу команды ${winnerTeam}?`
+      )
+    ) {
+      return;
+    }
+
+    try {
+      await post(
+        `/api/admin/match/${encodeURIComponent(
+          matchId
+        )}/resolve`,
+        {
+          adminId:
+            currentUser.id,
+
+          winnerTeam
+        }
+      );
+
+      notify(
+        "Матч обработан. Победа и ELO выданы."
+      );
+
+      loadAdmin();
+
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+async function loadAdminReports() {
+  const data =
+    await api(
+      `/api/admin/reports?adminId=${currentUser.id}`
+    );
+
+  $("adminReports")
+    .innerHTML =
+    data.reports
+      .map(
+        report => `
+          <div class="report-card">
+
+            <b>
+              ${escapeHTML(
+                report.id
+              )}
+            </b>
+
+            <p>
+              От:
+              ${escapeHTML(
+                report.reporter?.inGameNick ||
+                "Игрок"
+              )}
+            </p>
+
+            <p>
+              На:
+              ${escapeHTML(
+                report.target?.inGameNick ||
+                "Игрок"
+              )}
+            </p>
+
+            <p>
+              Причина:
+              ${escapeHTML(
+                report.reason
+              )}
+            </p>
+
+            <p class="report-status">
+              Статус:
+              ${report.status}
+            </p>
+
+            ${
+              report.status === "open"
+                ? `
+                  <button
+                    onclick="closeReport('${report.id}')"
+                  >
+                    Закрыть репорт
+                  </button>
+                `
+                : ""
+            }
+
+          </div>
+        `
+      )
+      .join("");
+}
+
+window.closeReport =
+  async function (
+    reportId
+  ) {
+
+    try {
+      await post(
+        `/api/admin/report/${encodeURIComponent(
+          reportId
+        )}`,
+        {
+          adminId:
+            currentUser.id,
+
+          status:
+            "closed"
+        }
+      );
+
+      loadAdmin();
+
+    } catch (err) {
+      notify(err.message);
+    }
+  };
+
+async function loadAdminUsers() {
+  const data =
+    await api(
+      `/api/admin/users?adminId=${currentUser.id}`
+    );
+
+  $("adminUsers")
+    .innerHTML =
+    data.users
+      .map(
+        user => `
+          <div class="admin-user">
+
+            <img
+              src="${avatar(
+                user
+              )}"
+            >
+
+            <div>
+
+              <b>
+                ${
+                  user.isAdmin
+                    ? '<span class="admin-prefix">ADMIN</span>'
+                    : ""
+                }
+
+                ${escapeHTML(
+                  user.inGameNick
+                )}
+              </b>
+
+              <div>
+                ID:
+                ${escapeHTML(
+                  user.id
+                )}
+              </div>
+
+              <div>
+                ELO:
+                ${user.stats["1v1"].elo}
+              </div>
+
+            </div>
+
+          </div>
+        `
+      )
+      .join("");
+}
 
 /* =========================================================
    SOCKET
 ========================================================= */
 
 socket.on(
-  'connect',
+  "connect",
   () => {
 
     if (currentUser) {
       socket.emit(
-        'auth',
+        "auth",
         currentUser.id
       );
     }
+
   }
 );
 
 socket.on(
-  'queueUpdate',
-  queues => {
-
-    queueState =
-      queues || {};
-
-    updateQueueUI();
-  }
-);
-
-socket.on(
-  'queueError',
-  data => {
-
-    showNotification(
-      data?.message ||
-        'Ошибка очереди',
-      'error'
-    );
-  }
-);
-
-socket.on(
-  'matchFound',
-  match => {
-
-    showMatchFound(
-      match
-    );
-  }
-);
-
-socket.on(
-  'matchAcceptanceUpdate',
-  data => {
-
-    const modal =
-      $('matchModal');
-
-    if (!modal) return;
-
-    const timer =
-      $('matchTimer');
-
-    if (timer) {
-
-      timer.textContent =
-        `${data.accepted}/${data.total}`;
-    }
-  }
-);
-
-socket.on(
-  'matchCancelled',
-  data => {
-
-    closeMatchModal();
-
-    currentMatch =
-      null;
-
-    showNotification(
-      data?.reason ||
-        'Матч отменён',
-      'error'
-    );
-  }
-);
-
-socket.on(
-  'lobbyOpen',
-  match => {
-
-    openMatchLobby(
-      match
-    );
-  }
-);
-
-socket.on(
-  'lobbyMessage',
-  msg => {
-
-    const container =
-      $('lobbyMessages');
-
-    if (!container) return;
-
-    const div =
-      document.createElement('div');
-
-    div.className =
-      'chat-message';
-
-    div.innerHTML = `
-      <div class="chat-text">
-        <span class="chat-name">
-          ${escapeHtml(
-            msg.username ||
-            msg.from ||
-            'Игрок'
-          )}
-        </span>
-
-        :
-        ${escapeHtml(msg.text)}
-
-        <small class="chat-date">
-          ${escapeHtml(msg.date)}
-        </small>
-      </div>
-    `;
-
-    container.appendChild(
-      div
-    );
-
-    container.scrollTop =
-      container.scrollHeight;
-  }
-);
-
-socket.on(
-  'chatMessage',
-  msg => {
-
-    renderChatMessage(
-      msg
-    );
-
-    $('chatMessages')
-      .scrollTop =
-      $('chatMessages')
-        .scrollHeight;
-  }
-);
-
-socket.on(
-  'chatHistory',
-  history => {
-
-    $('chatMessages')
-      .innerHTML = '';
-
-    (history || [])
-      .forEach(
-        renderChatMessage
-      );
-  }
-);
-
-socket.on(
-  'privateMessage',
-  msg => {
-
-    showNotification(
-      `Новое сообщение от игрока`,
-      'info'
-    );
-  }
-);
-
-socket.on(
-  'partyUpdate',
+  "partyUpdate",
   party => {
 
     currentParty =
       party;
 
     renderParty();
+
   }
 );
 
 socket.on(
-  'partyInvite',
-  invite => {
-
-    const accept =
-      confirm(
-        `${invite.fromName} приглашает вас в пати.\n\nПринять?`
-      );
-
-    if (accept) {
-
-      socket.emit(
-        'acceptPartyInvite',
-        {
-          partyId:
-            invite.partyId
-        }
-      );
-    }
-  }
-);
-
-socket.on(
-  'friendRequest',
-  data => {
-
-    if (!currentUser) return;
+  "userUpdated",
+  user => {
 
     if (
-      !currentUser.pendingRequests
-        .includes(data.from)
+      currentUser &&
+      String(user.id) ===
+        String(currentUser.id)
     ) {
-
-      currentUser.pendingRequests
-        .push(data.from);
-    }
-
-    showNotification(
-      `Новая заявка в друзья от ${data.fromName}`,
-      'info'
-    );
-
-    loadFriends();
-  }
-);
-
-socket.on(
-  'friendAdded',
-  friendId => {
-
-    if (!currentUser) return;
-
-    if (
-      !currentUser.friends
-        .includes(friendId)
-    ) {
-
-      currentUser.friends
-        .push(friendId);
-    }
-
-    loadFriends();
-  }
-);
-
-socket.on(
-  'statsUpdated',
-  stats => {
-
-    if (!currentUser) return;
-
-    currentUser.stats =
-      stats;
-
-    updateUI();
-  }
-);
-
-socket.on(
-  'muted',
-  data => {
-
-    showNotification(
-      `Мут до ${new Date(data.until).toLocaleString()}. ${data.reason || ''}`,
-      'error'
-    );
-  }
-);
-
-socket.on(
-  'banned',
-  data => {
-
-    showNotification(
-      `Вы заблокированы до ${new Date(data.until).toLocaleString()}`,
-      'error'
-    );
-
-    localStorage.removeItem(
-      'userId'
-    );
-
-    setTimeout(
-      () => location.reload(),
-      1500
-    );
-  }
-);
-
-socket.on(
-  'matchFinished',
-  async () => {
-
-    const fresh =
-      await api(
-        `/api/user/${currentUser.id}`
-      );
-
-    if (fresh.success) {
 
       currentUser =
-        fresh.userData;
+        user;
 
-      updateUI();
+      renderEverything();
     }
 
-    showNotification(
-      'Статистика обновлена',
-      'success'
+  }
+);
+
+socket.on(
+  "chatError",
+  data => {
+    notify(
+      data.message ||
+      "Ошибка чата."
     );
   }
 );
 
-/* =========================================================
-   ADMIN BUTTON
-========================================================= */
+socket.on(
+  "screenshotAdded",
+  data => {
 
-async function setupAdminButton() {
+    if (
+      currentMatch &&
+      currentMatch.matchId ===
+        data.matchId
+    ) {
 
-  if (!currentUser) return;
+      currentMatch.screenshots ||=
+        [];
 
-  const result =
-    await api(
-      `/api/check-admin?userId=${encodeURIComponent(currentUser.id)}`
-    );
+      currentMatch.screenshots.push(
+        data.screenshot
+      );
 
-  if (!result.isAdmin) return;
+      renderScreenshots(
+        currentMatch.screenshots
+      );
+    }
 
-  if ($('adminButton')) return;
-
-  const btn =
-    document.createElement('button');
-
-  btn.id =
-    'adminButton';
-
-  btn.textContent =
-    '⚙️ Админ-панель';
-
-  btn.style.cssText = `
-    position:fixed;
-    right:18px;
-    bottom:18px;
-    z-index:4500;
-    padding:12px 16px;
-    border:0;
-    border-radius:10px;
-    background:#2563eb;
-    color:white;
-    font-weight:700;
-    box-shadow:0 8px 25px rgba(0,0,0,.35);
-  `;
-
-  btn.onclick =
-    openAdminPanel;
-
-  document.body.appendChild(
-    btn
-  );
-}
-
-/* =========================================================
-   AFTER LOGIN PATCH
-========================================================= */
-
-const oldEnterAccount =
-  enterAccount;
-
-/*
-  После авторизации проверяем админские права.
-*/
-
-async function finishInitialization() {
-
-  setupNavigation();
-
-  if (currentUser) {
-    await setupAdminButton();
   }
-}
+);
 
 /* =========================================================
-   INIT
+   LOGOUT
 ========================================================= */
 
-(async () => {
+$("logoutBtn").onclick =
+  () => {
 
-  setupNavigation();
+    clearSession();
 
-  await tryAutoLogin();
+    currentUser =
+      null;
 
-  if (currentUser) {
-    await setupAdminButton();
-  }
+    currentParty =
+      null;
 
-})();
+    currentMatch =
+      null;
+
+    showLogin();
+  };
+
+/* =========================================================
+   START
+========================================================= */
+
+restoreSession();
