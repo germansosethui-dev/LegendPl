@@ -86,7 +86,7 @@ const socketUsers = {};
 ========================================================= */
 
 const ADMIN_LOGINS = [
-  "ыж"
+  "ыж1"
 ];
 
 const MODES = {
@@ -2594,6 +2594,8 @@ app.get("/api/top", (req, res) => {
 
 const PORT =
   process.env.PORT || 3000;
+
+app.get("/api/health", (req, res) => { res.json({ success: true, version: "2026.10.02-fix1", users: Object.keys(users).length }); });
 
 server.listen(PORT, () => {
   console.log(
