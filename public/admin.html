@@ -6,38 +6,368 @@
 <title>Legend Pl — Админ</title>
 <link rel="stylesheet" href="/styles.css">
 <style>
-.admin-page{min-height:100dvh;padding:18px}.admin-shell{max-width:1200px;margin:auto}.admin-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px}.admin-head h1{font-size:25px}.admin-head p,.muted{color:#8fa1ba;font-size:13px}.admin-tabs{display:flex;gap:8px;overflow:auto;margin-bottom:15px}.admin-tab{white-space:nowrap;background:#162238}.admin-tab.active{background:#2563eb}.admin-section{display:none}.admin-section.active{display:block}.admin-card{background:rgba(15,23,42,.84);border:1px solid rgba(96,165,250,.18);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 18px 60px rgba(0,0,0,.35);backdrop-filter:blur(14px)}.admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.admin-stat{padding:15px;border:1px solid rgba(96,165,250,.14);border-radius:12px;background:#0b1220}.admin-stat span{display:block;color:#8fa1ba;font-size:12px}.admin-stat b{font-size:24px;color:#60a5fa}.admin-player{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(96,165,250,.1)}.admin-player:last-child{border-bottom:0}.admin-player img{width:42px;height:42px;border-radius:50%;object-fit:cover}.admin-player-info{flex:1;min-width:0}.admin-player-actions{display:flex;gap:7px;flex-wrap:wrap}.match-meta{color:#8fa1ba;font-size:13px;line-height:1.6}.screens{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.screens img{width:170px;height:115px;object-fit:cover;border-radius:10px;border:1px solid rgba(96,165,250,.2)}.elo-grid{display:grid;grid-template-columns:1fr 110px;gap:7px;align-items:center;margin-top:10px}.elo-grid input{width:110px}.team-box{padding:10px;background:#0b1220;border:1px solid rgba(96,165,250,.12);border-radius:12px;margin-top:10px}.result-actions{display:flex;gap:8px;margin-top:12px}.result-actions button{flex:1}.dialog-back{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000b;backdrop-filter:blur(8px);z-index:3000;padding:12px}.dialog-back.open{display:flex}.dialog{width:min(460px,100%);background:#101827;border:1px solid rgba(96,165,250,.25);border-radius:18px;padding:20px;box-shadow:0 25px 90px #000}.dialog h3{margin-bottom:8px}.dialog p{color:#8fa1ba;margin-bottom:14px}.dialog-actions{display:flex;gap:8px;margin-top:12px}.dialog-actions button{flex:1}.danger{background:#991b1b!important}.success{background:#15803d!important}@media(max-width:700px){.admin-page{padding:10px}.admin-head{align-items:flex-start;flex-direction:column}.admin-stats{grid-template-columns:1fr 1fr}.result-actions,.dialog-actions{flex-direction:column}.admin-player{align-items:flex-start;flex-wrap:wrap}.admin-player-actions{width:100%}.screens img{width:135px;height:95px}.elo-grid{grid-template-columns:1fr 90px}.elo-grid input{width:90px}}
+.admin-page{min-height:100dvh;padding:18px}.admin-shell{max-width:1200px;margin:auto}.admin-head{display:flex;justify-content:space-between;gap:12px;align-items:center;margin-bottom:18px}.admin-head h1{font-size:25px}.admin-head p,.muted{color:#8fa1ba;font-size:13px}.admin-tabs{display:flex;gap:8px;overflow:auto;margin-bottom:15px}.admin-tab{white-space:nowrap;background:#162238}.admin-tab.active{background:#2563eb}.admin-section{display:none}.admin-section.active{display:block}.admin-card{background:rgba(15,23,42,.84);border:1px solid rgba(96,165,250,.18);border-radius:16px;padding:16px;margin-bottom:14px;box-shadow:0 18px 60px rgba(0,0,0,.35);backdrop-filter:blur(14px)}.admin-stats{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.admin-stat{padding:15px;border:1px solid rgba(96,165,250,.14);border-radius:12px;background:#0b1220}.admin-stat span{display:block;color:#8fa1ba;font-size:12px}.admin-stat b{font-size:24px;color:#60a5fa}.admin-player{display:flex;align-items:center;gap:10px;padding:9px 0;border-bottom:1px solid rgba(96,165,250,.1)}.admin-player:last-child{border-bottom:0}.admin-player img{width:42px;height:42px;border-radius:50%;object-fit:cover}.admin-player-info{flex:1;min-width:0}.admin-player-actions{display:flex;gap:7px;flex-wrap:wrap}.match-meta{color:#8fa1ba;font-size:13px;line-height:1.6}.screens{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0}.screens img{width:170px;height:115px;object-fit:cover;border-radius:10px;border:1px solid rgba(96,165,250,.2)}.elo-grid{display:grid;grid-template-columns:1fr 110px;gap:7px;align-items:center;margin-top:10px}.elo-grid input{width:110px}.team-box{padding:10px;background:#0b1220;border:1px solid rgba(96,165,250,.12);border-radius:12px;margin-top:10px}.result-actions{display:flex;gap:8px;margin-top:12px}.result-actions button{flex:1}.dialog-back{position:fixed;inset:0;display:none;align-items:center;justify-content:center;background:#000b;backdrop-filter:blur(8px);z-index:3000;padding:12px}.dialog-back.open{display:flex}.dialog{width:min(460px,100%);background:#101827;border:1px solid rgba(96,165,250,.25);border-radius:18px;padding:20px;box-shadow:0 25px 90px #000}.dialog h3{margin-bottom:8px}.dialog p{color:#8fa1ba;margin-bottom:14px}.dialog-actions{display:flex;gap:8px;margin-top:12px}.dialog-actions button{flex:1}.danger{background:#991b1b!important}.success{background:#15803d!important}.admin-refresh{background:#243147!important}.empty-state{text-align:center;padding:25px;color:#8fa1ba}.admin-prefix{color:#ef4444;font-weight:800}@media(max-width:700px){.admin-page{padding:10px}.admin-head{align-items:flex-start;flex-direction:column}.admin-stats{grid-template-columns:1fr 1fr}.result-actions,.dialog-actions{flex-direction:column}.admin-player{align-items:flex-start;flex-wrap:wrap}.admin-player-actions{width:100%}.admin-player-actions button{flex:1}.screens img{width:135px;height:95px}.elo-grid{grid-template-columns:1fr 90px}.elo-grid input{width:90px}}
 </style>
 </head>
 <body>
 <div class="admin-page"><div class="admin-shell">
-  <header class="admin-head"><div><h1>Legend Pl — Админ панель</h1><p id="status">Проверка доступа…</p></div><button id="back">Вернуться</button></header>
+  <header class="admin-head">
+    <div><h1>Legend Pl — Админ панель</h1><p id="status">Проверка доступа…</p></div>
+    <div style="display:flex;gap:8px;flex-wrap:wrap">
+      <button id="refresh" class="admin-refresh">Обновить</button>
+      <button id="back">Вернуться</button>
+    </div>
+  </header>
+
   <div id="denied" class="admin-card" style="display:none"><h2>Доступ закрыт</h2><p class="muted">Откройте панель из аккаунта администратора.</p></div>
+
   <div id="app" style="display:none">
     <div class="admin-stats" id="stats"></div>
-    <div class="admin-tabs"><button class="admin-tab active" data-tab="matches">Матчи</button><button class="admin-tab" data-tab="reports">Репорты</button><button class="admin-tab" data-tab="users">Игроки</button></div>
-    <section id="matches" class="admin-section active"><div class="admin-card"><h2>Матчи и результаты</h2><div id="matchesList"></div></div></section>
-    <section id="reports" class="admin-section"><div class="admin-card"><h2>Репорты</h2><div id="reportsList"></div></div></section>
-    <section id="users" class="admin-section"><div class="admin-card"><h2>Игроки</h2><div id="usersList"></div></div></section>
+
+    <div class="admin-tabs">
+      <button class="admin-tab active" data-tab="matches">Матчи</button>
+      <button class="admin-tab" data-tab="reports">Репорты</button>
+      <button class="admin-tab" data-tab="users">Игроки</button>
+    </div>
+
+    <section id="matches" class="admin-section active">
+      <div class="admin-card"><h2>Матчи и результаты</h2><div id="matchesList"></div></div>
+    </section>
+
+    <section id="reports" class="admin-section">
+      <div class="admin-card"><h2>Репорты</h2><div id="reportsList"></div></div>
+    </section>
+
+    <section id="users" class="admin-section">
+      <div class="admin-card"><h2>Игроки</h2><div id="usersList"></div></div>
+    </section>
   </div>
 </div></div>
-<div id="dialogBack" class="dialog-back"><div class="dialog"><h3 id="dialogTitle"></h3><p id="dialogText"></p><input id="dialogInput" style="display:none"><div class="dialog-actions"><button id="dialogCancel">Отмена</button><button id="dialogOk" class="success">Подтвердить</button></div></div></div>
+
+<div id="dialogBack" class="dialog-back">
+  <div class="dialog">
+    <h3 id="dialogTitle"></h3>
+    <p id="dialogText"></p>
+    <input id="dialogInput" style="display:none">
+    <div class="dialog-actions">
+      <button id="dialogCancel">Отмена</button>
+      <button id="dialogOk" class="success">Подтвердить</button>
+    </div>
+  </div>
+</div>
+
 <script>
 const adminId=localStorage.getItem('legendpl_user');
 const $=id=>document.getElementById(id);
-const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
-const avatar=u=>u?.avatar||'data:image/svg+xml;charset=UTF-8,'+encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect width="60" height="60" rx="30" fill="#26334a"/></svg>');
-async function api(url,opt={}){const r=await fetch(url,opt);const d=await r.json();if(!r.ok)throw Error(d.message||'Ошибка сервера');return d}
-const post=(url,b)=>api(url,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-function dialog(title,text,input=false,value=''){return new Promise(resolve=>{ $('dialogTitle').textContent=title;$('dialogText').textContent=text;$('dialogInput').style.display=input?'block':'none';$('dialogInput').value=value;$('dialogBack').classList.add('open');const done=v=>{$('dialogBack').classList.remove('open');resolve(v)};$('dialogCancel').onclick=()=>done(null);$('dialogOk').onclick=()=>done(input?$('dialogInput').value.trim():true);if(input){$('dialogInput').focus();$('dialogInput').onkeydown=e=>{if(e.key==='Enter')$('dialogOk').click()}}})}
-async function init(){try{if(!adminId)throw Error('Нет авторизации');const a=await api('/api/check-admin?userId='+encodeURIComponent(adminId));if(!a.isAdmin)throw Error('Недостаточно прав');$('status').textContent='Администратор подтверждён';$('app').style.display='block';await loadAll()}catch(e){$('status').textContent=e.message;$('denied').style.display='block'}}
-async function loadAll(){const s=await api('/api/admin/stats?adminId='+adminId);$('stats').innerHTML=[['Онлайн',s.online],['Игроки',s.users],['Матчи',s.matches],['Открытые репорты',s.reports]].map(x=>`<div class="admin-stat"><span>${x[0]}</span><b>${x[1]}</b></div>`).join('');await Promise.all([loadMatches(),loadReports(),loadUsers()])}
-async function loadMatches(){const d=await api('/api/admin/matches?adminId='+adminId);$('matchesList').innerHTML=d.matches.length?d.matches.map(m=>{const shots=m.screenshots||[];return `<article class="admin-card"><h3>${esc(m.id)}</h3><div class="match-meta">${esc(m.mode)} · ${m.ranked?'Ранговый':'Обычный'} · ${esc(m.map||'—')} · ${m.rounds||'—'} раундов · $${Number(m.maxMoney||16000).toLocaleString()}</div><div class="match-meta">Статус: ${esc(m.status)}${m.winnerTeam?' · Победа команды '+esc(m.winnerTeam):''}</div><div class="team-box"><b>Команда A</b>${m.teamA.map(p=>`<div class="admin-player"><img src="${avatar(p)}"><span>${esc(p.inGameNick||'Игрок')} · ${esc(p.inGameId||'—')}</span></div>`).join('')}</div><div class="team-box"><b>Команда B</b>${m.teamB.map(p=>`<div class="admin-player"><img src="${avatar(p)}"><span>${esc(p.inGameNick||'Игрок')} · ${esc(p.inGameId||'—')}</span></div>`).join('')}</div><div class="screens">${shots.map(x=>`<a href="${x.url}" target="_blank"><img src="${x.url}"></a>`).join('')||'<span class="muted">Скриншот ещё не загружен.</span>'}</div>${!m.resolved?`<div class="elo-grid">${m.participants.map(p=>`<span>${esc(p.inGameNick||'Игрок')}</span><input type="number" data-match="${esc(m.id)}" data-user="${esc(p.id)}" value="0" step="1">`).join('')}</div><div class="result-actions"><button class="success" ${shots.length?'':'disabled'} onclick="resolve('${esc(m.id)}','A')">Победа A</button><button class="success" ${shots.length?'':'disabled'} onclick="resolve('${esc(m.id)}','B')">Победа B</button></div>${shots.length?'':'<p class="muted">Матч можно обработать только после загрузки скриншота.</p>'}`:'<p class="muted">Матч обработан. ELO уже сохранено.</p>'}</article>`}).join(''):'<p class="muted">Матчей пока нет.</p>'}
-async function resolve(id,team){const ok=await dialog('Закрыть матч',`Подтвердить победу команды ${team}. Проверьте скриншот и ELO.`);if(!ok)return;const changes={};document.querySelectorAll(`[data-match="${CSS.escape(id)}"]`).forEach(i=>changes[i.dataset.user]=Number(i.value||0));try{await post('/api/admin/match/'+encodeURIComponent(id)+'/resolve',{adminId,winnerTeam:team,eloChanges:changes});await loadAll()}catch(e){await dialog('Ошибка',e.message)}}
-async function loadReports(){const d=await api('/api/admin/reports?adminId='+adminId);$('reportsList').innerHTML=d.reports.length?d.reports.map(r=>`<article class="report-card"><b>${esc(r.id)}</b><p>От: ${esc(r.reporter?.inGameNick||'Игрок')}</p><p>На: ${esc(r.target?.inGameNick||'Игрок')}</p><p>Причина: ${esc(r.reason)}</p><p class="muted">Статус: ${esc(r.status)}</p>${r.status==='open'?`<button onclick="closeReport('${esc(r.id)}')">Закрыть репорт</button>`:''}</article>`).join(''):'<p class="muted">Открытых репортов нет.</p>'}
-async function closeReport(id){await post('/api/admin/report/'+encodeURIComponent(id),{adminId,status:'closed'});loadAll()}
-async function loadUsers(){const d=await api('/api/admin/users?adminId='+adminId);$('usersList').innerHTML=d.users.map(u=>`<div class="admin-player"><img src="${avatar(u)}"><div class="admin-player-info"><b>${u.isAdmin?'<span class="admin-prefix">ADMIN</span> ':''}${esc(u.inGameNick||'Игрок')}</b><div class="muted">ID: ${esc(u.id)} · 1x1 ELO: ${u.stats['1v1'].elo}</div></div><div class="admin-player-actions">${!u.isAdmin?`<button onclick="action('${esc(u.id)}','ban')">Бан</button><button onclick="action('${esc(u.id)}','mute')">Мут</button>`:''}</div></div>`).join('')}
-async function action(id,type){const hours=await dialog('Срок действия',type==='ban'?'Сколько часов действует бан?':'Сколько часов действует мут?',true,'24');if(!hours)return;const reason=await dialog('Причина', 'Укажите причину.',true);try{await post('/api/admin/action',{adminId,targetUserId:id,action:type,hours:Number(hours),reason:reason||''});await loadAll()}catch(e){await dialog('Ошибка',e.message)}}
-document.querySelectorAll('.admin-tab').forEach(b=>b.onclick=()=>{document.querySelectorAll('.admin-tab').forEach(x=>x.classList.remove('active'));document.querySelectorAll('.admin-section').forEach(x=>x.classList.remove('active'));b.classList.add('active');$(b.dataset.tab).classList.add('active')});$('back').onclick=()=>location.href='/';init();
+
+const esc=v=>String(v??'').replace(/[&<>"']/g,c=>({
+  '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'
+}[c]));
+
+const avatar=u=>u?.avatar||'data:image/svg+xml;charset=UTF-8,'+
+  encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" width="60" height="60"><rect width="60" height="60" rx="30" fill="#26334a"/></svg>');
+
+async function api(url,opt={}){
+  const r=await fetch(url,opt);
+  let d;
+  try{d=await r.json()}catch{d={message:'Некорректный ответ сервера'}};
+  if(!r.ok)throw Error(d.message||'Ошибка сервера');
+  return d;
+}
+
+const post=(url,b)=>api(url,{
+  method:'POST',
+  headers:{'Content-Type':'application/json'},
+  body:JSON.stringify(b)
+});
+
+function dialog(title,text,input=false,value=''){
+  return new Promise(resolve=>{
+    $('dialogTitle').textContent=title;
+    $('dialogText').textContent=text;
+    $('dialogInput').style.display=input?'block':'none';
+    $('dialogInput').value=value;
+    $('dialogBack').classList.add('open');
+
+    const done=v=>{
+      $('dialogBack').classList.remove('open');
+      $('dialogInput').onkeydown=null;
+      resolve(v);
+    };
+
+    $('dialogCancel').onclick=()=>done(null);
+    $('dialogOk').onclick=()=>done(input?$('dialogInput').value.trim():true);
+
+    if(input){
+      $('dialogInput').focus();
+      $('dialogInput').onkeydown=e=>{
+        if(e.key==='Enter')$('dialogOk').click();
+        if(e.key==='Escape')$('dialogCancel').click();
+      };
+    }
+  });
+}
+
+async function init(){
+  try{
+    if(!adminId)throw Error('Нет авторизации');
+
+    const a=await api('/api/check-admin?userId='+encodeURIComponent(adminId));
+
+    if(!a.isAdmin)throw Error('Недостаточно прав');
+
+    $('status').textContent='Администратор подтверждён';
+    $('app').style.display='block';
+    await loadAll();
+  }catch(e){
+    $('status').textContent=e.message;
+    $('denied').style.display='block';
+  }
+}
+
+async function loadAll(){
+  try{
+    const s=await api('/api/admin/stats?adminId='+encodeURIComponent(adminId));
+
+    $('stats').innerHTML=[
+      ['Онлайн',s.online],
+      ['Игроки',s.users],
+      ['Матчи',s.matches],
+      ['Открытые репорты',s.reports]
+    ].map(x=>`
+      <div class="admin-stat">
+        <span>${esc(x[0])}</span>
+        <b>${esc(x[1])}</b>
+      </div>
+    `).join('');
+
+    await Promise.all([loadMatches(),loadReports(),loadUsers()]);
+  }catch(e){
+    await dialog('Ошибка загрузки',e.message);
+  }
+}
+
+async function loadMatches(){
+  const d=await api('/api/admin/matches?adminId='+encodeURIComponent(adminId));
+
+  $('matchesList').innerHTML=d.matches.length?d.matches.map(m=>{
+    const shots=m.screenshots||[];
+    const teamA=Array.isArray(m.teamA)?m.teamA:[];
+    const teamB=Array.isArray(m.teamB)?m.teamB:[];
+    const participants=Array.isArray(m.participants)?m.participants:[];
+
+    return `
+      <article class="admin-card">
+        <h3>${esc(m.id)}</h3>
+
+        <div class="match-meta">
+          ${esc(m.mode)} · ${m.ranked?'Ранговый':'Обычный'} ·
+          ${esc(m.map||'—')} · ${esc(m.rounds||'—')} раундов ·
+          $${Number(m.maxMoney||16000).toLocaleString()}
+        </div>
+
+        <div class="match-meta">
+          Статус: ${esc(m.status)}
+          ${m.winnerTeam?' · Победа команды '+esc(m.winnerTeam):''}
+        </div>
+
+        <div class="team-box">
+          <b>Команда A</b>
+          ${teamA.length?teamA.map(p=>`
+            <div class="admin-player">
+              <img src="${avatar(p)}" alt="">
+              <span>${esc(p.inGameNick||'Игрок')} · ${esc(p.inGameId||'—')}</span>
+            </div>
+          `).join(''):'<div class="muted">Игроков нет.</div>'}
+        </div>
+
+        <div class="team-box">
+          <b>Команда B</b>
+          ${teamB.length?teamB.map(p=>`
+            <div class="admin-player">
+              <img src="${avatar(p)}" alt="">
+              <span>${esc(p.inGameNick||'Игрок')} · ${esc(p.inGameId||'—')}</span>
+            </div>
+          `).join(''):'<div class="muted">Игроков нет.</div>'}
+        </div>
+
+        <div class="screens">
+          ${shots.map(x=>`
+            <a href="${esc(x.url)}" target="_blank" rel="noopener noreferrer">
+              <img src="${esc(x.url)}" alt="Скриншот матча">
+            </a>
+          `).join('')||'<span class="muted">Скриншот ещё не загружен.</span>'}
+        </div>
+
+        ${!m.resolved?`
+          <div class="elo-grid">
+            ${participants.map(p=>`
+              <span>${esc(p.inGameNick||'Игрок')}</span>
+              <input type="number"
+                data-match="${esc(m.id)}"
+                data-user="${esc(p.id)}"
+                value="0"
+                step="1">
+            `).join('')}
+          </div>
+
+          <div class="result-actions">
+            <button class="success" ${shots.length?'':'disabled'}
+              onclick="resolve('${esc(m.id)}','A')">Победа A</button>
+            <button class="success" ${shots.length?'':'disabled'}
+              onclick="resolve('${esc(m.id)}','B')">Победа B</button>
+          </div>
+
+          ${shots.length?'':'<p class="muted">Матч можно обработать только после загрузки скриншота.</p>'}
+        `:'<p class="muted">Матч обработан. ELO уже сохранено.</p>'}
+      </article>
+    `;
+  }).join(''):'<p class="empty-state">Матчей пока нет.</p>';
+}
+
+async function resolve(id,team){
+  const ok=await dialog(
+    'Закрыть матч',
+    `Подтвердить победу команды ${team}. Проверьте скриншот и ELO.`
+  );
+
+  if(!ok)return;
+
+  const changes={};
+
+  document.querySelectorAll(`[data-match="${CSS.escape(id)}"]`)
+    .forEach(i=>changes[i.dataset.user]=Number(i.value||0));
+
+  try{
+    await post('/api/admin/match/'+encodeURIComponent(id)+'/resolve',{
+      adminId,
+      winnerTeam:team,
+      eloChanges:changes
+    });
+
+    await loadAll();
+  }catch(e){
+    await dialog('Ошибка',e.message);
+  }
+}
+
+async function loadReports(){
+  const d=await api('/api/admin/reports?adminId='+encodeURIComponent(adminId));
+
+  $('reportsList').innerHTML=d.reports.length?d.reports.map(r=>`
+    <article class="report-card">
+      <b>${esc(r.id)}</b>
+      <p>От: ${esc(r.reporter?.inGameNick||'Игрок')}</p>
+      <p>На: ${esc(r.target?.inGameNick||'Игрок')}</p>
+      <p>Причина: ${esc(r.reason)}</p>
+      <p class="muted">Статус: ${esc(r.status)}</p>
+      ${r.status==='open'
+        ?`<button onclick="closeReport('${esc(r.id)}')">Закрыть репорт</button>`
+        :''}
+    </article>
+  `).join(''):'<p class="empty-state">Открытых репортов нет.</p>';
+}
+
+async function closeReport(id){
+  try{
+    await post('/api/admin/report/'+encodeURIComponent(id),{
+      adminId,
+      status:'closed'
+    });
+    await loadAll();
+  }catch(e){
+    await dialog('Ошибка',e.message);
+  }
+}
+
+async function loadUsers(){
+  const d=await api('/api/admin/users?adminId='+encodeURIComponent(adminId));
+
+  $('usersList').innerHTML=d.users.length?d.users.map(u=>{
+    const one=Number(u.stats?.['1v1']?.elo||0);
+
+    return `
+      <div class="admin-player">
+        <img src="${avatar(u)}" alt="">
+        <div class="admin-player-info">
+          <b>
+            ${u.isAdmin?'<span class="admin-prefix">ADMIN</span> ':''}
+            ${esc(u.inGameNick||'Игрок')}
+          </b>
+          <div class="muted">
+            ID: ${esc(u.id)} · 1x1 ELO: ${esc(one)}
+          </div>
+        </div>
+
+        <div class="admin-player-actions">
+          ${!u.isAdmin?`
+            <button onclick="action('${esc(u.id)}','ban')">Бан</button>
+            <button onclick="action('${esc(u.id)}','mute')">Мут</button>
+          `:''}
+        </div>
+      </div>
+    `;
+  }).join(''):'<p class="empty-state">Игроков пока нет.</p>';
+}
+
+async function action(id,type){
+  const hours=await dialog(
+    'Срок действия',
+    type==='ban'?'Сколько часов действует бан?':'Сколько часов действует мут?',
+    true,
+    '24'
+  );
+
+  if(!hours)return;
+
+  const reason=await dialog(
+    'Причина',
+    'Укажите причину.',
+    true
+  );
+
+  try{
+    await post('/api/admin/action',{
+      adminId,
+      targetUserId:id,
+      action:type,
+      hours:Number(hours),
+      reason:reason||''
+    });
+
+    await loadAll();
+  }catch(e){
+    await dialog('Ошибка',e.message);
+  }
+}
+
+document.querySelectorAll('.admin-tab').forEach(b=>{
+  b.onclick=()=>{
+    document.querySelectorAll('.admin-tab')
+      .forEach(x=>x.classList.remove('active'));
+
+    document.querySelectorAll('.admin-section')
+      .forEach(x=>x.classList.remove('active'));
+
+    b.classList.add('active');
+    $(b.dataset.tab).classList.add('active');
+  };
+});
+
+$('refresh').onclick=loadAll;
+$('back').onclick=()=>location.href='/';
+
+$('dialogBack').addEventListener('click',e=>{
+  if(e.target===$('dialogBack'))$('dialogCancel').click();
+});
+
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape' && $('dialogBack').classList.contains('open')){
+    $('dialogCancel').click();
+  }
+});
+
+init();
 </script>
-</body></html>
+</body>
+</html>
