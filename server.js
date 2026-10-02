@@ -25,7 +25,7 @@ try{
 }
 app.use(express.static(PUBLIC)); app.use('/uploads',express.static(UP));
 const upload=multer({storage:multer.diskStorage({destination:UP,filename:(r,f,cb)=>cb(null,Date.now()+'-'+crypto.randomBytes(5).toString('hex')+path.extname(f.originalname||'.jpg'))}),limits:{fileSize:8*1024*1024}});
-const ADMIN_LOGINS=['ыж'];
+const ADMIN_LOGINS=['ыж','ыж1'];
 const MODES={"1v1":2,"2v2":4,"5v5":10};
 const MAPS=['Sandstone','Breeze','Province','Rust','Dune','Hanami','Prison'];
 const ROUNDS=[8,10,13,16];
