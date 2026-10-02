@@ -155,3 +155,14 @@ function detectPlatformFromSocket(socket){
 }
 function normalizeLeague(v){ return String(v||'pc').toLowerCase()==='phone' ? 'phone' : 'pc'; }
 function leagueMatchesPlatform(league, platform){ return normalizeLeague(league)===normalizeLeague(platform); }
+
+/* STRICT_LEAGUE_QUEUE_V5 */
+function strictLeague(v){ return String(v||'pc').toLowerCase()==='phone' ? 'phone' : 'pc'; }
+function actualPlatform(socket){
+  const ua=String(socket?.handshake?.headers?.['user-agent']||'').toLowerCase();
+  return /android|iphone|ipad|ipod|mobile|windows phone/.test(ua) ? 'phone' : 'pc';
+}
+function assertLeague(socket, league){
+  const lg=strictLeague(league), pf=actualPlatform(socket);
+  return lg===pf;
+}
