@@ -1,8 +1,3 @@
-# Legend Pl
+Legend Pl 2.0
 
-Fix build 2026.10.02-fix1.
-
-## Important
-This archive is intentionally packed with `server.js`, `package.json` and `public/` at the archive root, so it can be deployed without the previous `satoshi-server-main/` nesting.
-
-Fixes include: login `ыж1` is admin, corrected duplicated HTML/JS lines, safer button types, visible runtime errors, mobile UI notification styling, and a `/api/health` build endpoint.
+For persistent data on Render, set DATABASE_URL to a Render PostgreSQL database. Without DATABASE_URL the server falls back to local JSON storage, which is not persistent across ephemeral Render restarts.

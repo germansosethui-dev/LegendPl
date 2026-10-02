@@ -1,7 +1,7 @@
 {
   "name": "legend-pl-server",
-  "version": "1.0.1",
-  "description": "Legend Pl game server — mobile/auth/admin fix build",
+  "version": "2.0.0",
+  "description": "Legend Pl matchmaking platform",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {
