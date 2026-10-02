@@ -1,3 +1,4 @@
+/* STRICT_LEAGUE_CLIENT_V5 */
 const socket=io();
 let me=null,party=null,currentMatch=null,pmTarget=null,pmHistory=[],queueMine={},lastCompletedMatch=null;
 const $=id=>document.getElementById(id);

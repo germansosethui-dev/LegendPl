@@ -39,3 +39,5 @@ select{width:100%;padding:12px;border-radius:11px;border:1px solid #263653;backg
 @media(max-width:700px){.league-title{align-items:flex-start}.league-grid{grid-template-columns:1fr}.league-block{padding:12px}.league-title h2{font-size:22px}}
 
 .league-switch{margin-bottom:14px}.league-switch .active{outline:2px solid #60a5fa}.league-switch .row{display:flex;gap:8px;flex-wrap:wrap}.league-switch button{flex:1;min-width:140px}
+
+.league-queue-separate{display:grid;grid-template-columns:1fr 1fr;gap:12px}.league-queue-separate>*{min-width:0}@media(max-width:700px){.league-queue-separate{grid-template-columns:1fr}}
