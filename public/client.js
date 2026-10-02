@@ -267,11 +267,18 @@ function renderPM(){
   $('pmMessages').innerHTML=pmHistory.filter(m=>(m.from===me.id&&m.to===pmTarget)||(m.to===me.id&&m.from===pmTarget)).map(m=>`<div class="msg ${m.from===me.id?'mine':''}">${esc(m.text)}</div>`).join('');
   $('pmMessages').scrollTop=$('pmMessages').scrollHeight;
 }
+function closeSideMenu(){
+  const side=$('side');
+  if(side)side.classList.remove('open');
+}
 function nav(){
   document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{
     document.querySelectorAll('.nav').forEach(x=>x.classList.remove('active'));
     document.querySelectorAll('.view').forEach(v=>v.classList.remove('active'));
-    b.classList.add('active');$(b.dataset.view).classList.add('active');
+    b.classList.add('active');
+    const view=$(b.dataset.view);
+    if(view)view.classList.add('active');
+    closeSideMenu();
     if(b.dataset.view==='friends')loadFriends();
     if(b.dataset.view==='messages'){loadFriends().then(loadPMData)}
     if(b.dataset.view==='history')loadHistory();
