@@ -72,6 +72,34 @@ function notify(text) {
     }, 3000);
 }
 
+
+function uiModal({ title, message = "", input = false, value = "", placeholder = "", confirmText = "Подтвердить", cancelText = "Отмена" }) {
+  return new Promise(resolve => {
+    const modal = document.createElement("div");
+    modal.className = "modal ui-dialog";
+    modal.innerHTML = `
+      <div class="modal-box dialog-box">
+        <div class="dialog-glow"></div>
+        <h3>${escapeHTML(title)}</h3>
+        ${message ? `<p class="dialog-message">${escapeHTML(message)}</p>` : ""}
+        ${input ? `<input id="uiDialogInput" class="dialog-input" value="${escapeHTML(value)}" placeholder="${escapeHTML(placeholder)}">` : ""}
+        <div class="modal-buttons">
+          <button id="uiDialogCancel" class="secondary">${escapeHTML(cancelText)}</button>
+          <button id="uiDialogOk" class="success">${escapeHTML(confirmText)}</button>
+        </div>
+      </div>`;
+    document.body.appendChild(modal);
+    const close = result => { modal.remove(); resolve(result); };
+    modal.querySelector("#uiDialogCancel").onclick = () => close(null);
+    modal.querySelector("#uiDialogOk").onclick = () => close(input ? modal.querySelector("#uiDialogInput").value.trim() : true);
+    modal.addEventListener("click", e => { if (e.target === modal) close(null); });
+    if (input) { const el = modal.querySelector("#uiDialogInput"); el.focus(); el.select(); el.addEventListener("keydown", e => { if (e.key === "Enter") modal.querySelector("#uiDialogOk").click(); }); }
+  });
+}
+
+const uiPrompt = (title, message, placeholder = "", value = "") => uiModal({ title, message, input:true, placeholder, value, confirmText:"Сохранить" });
+const uiConfirm = (title, message) => uiModal({ title, message, confirmText:"Подтвердить" });
+
 async function api(
   url,
   options = {}
@@ -402,6 +430,17 @@ function getLevel(elo) {
 }
 
 /* =========================================================
+   MOBILE MENU
+========================================================= */
+const mobileMenuBtn = $("mobileMenuBtn");
+const sidebar = $("sidebar");
+const sidebarOverlay = $("sidebarOverlay");
+function setMobileMenu(open){ sidebar?.classList.toggle("mobile-open", open); sidebarOverlay?.classList.toggle("open", open); }
+function closeMobileMenu(){ setMobileMenu(false); }
+mobileMenuBtn?.addEventListener("click", () => setMobileMenu(!sidebar?.classList.contains("mobile-open")));
+sidebarOverlay?.addEventListener("click", closeMobileMenu);
+
+/* =========================================================
    NAVIGATION
 ========================================================= */
 
@@ -410,9 +449,8 @@ document
   .forEach(button => {
 
     button.onclick = () => {
-      switchView(
-        button.dataset.view
-      );
+      switchView(button.dataset.view);
+      closeMobileMenu();
     };
 
   });
@@ -612,6 +650,11 @@ function profileMode(
       <div class="stat-row">
         <span>Матчи</span>
         <b>${stats.matches}</b>
+      </div>
+
+      <div class="stat-row">
+        <span>Обычных до ранга</span>
+        <b>${stats[`unrankedMatches${mode}`] || 0}/3</b>
       </div>
 
       <div class="stat-row">
@@ -985,11 +1028,6 @@ function renderQueue(data) {
       `queue-${mode}-ranked`
     ).textContent =
       `${ranked}/${normalMax}`;
-    document.querySelectorAll(`.leave-queue[data-mode="${mode}"]`).forEach(btn => {
-      const isRanked = btn.dataset.ranked === "true";
-      const count = isRanked ? ranked : normal;
-      btn.style.display = count > 0 ? "inline-block" : "none";
-    });
   }
 }
 
@@ -1031,9 +1069,9 @@ function openMatchModal(
         )}
       </p>
 
-      <p id="matchAcceptedCount">
-        Приняли: ${Number(match.accepted || 0)}/${match.participants.length}
-      </p>
+      <p><b>Карта:</b> ${escapeHTML(match.map)}</p>
+      <p><b>Раундов:</b> ${Number(match.rounds || 0)}</p>
+      <p><b>Приняли:</b> <span id="matchAcceptedCount">${Number(match.accepted || 0)}/${Number(match.total || match.participants?.length || 0)}</span></p>
 
       <div class="teams">
 
@@ -1065,17 +1103,9 @@ function openMatchModal(
       </div>
     `;
 
-  const accepted = Array.isArray(match.acceptedUsers)
-    ? match.acceptedUsers.includes(currentUser?.id)
-    : false;
-
-  $("acceptMatchBtn").disabled = accepted;
-  $("acceptMatchBtn").textContent = accepted ? "Принято ✓" : "Принять";
-
-  const counter = $("matchAcceptedCount");
-  if (counter) counter.textContent = `Приняли: ${Number(match.accepted || 0)}/${match.participants.length}`;
-
-  startMatchTimer(Number(match.timeout) || 20);
+  startMatchTimer(
+    Number(match.timeout) || 20
+  );
 }
 
 function playerCard(
@@ -1169,18 +1199,12 @@ $("declineMatchBtn").onclick =
     closeMatchModal();
   };
 
-socket.on(
-  "matchAcceptedUpdate",
-  data => {
-    if (currentMatch && currentMatch.matchId === data.matchId) {
-      currentMatch.accepted = data.accepted;
-      currentMatch.total = data.total;
-    }
-    const counter = $("matchAcceptedCount");
-    if (counter) counter.textContent = `Приняли: ${data.accepted}/${data.total}`;
-    notify(`Приняли: ${data.accepted}/${data.total}`);
-  }
-);
+socket.on("matchAcceptedUpdate", data => {
+  const counter = $("matchAcceptedCount");
+  if (counter) counter.textContent = `${data.accepted}/${data.total}`;
+  if (currentMatch) { currentMatch.accepted = data.accepted; currentMatch.total = data.total; }
+  notify(`Приняли матч: ${data.accepted}/${data.total}`);
+});
 
 socket.on(
   "matchCancelled",
@@ -1197,6 +1221,48 @@ socket.on(
 );
 
 /* =========================================================
+   DRAFT
+========================================================= */
+
+socket.on("matchDraft", data => {
+  currentMatch = data;
+  openDraftModal(data);
+});
+
+function openDraftModal(match) {
+  let modal = $("draftModal");
+  if (!modal) {
+    modal = document.createElement("div");
+    modal.id = "draftModal";
+    modal.className = "modal";
+    document.body.appendChild(modal);
+  }
+  modal.style.display = "flex";
+  const captainIds = new Set((match.captains || []).map(x => x?.id));
+  const left = Number(match.draftSeconds || 6);
+  modal.innerHTML = `
+    <div class="modal-box draft-box">
+      <div class="draft-badge">ДРАФТ МАТЧА</div>
+      <h2>Матч подготовлен</h2>
+      <div class="draft-id">${escapeHTML(match.matchId)}</div>
+      <div class="draft-params">
+        <div><span>Карта</span><b>${escapeHTML(match.map)}</b></div>
+        <div><span>Раундов</span><b>${match.rounds}</b></div>
+        <div><span>Макс. деньги</span><b>$${Number(match.maxMoney || 16000).toLocaleString()}</b></div>
+      </div>
+      <div class="teams draft-teams">
+        <div class="team"><h3>Команда A</h3>${(match.teamA||[]).map(p => playerCard(p)+(captainIds.has(p?.id)?'<small class="captain-tag">КАПИТАН</small>':'')).join("")}</div>
+        <div class="team"><h3>Команда B</h3>${(match.teamB||[]).map(p => playerCard(p)+(captainIds.has(p?.id)?'<small class="captain-tag">КАПИТАН</small>':'')).join("")}</div>
+      </div>
+      <div class="lobby-creator"><b>Создаёт лобби:</b> ${playerCard(match.lobbyCreator || {})}<span class="creator-id">ID в игре: ${escapeHTML(match.lobbyCreator?.inGameId || "—")}</span></div>
+      <div class="draft-countdown">Переход в лобби через <b id="draftTimer">${left}</b> сек.</div>
+    </div>`;
+  let sec = left;
+  clearInterval(window._draftTimer);
+  window._draftTimer = setInterval(() => { sec--; const el=$("draftTimer"); if(el) el.textContent=Math.max(0,sec); if(sec<=0){clearInterval(window._draftTimer); modal.style.display="none";} },1000);
+}
+
+/* =========================================================
    MATCH LOBBY
 ========================================================= */
 
@@ -1204,10 +1270,9 @@ socket.on(
   "matchLobby",
   data => {
 
-    currentMatch =
-      data;
-
-    closeMatchModal();
+    currentMatch = data;
+  $("draftModal")?.style && ($("draftModal").style.display = "none");
+  closeMatchModal();
 
     openGameModal(
       data
@@ -1225,29 +1290,34 @@ function closeMatchModal() {
 
   $("acceptMatchBtn")
     .disabled = false;
-  $("acceptMatchBtn").textContent = "Принять";
 }
 
-function openGameModal(match) {
-  $("gameModal").style.display = "flex";
+function openGameModal(
+  match
+) {
+  $("gameModal").style.display =
+    "flex";
 
-  $("gameMatchId").textContent = `ID матча: ${match.matchId}`;
-  $("gameMap").textContent = `Карта: ${match.map || "—"}`;
-  $("gameRounds").textContent = `Количество раундов: ${match.rounds || "—"}`;
-  $("gameMoney").textContent = `Максимум денег: $${Number(match.maxMoney || 16000).toLocaleString("en-US")}`;
+  $("gameMatchId").textContent =
+    `ID матча: ${match.matchId}`;
 
-  $("gameCaptains").innerHTML = `
-    <div><b>Капитан команды A:</b> ${match.captainA ? escapeHTML(match.captainA.inGameNick) : "—"} · ID: ${match.captainA ? escapeHTML(match.captainA.inGameId) : "—"}</div>
-    <div><b>Капитан команды B:</b> ${match.captainB ? escapeHTML(match.captainB.inGameNick) : "—"} · ID: ${match.captainB ? escapeHTML(match.captainB.inGameId) : "—"}</div>
-  `;
+  $("gameMap").innerHTML = `Карта: <b>${escapeHTML(match.map)}</b> · Раундов: <b>${Number(match.rounds || 0)}</b> · Макс. денег: <b>$${Number(match.maxMoney || 16000).toLocaleString()}</b>`;
+  const lobbyInfo = document.getElementById("gameLobbyInfo");
+  if (lobbyInfo) lobbyInfo.innerHTML = `Создаёт лобби: <b>${escapeHTML(match.lobbyCreator?.inGameNick || "—")}</b> · ID игры: <b>${escapeHTML(match.lobbyCreator?.inGameId || "—")}</b>`;
 
-  $("gameHost").innerHTML = match.host
-    ? `<b>Создать лобби должен:</b> ${escapeHTML(match.host.inGameNick)} · ID: ${escapeHTML(match.host.inGameId)}<br><span>Параметры: ${escapeHTML(match.map)} · ${match.rounds} раундов · максимум $${Number(match.maxMoney || 16000).toLocaleString("en-US")}</span>`
-    : "Создатель лобби: —";
+  $("teamA").innerHTML =
+    match.teamA
+      .map(playerCard)
+      .join("");
 
-  $("teamA").innerHTML = (match.teamA || []).map(playerCard).join("");
-  $("teamB").innerHTML = (match.teamB || []).map(playerCard).join("");
-  renderScreenshots(match.screenshots || []);
+  $("teamB").innerHTML =
+    match.teamB
+      .map(playerCard)
+      .join("");
+
+  renderScreenshots(
+    match.screenshots || []
+  );
 }
 
 $("closeGameBtn").onclick =
@@ -1255,6 +1325,12 @@ $("closeGameBtn").onclick =
     $("gameModal").style.display =
       "none";
   };
+
+$("chooseScreenshotBtn")?.addEventListener("click", () => $("screenshotInput")?.click());
+$("screenshotInput")?.addEventListener("change", e => {
+  const file = e.target.files?.[0];
+  if ($("screenshotFileName")) $("screenshotFileName").textContent = file ? file.name : "Файл не выбран";
+});
 
 $("uploadScreenshotBtn").onclick =
   async () => {
@@ -1541,11 +1617,7 @@ window.addFriend =
 async function reportPlayer(
   userId
 ) {
-  const reason =
-    prompt(
-      "Причина жалобы:"
-    );
-
+  const reason = await uiPrompt("Новая жалоба", "Опишите нарушение игрока.", "Причина жалобы");
   if (!reason) return;
 
   try {
@@ -2039,31 +2111,17 @@ async function loadClan() {
         .innerHTML =
         `
           <h3>Вы не состоите в клане</h3>
-          <p>Создайте свой клан прямо здесь.</p>
-          <div class="clan-create-form">
-            <input id="clanNameInput" placeholder="Название клана" maxlength="32">
-            <input id="clanTagInput" placeholder="Тег, например LP" maxlength="5">
-            <button id="createClanBtn">Создать клан</button>
-          </div>
+
+          <p>
+            Система кланов уже подключена.
+          </p>
+
+          <p>
+            Создание клана можно расширить
+            через админ-панель.
+          </p>
         `;
 
-      const createBtn = $("createClanBtn");
-      if (createBtn) {
-        createBtn.onclick = async () => {
-          try {
-            await post("/api/clan/create", {
-              userId: currentUser.id,
-              name: $("clanNameInput").value.trim(),
-              tag: $("clanTagInput").value.trim()
-            });
-            await refreshMe();
-            await loadClan();
-            notify("Клан создан.");
-          } catch (err) {
-            notify(err.message);
-          }
-        };
-      }
       return;
     }
 
@@ -2181,7 +2239,6 @@ async function loadAdminMatches() {
                   ? "Ранговый"
                   : "Обычный"
               }
-              ${match.draft ? `· ${escapeHTML(match.draft.map)} · ${match.draft.rounds} раундов` : ""}
             </p>
 
             <div class="admin-team">
@@ -2272,41 +2329,18 @@ async function loadAdminMatches() {
               "<p>Скриншотов пока нет.</p>"
             }
 
-            ${
-              !match.resolved
-                ? `
-                  <div
-                    style="
-                      display:flex;
-                      gap:8px;
-                      margin-top:12px;
-                    "
-                  >
-
-                    <button
-                      class="success"
-                      onclick="resolveAdminMatch('${match.id}', 'A')"
-                    >
-                      Победа команды A
-                    </button>
-
-                    <button
-                      class="success"
-                      onclick="resolveAdminMatch('${match.id}', 'B')"
-                    >
-                      Победа команды B
-                    </button>
-
-                  </div>
-                `
-                : `
-                  <p>
-                    Матч уже обработан.
-                    Победитель:
-                    ${match.winnerTeam}
-                  </p>
-                `
-            }
+            ${!match.resolved ? `
+              <div class="elo-control-card">
+                <b>Изменение ELO каждому игроку</b>
+                <p class="muted">Положительное число — добавить ELO, отрицательное — снять. Базовое значение: 0.</p>
+                ${match.participants.map(p => `<label class="elo-control-row"><span>${escapeHTML(p.inGameNick || "Игрок")}</span><input type="number" data-elo-match="${escapeHTML(match.id)}" data-user-id="${escapeHTML(p.id)}" value="0" step="1"></label>`).join("")}
+              </div>
+              <div class="admin-result-buttons">
+                <button class="success" ${!(match.screenshots||[]).length?'disabled':''} onclick="resolveAdminMatch('${match.id}', 'A')">Победа команды A</button>
+                <button class="success" ${!(match.screenshots||[]).length?'disabled':''} onclick="resolveAdminMatch('${match.id}', 'B')">Победа команды B</button>
+              </div>
+              ${!(match.screenshots||[]).length ? '<p class="muted">Нельзя закрыть матч без скриншота.</p>' : ''}
+            ` : `<p class="resolved-badge">Матч обработан • победа команды ${escapeHTML(match.winnerTeam || "—")}</p>`}
 
           </div>
         `
@@ -2314,42 +2348,18 @@ async function loadAdminMatches() {
       .join("");
 }
 
-window.resolveAdminMatch =
-  async function (
-    matchId,
-    winnerTeam
-  ) {
-    if (
-      !confirm(
-        `Подтвердить победу команды ${winnerTeam}?`
-      )
-    ) {
-      return;
-    }
-
-    try {
-      await post(
-        `/api/admin/match/${encodeURIComponent(
-          matchId
-        )}/resolve`,
-        {
-          adminId:
-            currentUser.id,
-
-          winnerTeam
-        }
-      );
-
-      notify(
-        "Матч обработан. Победа и ELO выданы."
-      );
-
-      loadAdmin();
-
-    } catch (err) {
-      notify(err.message);
-    }
-  };
+window.resolveAdminMatch = async function(matchId, winnerTeam) {
+  const inputs = [...document.querySelectorAll(`[data-elo-match="${CSS.escape(matchId)}"]`)];
+  const eloChanges = {};
+  inputs.forEach(input => { eloChanges[input.dataset.userId] = Number(input.value || 0); });
+  const ok = await uiConfirm(`Команда ${winnerTeam} победила?`, "Проверьте скриншот и введённые изменения ELO. После подтверждения матч будет закрыт.");
+  if (!ok) return;
+  try {
+    await post(`/api/admin/match/${encodeURIComponent(matchId)}/resolve`, { adminId: currentUser.id, winnerTeam, eloChanges });
+    notify("Матч обработан. Статистика и ELO сохранены.");
+    await loadAdmin();
+  } catch (err) { notify(err.message); }
+};
 
 async function loadAdminReports() {
   const data =

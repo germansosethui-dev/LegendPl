@@ -125,6 +125,9 @@
   style="display:none"
 >
 
+  <button id="mobileMenuBtn" class="mobile-menu-btn" aria-label="Открыть меню">☰</button>
+  <div id="sidebarOverlay" class="sidebar-overlay"></div>
+
   <aside id="sidebar">
 
     <div class="brand">
@@ -829,15 +832,8 @@
     <h2>Матч</h2>
 
     <div id="gameMatchId"></div>
-
-    <div class="draft-summary card">
-      <h3>🎯 Драфт матча</h3>
-      <div id="gameMap"></div>
-      <div id="gameRounds"></div>
-      <div id="gameMoney"></div>
-      <div id="gameCaptains"></div>
-      <div id="gameHost"></div>
-    </div>
+    <div id="gameMap"></div>
+    <div id="gameLobbyInfo" class="lobby-info"></div>
 
     <div class="teams">
 
@@ -863,15 +859,10 @@
         выдаст победу и ELO.
       </p>
 
-      <input
-        id="screenshotInput"
-        type="file"
-        accept="image/*"
-      >
-
-      <button id="uploadScreenshotBtn">
-        Загрузить скриншот
-      </button>
+      <input id="screenshotInput" type="file" accept="image/*" hidden>
+      <button id="chooseScreenshotBtn" class="secondary">Выбрать скриншот</button>
+      <div id="screenshotFileName" class="muted" style="margin-top:8px">Файл не выбран</div>
+      <button id="uploadScreenshotBtn">Загрузить скриншот</button>
 
     </div>
 
