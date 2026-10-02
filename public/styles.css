@@ -41,3 +41,25 @@ select{width:100%;padding:12px;border-radius:11px;border:1px solid #263653;backg
 .league-switch{margin-bottom:14px}.league-switch .active{outline:2px solid #60a5fa}.league-switch .row{display:flex;gap:8px;flex-wrap:wrap}.league-switch button{flex:1;min-width:140px}
 
 .league-queue-separate{display:grid;grid-template-columns:1fr 1fr;gap:12px}.league-queue-separate>*{min-width:0}@media(max-width:700px){.league-queue-separate{grid-template-columns:1fr}}
+/* Mobile app fixes */
+* { -webkit-tap-highlight-color: transparent; }
+html, body { 
+    overscroll-behavior: none;
+    -webkit-user-select: none;
+    user-select: none;
+}
+button, input, a { -webkit-user-select: text; user-select: text; }
+
+/* Круглые кнопки */
+button { border-radius: 14px !important; }
+
+/* Safe area для вырезов экрана */
+body { 
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+/* Убираем outline при тапе */
+*:focus { outline: none !important; }
