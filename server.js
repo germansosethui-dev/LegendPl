@@ -100,8 +100,12 @@ const MAPS = [
   "Rust",
   "Province",
   "Dune",
-  "Breeze"
+  "Breeze",
+  "Hanami",
+  "Prison"
 ];
+
+const ROUND_OPTIONS = [8, 10, 13, 16];
 
 /* =========================================================
    PASSWORD
@@ -671,113 +675,106 @@ function findMatch(mode, ranked) {
   return null;
 }
 
-function createMatch(mode, ranked, participants) {
-  const shuffled = [...participants];
-
-  for (
-    let i = shuffled.length - 1;
-    i > 0;
-    i--
-  ) {
-    const j =
-      Math.floor(Math.random() * (i + 1));
-
-    [
-      shuffled[i],
-      shuffled[j]
-    ] = [
-      shuffled[j],
-      shuffled[i]
-    ];
+function shuffleArray(items) {
+  const arr = [...items];
+  for (let i = arr.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [arr[i], arr[j]] = [arr[j], arr[i]];
   }
+  return arr;
+}
 
-  const half = shuffled.length / 2;
-
-  const teamA = shuffled.slice(0, half);
-  const teamB = shuffled.slice(half);
-
+function createMatch(mode, ranked, participants) {
   const match = {
     id: generateMatchId(),
-
     mode,
     ranked,
-
-    map:
-      MAPS[
-        Math.floor(Math.random() * MAPS.length)
-      ],
-
-    participants,
-
-    teamA,
-    teamB,
-
+    participants: [...participants],
     accepted: [],
-
     screenshots: [],
-
     status: "waiting_accept",
-
     createdAt: Date.now(),
-
-    resolved: false
+    resolved: false,
+    draft: null,
+    teamA: [],
+    teamB: [],
+    captains: { A: null, B: null },
+    hostId: null,
+    lobby: null
   };
 
   pendingMatches.push(match);
-
   saveData();
 
-  const publicMatch = {
-    id: match.id,
-    mode: match.mode,
-    ranked: match.ranked,
-    map: match.map,
-    timeout: 20,
-    participants: match.participants.map(
-      safeUser
-    )
-  };
-
-  sendMatchToParticipants(
-    match,
-    "matchFound",
-    publicMatch
-  );
-
-  setTimeout(() => {
-    checkMatchTimeout(match.id);
-  }, 20000);
+  emitMatchFound(match);
+  scheduleMatchTimeout(match);
 
   return match;
 }
 
-function checkMatchTimeout(matchId) {
-  const match =
-    pendingMatches.find(
-      m => m.id === matchId
-    );
+function publicMatchFound(match) {
+  return {
+    matchId: match.id,
+    mode: match.mode,
+    ranked: match.ranked,
+    timeout: Math.max(
+      0,
+      20 - Math.floor((Date.now() - match.createdAt) / 1000)
+    ),
+    accepted: match.accepted.length,
+    participants: match.participants.map(safeUser)
+  };
+}
 
-  if (!match) return;
+function emitMatchFound(match) {
+  sendMatchToParticipants(
+    match,
+    "matchFound",
+    publicMatchFound(match)
+  );
+}
 
-  if (
-    match.status !== "waiting_accept"
-  ) {
+function scheduleMatchTimeout(match) {
+  if (!match || match.status !== "waiting_accept") return;
+
+  const remaining = Math.max(
+    0,
+    20000 - (Date.now() - Number(match.createdAt || Date.now()))
+  );
+
+  if (remaining <= 0) {
+    checkMatchTimeout(match.id);
     return;
   }
 
+  setTimeout(() => checkMatchTimeout(match.id), remaining);
+}
+
+function checkMatchTimeout(matchId) {
+  const match = pendingMatches.find(m => m.id === matchId);
+  if (!match || match.status !== "waiting_accept") return;
+
   match.status = "cancelled";
+  match.cancelledAt = Date.now();
 
   sendMatchToParticipants(
     match,
     "matchCancelled",
     {
       matchId,
-      reason:
-        "Не все игроки приняли матч за 20 секунд."
+      reason: "Не все игроки приняли матч за 20 секунд."
     }
   );
 
   saveData();
+}
+
+function restoreMatchTimers() {
+  for (const match of pendingMatches) {
+    if (match.status === "waiting_accept") {
+      scheduleMatchTimeout(match);
+    }
+  }
 }
 
 /* =========================================================
@@ -785,25 +782,53 @@ function checkMatchTimeout(matchId) {
 ========================================================= */
 
 function finishMatchForPlayers(match) {
+  const shuffled = shuffleArray(match.participants);
+  const half = shuffled.length / 2;
+
+  match.teamA = shuffled.slice(0, half);
+  match.teamB = shuffled.slice(half);
+
+  const captainA = shuffleArray(match.teamA)[0];
+  const captainB = shuffleArray(match.teamB)[0];
+  const hostId = shuffleArray(match.participants)[0];
+  const rounds = ROUND_OPTIONS[Math.floor(Math.random() * ROUND_OPTIONS.length)];
+  const map = MAPS[Math.floor(Math.random() * MAPS.length)];
+
+  match.captains = { A: captainA, B: captainB };
+  match.hostId = hostId;
+  match.draft = {
+    rounds,
+    map,
+    maxMoney: 16000,
+    createdAt: Date.now()
+  };
+  match.lobby = {
+    hostId,
+    hostInGameId: users[hostId]?.inGameId || "—",
+    rounds,
+    map,
+    maxMoney: 16000
+  };
   match.status = "awaiting_result";
 
-  sendMatchToParticipants(
-    match,
-    "matchLobby",
-    {
-      matchId: match.id,
-      mode: match.mode,
-      ranked: match.ranked,
-      map: match.map,
+  const payload = {
+    matchId: match.id,
+    mode: match.mode,
+    ranked: match.ranked,
+    rounds,
+    map,
+    maxMoney: 16000,
+    teamA: match.teamA.map(safeUser),
+    teamB: match.teamB.map(safeUser),
+    captainA: safeUser(captainA),
+    captainB: safeUser(captainB),
+    host: safeUser(hostId),
+    lobby: match.lobby,
+    screenshots: match.screenshots || [],
+    message: "Драфт завершён. Создайте лобби с указанными параметрами и после игры загрузите скриншот результата."
+  };
 
-      teamA: match.teamA.map(safeUser),
-      teamB: match.teamB.map(safeUser),
-
-      message:
-        "Матч принят. После игры загрузите скриншот результата."
-    }
-  );
-
+  sendMatchToParticipants(match, "matchLobby", payload);
   saveData();
 }
 
@@ -1834,6 +1859,8 @@ io.on("connection", socket => {
                     1000
                 )
             ),
+            accepted: match.accepted.length,
+            acceptedUsers: [...match.accepted],
             participants:
               match.participants.map(
                 safeUser
@@ -1852,13 +1879,19 @@ io.on("connection", socket => {
             matchId: match.id,
             mode: match.mode,
             ranked: match.ranked,
-            map: match.map,
+            rounds: match.draft?.rounds || 13,
+            maxMoney: match.draft?.maxMoney || 16000,
+            map: match.draft?.map || "—",
             teamA:
-              match.teamA.map(safeUser),
+              (match.teamA || []).map(safeUser),
             teamB:
-              match.teamB.map(safeUser),
+              (match.teamB || []).map(safeUser),
+            captainA: safeUser(match.captains?.A),
+            captainB: safeUser(match.captains?.B),
+            host: safeUser(match.hostId),
+            lobby: match.lobby || null,
             screenshots:
-              match.screenshots
+              match.screenshots || []
           }
         );
       }
@@ -1883,9 +1916,14 @@ io.on("connection", socket => {
 
       if (!MODES[mode]) return;
 
+      const partyMembersForQueue =
+        partyId && parties[partyId] && parties[partyId].members.includes(userId)
+          ? parties[partyId].members
+          : [userId];
+
       if (
         ranked &&
-        !rankedAllowed(userId, mode)
+        partyMembersForQueue.some(id => !rankedAllowed(id, mode))
       ) {
         socket.emit(
           "queueError",
@@ -2040,13 +2078,13 @@ io.on("connection", socket => {
         }
       );
 
+      saveData();
+
       if (
         match.accepted.length ===
         match.participants.length
       ) {
-        finishMatchForPlayers(
-          match
-        );
+        finishMatchForPlayers(match);
       }
     }
   );
@@ -2142,7 +2180,7 @@ io.on("connection", socket => {
           user.inGameNick,
 
         avatar:
-          user.avatar,
+          user.stats?.avatar || "",
 
         isAdmin:
           user.isAdmin,
@@ -2492,6 +2530,20 @@ app.post(
       });
     }
 
+    if (match.status !== "awaiting_result") {
+      return res.status(400).json({
+        success: false,
+        message: "Матч ещё не перешёл в состояние ожидания результата."
+      });
+    }
+
+    if (!Array.isArray(match.screenshots) || match.screenshots.length === 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Сначала дождитесь скриншота результата от игроков."
+      });
+    }
+
     const result =
       resolveMatch(
         match,
@@ -2626,6 +2678,8 @@ app.get("/api/top", (req, res) => {
 /* =========================================================
    SERVER
 ========================================================= */
+
+restoreMatchTimers();
 
 const PORT =
   process.env.PORT || 3000;
