@@ -12,8 +12,18 @@ const app=express();
 const server=http.createServer(app);
 const io=new Server(server,{cors:{origin:'*'}});
 app.use(cors()); app.use(express.json({limit:'12mb'})); app.use(express.urlencoded({extended:true}));
-const PUBLIC=path.join(__dirname,'public'); const DATA=process.env.DATA_DIR?path.resolve(process.env.DATA_DIR):path.join(__dirname,'data'); const UP=path.join(DATA,'uploads');
-fs.mkdirSync(UP,{recursive:true}); app.use(express.static(PUBLIC)); app.use('/uploads',express.static(UP));
+const PUBLIC=path.join(__dirname,'public');
+let DATA=process.env.DATA_DIR?path.resolve(process.env.DATA_DIR):path.join(__dirname,'data');
+let UP=path.join(DATA,'uploads');
+try{
+  fs.mkdirSync(UP,{recursive:true});
+}catch(e){
+  console.warn('DATA_DIR unavailable:',DATA,e.code||e.message);
+  DATA=path.join(__dirname,'data');
+  UP=path.join(DATA,'uploads');
+  fs.mkdirSync(UP,{recursive:true});
+}
+app.use(express.static(PUBLIC)); app.use('/uploads',express.static(UP));
 const upload=multer({storage:multer.diskStorage({destination:UP,filename:(r,f,cb)=>cb(null,Date.now()+'-'+crypto.randomBytes(5).toString('hex')+path.extname(f.originalname||'.jpg'))}),limits:{fileSize:8*1024*1024}});
 const ADMIN_LOGINS=['ыж'];
 const MODES={"1v1":2,"2v2":4,"5v5":10};
