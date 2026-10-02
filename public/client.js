@@ -92,7 +92,7 @@ async function boot(){
   try{
     const d=await api('/api/me?userId='+encodeURIComponent(id));
     me=d.user;party=d.party;enter();
-  }catch(e){clearSession();$('auth').hidden=false;$('auth').style.display='flex';$('app').hidden=true;$('app').style.display='none'}
+  }catch(e){clearSession();$('auth').hidden=false;$('auth').style.display='flex';$('app').hidden=true;$('app').style.display='none';$('authMsg').textContent=e.message||'Сессия недействительна.'}
 }
 function renderMe(){
   if(!me)return;
@@ -222,23 +222,20 @@ function showDraft(d){
   $('draftChatInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('draftChatSend').click()});
 }
 function showLobby(m){
-  currentMatch=m;
+  currentMatch=m;const host=m.hostCaptain||m.captains?.[0]||null;
+  const hostName=host?.inGameNick||'Капитан';const hostGameId=host?.inGameId||'—';
   const x=modal(`<div class="modal-box"><button class="close" id="closeLobby">✕</button><h2>Лобби · ${esc(m.matchId)}</h2><p>${esc(m.mode)} · ${m.ranked?'Ранговый':'Обычный'} · <b>${esc(m.map)}</b> · ${m.rounds} раундов · $${m.maxMoney}</p>
+  <div class="card lobby-host"><h3>🎮 Создатель игрового лобби</h3><p><b>${esc(hostName)}</b></p><p>Игровой ID: <b id="hostGameId">${esc(hostGameId)}</b></p><div class="row"><button id="copyHostId">Скопировать ID</button>${host?`<button id="pmHost" class="secondary">Написать капитану</button>`:''}</div><p class="muted">Капитан создаёт лобби в игре. Остальные игроки отправляют ему точку «.» в личные сообщения.</p></div>
   <div class="teams"><div class="team"><h3>🟥 T (террористы)</h3>${m.teamT.map(u=>`<div class="member"><img src="${avatar(u)}" alt=""><button class="profile-link" data-id="${u.id}">${esc(u.inGameNick)}</button></div>`).join('')}</div>
   <div class="team"><h3>🟦 CT (спецназ)</h3>${m.teamCT.map(u=>`<div class="member"><img src="${avatar(u)}" alt=""><button class="profile-link" data-id="${u.id}">${esc(u.inGameNick)}</button></div>`).join('')}</div></div>
   <div class="card"><b>Если не можете войти в игру</b><button id="cancelReq" class="danger">Запросить отмену матча</button></div>
   <div class="result-upload"><input id="shot" type="file" accept="image/*"><button id="uploadShot">Загрузить скриншот</button></div><button id="closeLobby2" class="secondary">Закрыть</button></div>`);
   x.querySelectorAll('.profile-link').forEach(b=>b.onclick=()=>showProfile(b.dataset.id));
-  $('closeLobby').onclick=()=>x.remove();$('closeLobby2').onclick=()=>x.remove();
-  $('cancelReq').onclick=async()=>{
-    const reason=await promptSafe('Причина отмены','Укажите причину');
-    if(reason){try{await post('/api/match/'+encodeURIComponent(m.matchId)+'/cancel-request',{userId:me.id,reason});toast('Заявка отправлена администратору','success')}catch(e){toast(e.message,'error')}}
-  };
-  $('uploadShot').onclick=async()=>{
-    const f=$('shot').files[0];if(!f)return toast('Выберите скриншот','error');
-    const fd=new FormData();fd.append('screenshot',f);fd.append('userId',me.id);
-    try{const d=await fetch('/api/match/'+encodeURIComponent(m.matchId)+'/screenshot',{method:'POST',body:fd}).then(r=>r.json());if(d.success)toast('Скриншот загружен','success');else toast(d.message||'Ошибка','error')}catch(e){toast('Ошибка загрузки','error')}
-  };
+  $('closeLobby').onclick=()=>{x.remove();cleanupModalRoot()};$('closeLobby2').onclick=()=>{x.remove();cleanupModalRoot()};
+  $('copyHostId').onclick=async()=>{try{await navigator.clipboard.writeText(hostGameId);toast('Игровой ID скопирован','success')}catch{toast(hostGameId,'info')}};
+  if(host)$('pmHost').onclick=()=>openFriendChat(host.id);
+  $('cancelReq').onclick=async()=>{const reason=await promptSafe('Причина отмены','Укажите причину');if(reason){try{await post('/api/match/'+encodeURIComponent(m.matchId)+'/cancel-request',{userId:me.id,reason});toast('Заявка отправлена администратору','success')}catch(e){toast(e.message,'error')}}};
+  $('uploadShot').onclick=async()=>{const f=$('shot').files[0];if(!f)return toast('Выберите скриншот','error');const fd=new FormData();fd.append('screenshot',f);fd.append('userId',me.id);try{const d=await fetch('/api/match/'+encodeURIComponent(m.matchId)+'/screenshot',{method:'POST',body:fd}).then(r=>r.json());if(d.success)toast('Скриншот загружен','success');else toast(d.message||'Ошибка','error')}catch(e){toast('Ошибка загрузки','error')}};
 }
 function promptSafe(title,msg){
   const x=modal(`<div class="modal-box"><h3>${esc(title)}</h3><p>${esc(msg)}</p><input id="safePrompt" placeholder="Причина"><div class="row"><button id="pOk">Отправить</button><button id="pNo" class="secondary">Отмена</button></div></div>`);
@@ -306,20 +303,29 @@ async function adminMatches(){
     const teamT=m.teamT.map(u=>`<div class="member"><img src="${avatar(u)}"><span>${adminEsc(u.inGameNick)}</span></div>`).join('');
     const teamCT=m.teamCT.map(u=>`<div class="member"><img src="${avatar(u)}"><span>${adminEsc(u.inGameNick)}</span></div>`).join('');
     const shots=(m.screenshots||[]).map(s=>`<a href="${s.url}" target="_blank"><img src="${s.url}"></a>`).join('');
-    const controls=m.status!=='resolved'?`<div class="row"><button onclick="adminResolveMatch('${m.id}','T')">Победа T</button><button onclick="adminResolveMatch('${m.id}','CT')">Победа CT</button><button class="danger" onclick="adminCancelMatch('${m.id}')">Отменить</button></div><div class="admin-elo">${m.participants.map(u=>`<label>${adminEsc(u.inGameNick)}<input type="number" id="aelo-${m.id}-${u.id}" value="0"></label>`).join('')}</div>`:'<p class="muted">Матч обработан.</p>';
+    const canEdit=m.status==='resolved'&&m.resolvedAt&&(Date.now()-Number(m.resolvedAt)<=3*60*60*1000);
+    let controls='';
+    if(m.status!=='resolved') controls=`<div class="row"><button onclick="adminResolveMatch('${m.id}','T')">Победа T</button><button onclick="adminResolveMatch('${m.id}','CT')">Победа CT</button><button class="danger" onclick="adminCancelMatch('${m.id}')">Отменить матч</button></div><div class="admin-elo">${m.participants.map(u=>`<label>${adminEsc(u.inGameNick)}<input type="number" step="1" id="aelo-${m.id}-${u.id}" value="0"></label>`).join('')}</div>`;
+    else if(canEdit) controls=`<div class="card success"><b>Результат подтверждён ${new Date(m.resolvedAt).toLocaleString('ru-RU')}</b><p>Изменение доступно ещё ${Math.max(0,Math.ceil((3*60*60*1000-(Date.now()-Number(m.resolvedAt)))/60000))} мин.</p></div><div class="row"><button onclick="adminResolveMatch('${m.id}','T')">Изменить: победа T</button><button onclick="adminResolveMatch('${m.id}','CT')">Изменить: победа CT</button><button class="danger" onclick="adminCancelMatch('${m.id}')">Отменить матч</button></div><div class="admin-elo">${m.participants.map(u=>`<label>${adminEsc(u.inGameNick)}<input type="number" step="1" id="aelo-${m.id}-${u.id}" value="${Number(m.eloChanges?.[u.id]||0)}"></label>`).join('')}</div>`;
     return `<article class="card admin-match"><h3>${adminEsc(m.id)}</h3><p>${adminEsc(m.mode)} · ${m.ranked?'Ранговый':'Обычный'} · <b>${adminEsc(m.map||'Драфт')}</b> · ${m.rounds||'—'} раундов</p><p>Статус: ${adminEsc(m.status)}</p><div class="teams"><div class="team"><b>T</b>${teamT}</div><div class="team"><b>CT</b>${teamCT}</div></div><div class="admin-shots">${shots}</div>${controls}</article>`;
   }).join('');
   $('adminMatches').innerHTML='<h2>Матчи</h2>'+(html||'<p>Нет активных матчей.</p>');
 }
 async function adminAsk(title,text){return new Promise(resolve=>{const x=modal(`<div class="modal-box"><h3>${adminEsc(title)}</h3><p>${adminEsc(text)}</p><input id="adminAskInput" placeholder="Введите текст"><div class="row"><button id="adminAskOk">Подтвердить</button><button id="adminAskNo" class="secondary">Отмена</button></div></div>`);$('adminAskOk').onclick=()=>{const v=$('adminAskInput').value.trim();x.remove();cleanupModalRoot();resolve(v)};$('adminAskNo').onclick=()=>{x.remove();cleanupModalRoot();resolve(null)}})}
-async function adminResolveMatch(mid,w){const changes={};document.querySelectorAll(`[id^="aelo-${mid}-"]`).forEach(i=>changes[i.id.split('-').pop()]=Number(i.value||0));try{await post('/api/admin/match/'+encodeURIComponent(mid)+'/resolve',{adminId:me.id,winnerTeam:w,eloChanges:changes});await loadAdmin()}catch(e){toast(e.message,'error')}}
-async function adminCancelMatch(mid){const r=await adminAsk('Отмена матча','Укажите причину');if(r===null)return;try{await post('/api/admin/match/'+encodeURIComponent(mid)+'/cancel',{adminId:me.id,reason:r||'Отменено администратором'});await loadAdmin()}catch(e){toast(e.message,'error')}}
+async function adminResolveMatch(mid,w){const changes={};document.querySelectorAll(`[id^="aelo-${mid}-"]`).forEach(i=>changes[i.id.split('-').pop()]=Number(i.value||0));try{await post('/api/admin/match/'+encodeURIComponent(mid)+'/resolve',{adminId:me.id,winnerTeam:w,eloChanges:changes});toast('Результат сохранён','success');await loadAdmin()}catch(e){toast(e.message,'error')}}
+async function adminCancelMatch(mid){const r=await adminAsk('Отмена матча','Укажите причину отмены');if(r===null)return;try{await post('/api/admin/match/'+encodeURIComponent(mid)+'/cancel',{adminId:me.id,reason:r||'Отменено администратором'});toast('Матч отменён','success');await loadAdmin()}catch(e){toast(e.message,'error')}}
+async function adminRestriction(uid,action){
+  if(action==='unban'||action==='unmute'){try{await post('/api/admin/action',{adminId:me.id,targetUserId:uid,action});toast(action==='unban'?'Игрок разбанен':'Игрок размучен','success');await loadAdmin()}catch(e){toast(e.message,'error')}return}
+  const x=modal(`<div class="modal-box"><h3>${action==='ban'?'🔴 Бан игрока':'🔇 Мут игрока'}</h3><p>Выберите срок.</p><div class="row"><input id="restrictionAmount" type="number" min="1" value="1" placeholder="Срок"><select id="restrictionUnit"><option value="1">Минуты</option><option value="60">Часы</option></select></div><input id="restrictionReason" placeholder="Причина"><div class="row"><button id="restrictionOk">Выдать</button><button id="restrictionNo" class="secondary">Отмена</button></div></div>`);
+  $('restrictionOk').onclick=async()=>{const amount=Math.max(1,Number($('restrictionAmount').value||1));const unit=Number($('restrictionUnit').value||1);const minutes=Math.round(amount*unit);const reason=$('restrictionReason').value.trim();x.remove();cleanupModalRoot();try{await post('/api/admin/action',{adminId:me.id,targetUserId:uid,action,minutes,reason});toast(action==='ban'?'Бан выдан':'Мут выдан','success');await loadAdmin()}catch(e){toast(e.message,'error')}};
+  $('restrictionNo').onclick=()=>{x.remove();cleanupModalRoot()};
+}
 async function adminCancels(){const d=await adminApi('/api/admin/cancel-requests');$('adminCancels').innerHTML='<h2>Заявки на отмену</h2>'+(d.requests.length?d.requests.map(r=>`<div class="card"><b>${adminEsc(r.id)}</b><p>Матч: ${adminEsc(r.matchId)}</p><p>Игрок: ${adminEsc(r.user?.inGameNick||'—')}</p><p>${adminEsc(r.reason)}</p>${r.status==='open'?`<div class="row"><button onclick="adminAnswerCancel('${r.id}','approved')">Одобрить</button><button class="danger" onclick="adminAnswerCancel('${r.id}','rejected')">Отклонить</button></div>`:`<p class="muted">${adminEsc(r.status)}</p>`}</div>`).join(''):'<p>Нет заявок.</p>')}
 async function adminAnswerCancel(id,status){await post('/api/admin/cancel-request/'+id,{adminId:me.id,status});await loadAdmin()}
 async function adminReports(){const d=await adminApi('/api/admin/reports');$('adminReports').innerHTML='<h2>Репорты</h2>'+(d.reports.length?d.reports.map(r=>`<div class="card"><b>${adminEsc(r.id)}</b><p>${adminEsc(r.reporter?.inGameNick||'—')} → ${adminEsc(r.target?.inGameNick||'—')}</p><p>Причина: ${adminEsc(r.reason)}</p><p>Статус: ${adminEsc(r.status)}</p>${r.status==='open'?`<button onclick="adminCloseReport('${r.id}')">Закрыть</button>`:''}</div>`).join(''):'<p>Нет репортов.</p>')}
 async function adminCloseReport(id){await post('/api/admin/report/'+id,{adminId:me.id,status:'closed'});await loadAdmin()}
-async function adminUsers(){const d=await adminApi('/api/admin/users');$('adminUsers').innerHTML='<h2>Игроки</h2>'+(d.users.length?d.users.map(u=>`<div class="member admin-user"><img src="${avatar(u)}"><div class="admin-user-info"><b>${u.isAdmin?'<span class="admin">ADMIN</span> ':''}${adminEsc(u.inGameNick)}</b><div class="muted">${adminEsc(u.username)} · ID ${u.id} · ELO ${u.stats['1v1'].elo}</div></div>${!u.isAdmin?`<button onclick="adminAction('${u.id}','ban')">Бан</button><button onclick="adminAction('${u.id}','mute')">Мут</button>`:''}</div>`).join(''):'<p>Нет игроков.</p>')}
-async function adminAction(uid,action){try{await post('/api/admin/action',{adminId:me.id,targetUserId:uid,action,hours:24});toast('Действие применено','success');await loadAdmin()}catch(e){toast(e.message,'error')}}
+async function adminUsers(){const d=await adminApi('/api/admin/users');$('adminUsers').innerHTML='<h2>Игроки</h2>'+(d.users.length?d.users.map(u=>{const ban=!!u.ban,mute=!!u.mute;return `<div class="member admin-user"><img src="${avatar(u)}"><div class="admin-user-info"><b>${u.isAdmin?'<span class="admin">ADMIN</span> ':''}${adminEsc(u.inGameNick)}</b><div class="muted">${adminEsc(u.username)} · ID ${u.id} · ELO 1v1 ${u.stats['1v1'].elo}</div>${ban?`<div class="restriction-badge ban-badge">БАН до ${new Date(u.ban.until).toLocaleString('ru-RU')} · ${adminEsc(u.ban.reason||'без причины')}</div>`:''}${mute?`<div class="restriction-badge mute-badge">МУТ до ${new Date(u.mute.until).toLocaleString('ru-RU')} · ${adminEsc(u.mute.reason||'без причины')}</div>`:''}</div>${!u.isAdmin?`${ban?`<button class="success" onclick="adminRestriction('${u.id}','unban')">Разбан</button>`:`<button class="danger" onclick="adminRestriction('${u.id}','ban')">Бан</button>`}${mute?`<button class="success" onclick="adminRestriction('${u.id}','unmute')">Размут</button>`:`<button onclick="adminRestriction('${u.id}','mute')">Мут</button>`}`:''}</div>`}).join(''):'<p>Нет игроков.</p>')}
+
 async function loadPMData(){
   try{
     const d=await api('/api/private-messages?userId='+me.id);
@@ -465,6 +471,8 @@ $('menuBtn').onclick=()=>{
   }
 };
 
+socket.on('accountBanned',d=>{clearSession();closeModalRoot();$('app').hidden=true;$('app').style.display='none';$('auth').hidden=false;$('auth').style.display='flex';$('authMsg').textContent=d.message||'Вы забанены.'});
+socket.on('chatBlocked',d=>toast(d.message||'Вы не можете писать в чат.','error'));
 socket.on('queueUpdate',updateQueue);
 socket.on('queueMembership',updateQueueMine);
 socket.on('queueError',d=>toast(d.message||'Ошибка очереди','error'));
