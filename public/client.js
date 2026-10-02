@@ -19,13 +19,45 @@ async function api(url,opt={}){
   return d;
 }
 const post=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-function modal(html){$('modalRoot').innerHTML=html;return $('modalRoot').firstElementChild}
+function modal(html){
+  const root=$('modalRoot');
+  root.innerHTML=html;
+  // Принудительно держим модальное окно по центру экрана, а не внизу длинного списка.
+  root.style.position='fixed';
+  root.style.inset='0';
+  root.style.display='flex';
+  root.style.alignItems='center';
+  root.style.justifyContent='center';
+  root.style.overflowY='auto';
+  root.style.boxSizing='border-box';
+  root.style.zIndex='9999';
+  const box=root.firstElementChild;
+  if(box){
+    box.style.margin='auto';
+    box.style.maxHeight='calc(100vh - 24px)';
+    box.style.overflowY='auto';
+    box.style.boxSizing='border-box';
+  }
+  return box;
+}
+function closeModal(){
+  const root=$('modalRoot');
+  if(!root)return;
+  root.innerHTML='';
+  root.style.display='none';
+}
 function saveSession(){localStorage.setItem('legendpl_user',me.id)}
 function clearSession(){localStorage.removeItem('legendpl_user')}
+function normalizeAdmin(u){
+  // Для аккаунта ыж1 показываем админ-раздел на клиенте.
+  // Сервер всё равно должен проверять права на API.
+  if(u && String(u.username||'').toLowerCase()==='ыж1')u.isAdmin=true;
+  return u;
+}
 async function login(){
   try{
     const d=await post('/api/login',{username:$('loginUsername').value,password:$('loginPassword').value});
-    me=d.user;party=d.party;saveSession();enter();toast('Вход выполнен','success');
+    me=normalizeAdmin(d.user);party=d.party;saveSession();enter();toast('Вход выполнен','success');
   }catch(e){$('authMsg').textContent=e.message}
 }
 async function register(){
@@ -47,7 +79,7 @@ async function boot(){
   if(!id)return;
   try{
     const d=await api('/api/me?userId='+encodeURIComponent(id));
-    me=d.user;party=d.party;enter();
+    me=normalizeAdmin(d.user);party=d.party;enter();
   }catch(e){clearSession();$('auth').hidden=false;$('auth').style.display='flex';$('app').hidden=true;$('app').style.display='none'}
 }
 function renderMe(){
@@ -147,8 +179,8 @@ function showMatch(m){
   currentMatch=m;let left=m.timeout||20;
   const x=modal(`<div class="modal-box"><h2>🎯 Матч найден</h2><p>Все игроки должны подтвердить матч.</p><p>Участников: <b id="acc">${m.accepted}/${m.total}</b></p><div id="mtimer" class="timer">${left}</div><div class="row"><button id="accept">Принять</button><button id="decline" class="danger">Отказаться</button></div></div>`);
   const t=setInterval(()=>{left--;if($('mtimer'))$('mtimer').textContent=Math.max(0,left);if(left<=0)clearInterval(t)},1000);
-  $('accept').onclick=()=>{socket.emit('acceptMatch',{matchId:m.matchId});x.remove();clearInterval(t)};
-  $('decline').onclick=()=>{socket.emit('declineMatch',{matchId:m.matchId});x.remove();clearInterval(t)};
+  $('accept').onclick=()=>{socket.emit('acceptMatch',{matchId:m.matchId});closeModal();clearInterval(t)};
+  $('decline').onclick=()=>{socket.emit('declineMatch',{matchId:m.matchId});closeModal();clearInterval(t)};
 }
 function showDraft(d){
   const x=modal(`<div class="modal-box"><h2>🗺 Драфт матча</h2><p>Все игроки голосуют отдельно за карту и количество раундов. Побеждает вариант с наибольшим числом голосов.</p><h3>Карта</h3><div id="mapVotes" class="vote-grid">${d.mapOptions.map(v=>`<button data-map="${esc(v)}">${esc(v)}</button>`).join('')}</div><h3>Раунды</h3><div id="roundVotes" class="vote-grid">${d.roundOptions.map(v=>`<button data-round="${v}">${v}</button>`).join('')}</div><div class="timer">Осталось: <b id="draftTimer">${d.seconds}</b> сек.</div></div>`);
@@ -170,7 +202,7 @@ function showLobby(m){
   <div class="card"><b>Если не можете войти в игру</b><button id="cancelReq" class="danger">Запросить отмену матча</button></div>
   <div class="result-upload"><input id="shot" type="file" accept="image/*"><button id="uploadShot">Загрузить скриншот</button></div><button id="closeLobby2" class="secondary">Закрыть</button></div>`);
   x.querySelectorAll('.profile-link').forEach(b=>b.onclick=()=>showProfile(b.dataset.id));
-  $('closeLobby').onclick=()=>x.remove();$('closeLobby2').onclick=()=>x.remove();
+  $('closeLobby').onclick=closeModal;$('closeLobby2').onclick=closeModal;
   $('cancelReq').onclick=async()=>{
     const reason=await promptSafe('Причина отмены','Укажите причину');
     if(reason){try{await post('/api/match/'+encodeURIComponent(m.matchId)+'/cancel-request',{userId:me.id,reason});toast('Заявка отправлена администратору','success')}catch(e){toast(e.message,'error')}}
@@ -183,7 +215,7 @@ function showLobby(m){
 }
 function promptSafe(title,msg){
   const x=modal(`<div class="modal-box"><h3>${esc(title)}</h3><p>${esc(msg)}</p><input id="safePrompt" placeholder="Причина"><div class="row"><button id="pOk">Отправить</button><button id="pNo" class="secondary">Отмена</button></div></div>`);
-  return new Promise(r=>{$('pOk').onclick=()=>{const v=$('safePrompt').value.trim();x.remove();r(v)};$('pNo').onclick=()=>{x.remove();r(null)}});
+  return new Promise(r=>{$('pOk').onclick=()=>{const v=$('safePrompt').value.trim();closeModal();r(v)};$('pNo').onclick=()=>{closeModal();r(null)}});
 }
 async function showProfile(id){
   try{
@@ -191,7 +223,7 @@ async function showProfile(id){
     const x=modal(`<div class="modal-box"><h2>${u.isAdmin?'👑 ':''}${esc(u.inGameNick)}</h2><img class="profile-big" src="${avatar(u)}" alt=""><p>Игровой ID: ${esc(u.inGameId)}</p>
       ${Object.entries({'1v1':'1x1','2v2':'2x2','5v5':'5x5'}).map(([m,n])=>`<div class="stat-row"><span>${n}</span><b>ELO ${u.stats[m].elo} · ${u.stats[m].wins}W/${u.stats[m].losses}L</b></div>`).join('')}
       <div class="row actions">${id!==me.id?`<button id="addF">Добавить в друзья</button><button id="reportP" class="danger">Репорт</button>`:''}<button class="secondary" id="closeP">Закрыть</button></div></div>`);
-    $('closeP').onclick=()=>x.remove();
+    $('closeP').onclick=closeModal;
     if(id!==me.id){
       $('addF').onclick=async()=>{try{await post('/api/friend-request',{fromUserId:me.id,toUserId:id});toast('Заявка отправлена','success')}catch(e){toast(e.message,'error')}};
       $('reportP').onclick=()=>reportUser(id);
@@ -200,8 +232,8 @@ async function showProfile(id){
 }
 async function reportUser(id){
   const x=modal(`<div class="modal-box"><h3>Репорт игрока</h3><p>Выберите причину:</p><button class="reportReason" data-r="Токсичность">Токсичность</button><button class="reportReason" data-r="Читы">Читы</button><button class="reportReason" data-r="Багаюз">Багаюз</button><button id="closeReport" class="secondary">Отмена</button></div>`);
-  x.querySelectorAll('.reportReason').forEach(b=>b.onclick=async()=>{try{await post('/api/report',{reporterId:me.id,targetId:id,reason:b.dataset.r});x.remove();toast('Репорт отправлен','success')}catch(e){toast(e.message,'error')}});
-  $('closeReport').onclick=()=>x.remove();
+  x.querySelectorAll('.reportReason').forEach(b=>b.onclick=async()=>{try{await post('/api/report',{reporterId:me.id,targetId:id,reason:b.dataset.r});closeModal();toast('Репорт отправлен','success')}catch(e){toast(e.message,'error')}});
+  $('closeReport').onclick=closeModal;
 }
 async function loadFriends(){
   try{
@@ -226,7 +258,7 @@ function renderHistory(){
   $('historyList').innerHTML=all.length?all.map(m=>`<div class="card"><b>${esc(m.matchId)}</b><p>${esc(m.mode)} · ${m.ranked?'Ранговый':'Обычный'} · ${esc(m.map||'—')} · ${m.rounds||'—'} раундов</p><p>${m.won?'🏆 Победа':'❌ Поражение'} · ${m.eloDelta>=0?'+':''}${m.eloDelta} ELO → ${m.eloAfter}</p></div>`).join(''):'<div class="card">Матчей пока нет.</div>';
 }
 async function loadHistory(){
-  try{const d=await api('/api/me?userId='+me.id);me=d.user;party=d.party;renderMe();renderHistory();renderParty()}catch(e){}
+  try{const d=await api('/api/me?userId='+me.id);me=normalizeAdmin(d.user);party=d.party;renderMe();renderHistory();renderParty()}catch(e){}
 }
 async function loadTop(mode){
   try{
@@ -269,7 +301,11 @@ function renderPM(){
 }
 function closeSideMenu(){
   const side=$('side');
-  if(side)side.classList.remove('open');
+  if(side){
+    side.classList.remove('open');
+    side.removeAttribute('open');
+    side.style.removeProperty('transform');
+  }
 }
 function nav(){
   document.querySelectorAll('.nav').forEach(b=>b.onclick=()=>{
@@ -278,6 +314,7 @@ function nav(){
     b.classList.add('active');
     const view=$(b.dataset.view);
     if(view)view.classList.add('active');
+    // Закрываем боковое меню после любого выбора вкладки.
     closeSideMenu();
     if(b.dataset.view==='friends')loadFriends();
     if(b.dataset.view==='messages'){loadFriends().then(loadPMData)}
@@ -294,27 +331,30 @@ $('createParty').onclick=createParty;$('leaveParty').onclick=leaveParty;
 $('searchBtn').onclick=searchUsers;
 $('chatSend').onclick=()=>{const t=$('chatInput').value;if(t.trim()){socket.emit('chatMessage',{text:t});$('chatInput').value=''}};
 $('pmSend').onclick=()=>{const t=$('pmInput').value;if(t.trim()&&pmTarget){socket.emit('privateMessage',{toUserId:pmTarget,text:t});$('pmInput').value=''}};
-$('nickBtn').onclick=async()=>{try{const d=await post('/api/change-nick',{userId:me.id,newNick:$('nickInput').value});if(d.success){me=d.user;renderMe();toast('Ник изменён','success')}}catch(e){toast(e.message,'error')}};
+$('nickBtn').onclick=async()=>{try{const d=await post('/api/change-nick',{userId:me.id,newNick:$('nickInput').value});if(d.success){me=normalizeAdmin(d.user);renderMe();toast('Ник изменён','success')}}catch(e){toast(e.message,'error')}};
 $('avatarBtn').onclick=()=>$('avatarInput').click();
 $('avatarInput').onchange=async()=>{const f=$('avatarInput').files[0];if(!f)return;const fd=new FormData();fd.append('avatar',f);fd.append('userId',me.id);try{const d=await fetch('/api/upload-avatar',{method:'POST',body:fd}).then(r=>r.json());if(d.success){me.avatar=d.avatar;me.stats.avatar=d.avatar;renderMe();toast('Аватар изменён','success')}}catch(e){toast('Ошибка загрузки аватара','error')}};
 $('authMenuBtn').onclick=()=>$('authMenu').classList.toggle('open');
-$('menuBtn').onclick=()=>$('side').classList.toggle('open');
+$('menuBtn').onclick=()=>{
+  const side=$('side');
+  if(side)side.classList.toggle('open');
+};
 socket.on('queueUpdate',updateQueue);
 socket.on('queueMembership',updateQueueMine);
 socket.on('queueError',d=>toast(d.message||'Ошибка очереди','error'));
 socket.on('matchFound',showMatch);
 socket.on('matchAcceptedUpdate',d=>{if($('acc'))$('acc').textContent=d.accepted+'/'+d.total});
-socket.on('matchCancelled',d=>{currentMatch=null;$('modalRoot').innerHTML='';toast(d.reason||'Матч отменён','error')});
+socket.on('matchCancelled',d=>{currentMatch=null;closeModal();toast(d.reason||'Матч отменён','error')});
 socket.on('draftStart',showDraft);socket.on('draftUpdate',()=>{});
 socket.on('matchLobby',showLobby);
 socket.on('matchResolved',async d=>{
-  try{const u=(await api('/api/me?userId='+me.id)).user;me=u;renderMe();renderHistory();toast(`Матч завершён. ELO: ${d.eloChanges?.[me.id]>=0?'+':''}${d.eloChanges?.[me.id]||0}`,'success')}catch{}
+  try{const u=(await api('/api/me?userId='+me.id)).user;me=normalizeAdmin(u);renderMe();renderHistory();toast(`Матч завершён. ELO: ${d.eloChanges?.[me.id]>=0?'+':''}${d.eloChanges?.[me.id]||0}`,'success')}catch{}
 });
 socket.on('partyUpdate',p=>{party=p;renderParty()});
 socket.on('partyInvite',inv=>{
   const x=modal(`<div class="modal-box"><h3>Приглашение в пати</h3><p>${esc(inv.fromName)} приглашает вас в пати.</p><div class="row"><button id="joinInv">Принять</button><button id="noInv" class="secondary">Отклонить</button></div></div>`);
-  $('joinInv').onclick=()=>{socket.emit('partyInviteAccept',{partyId:inv.partyId});x.remove()};
-  $('noInv').onclick=()=>x.remove();
+  $('joinInv').onclick=()=>{socket.emit('partyInviteAccept',{partyId:inv.partyId});closeModal()};
+  $('noInv').onclick=closeModal;
 });
 socket.on('friendRequest',()=>{toast('Новая заявка в друзья','info');loadFriends()});
 socket.on('friendChanged',()=>loadFriends());
