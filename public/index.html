@@ -9,6 +9,14 @@
 <section id="chat" class="view"><h2>Общий чат</h2><div id="globalChat" class="chat"></div><div class="row"><input id="chatInput" type="text" inputmode="text" lang="ru" autocomplete="off" placeholder="Сообщение"><button id="chatSend">Отправить</button></div></section>
 <section id="top" class="view"><h2>Топ по ELO</h2><div class="tabs"><button data-mode="1v1">1x1</button><button data-mode="2v2">2x2</button><button data-mode="5v5">5x5</button></div><div id="topList"></div></section>
 <section id="about2" class="view"><h2>О проекте</h2><div class="card about"><p>Legend Pl — матчи, рейтинг, друзья и сообщения.</p><p>Telegram: <a href="https://t.me/inknight666" target="_blank">@inknight666</a></p></div></section>
-<section id="admin" class="view"><h2>Админ-панель</h2><a class="button" href="/admin.html">Открыть полную админ-панель</a></section>
+<section id="admin" class="view admin-view"><h2>🔴 Админ-панель</h2>
+<div id="adminStatus" class="card muted">Проверка доступа…</div>
+<div id="adminStats" class="grid admin-stats"></div>
+<div class="tabs admin-tabs"><button data-admin-tab="matches">Матчи</button><button data-admin-tab="cancels">Отмены</button><button data-admin-tab="reports">Репорты</button><button data-admin-tab="users">Игроки</button></div>
+<section id="adminMatches" class="card admin-section"></section>
+<section id="adminCancels" class="card admin-section" hidden></section>
+<section id="adminReports" class="card admin-section" hidden></section>
+<section id="adminUsers" class="card admin-section" hidden></section>
+</section>
 </main></div>
 <div id="modalRoot"></div><div id="toast"></div><script src="/client.js"></script></body></html>
