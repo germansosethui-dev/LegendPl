@@ -358,6 +358,181 @@ function loadData() {
 
 loadData();
 
+/* =========================================================
+   AUTH / SESSION API
+========================================================= */
+
+app.post("/api/register", (req, res) => {
+  try {
+    const username = String(req.body?.username || "").trim();
+    const password = String(req.body?.password || "");
+    const inGameNick = String(req.body?.inGameNick || "").trim();
+    const inGameId = String(req.body?.inGameId || "").trim();
+
+    if (!username || !password || !inGameNick || !inGameId) {
+      return res.status(400).json({
+        success: false,
+        message: "Заполните все поля."
+      });
+    }
+
+    if (username.length < 3 || username.length > 24) {
+      return res.status(400).json({
+        success: false,
+        message: "Логин должен содержать от 3 до 24 символов."
+      });
+    }
+
+    if (password.length < 4 || password.length > 128) {
+      return res.status(400).json({
+        success: false,
+        message: "Пароль должен содержать от 4 до 128 символов."
+      });
+    }
+
+    if (inGameNick.length > 32) {
+      return res.status(400).json({
+        success: false,
+        message: "Ник в игре: максимум 32 символа."
+      });
+    }
+
+    if (inGameId.length > 64) {
+      return res.status(400).json({
+        success: false,
+        message: "ID в игре: максимум 64 символа."
+      });
+    }
+
+    const normalized = username.toLowerCase();
+    const exists = Object.values(users).some(
+      user => String(user.username || "").toLowerCase() === normalized
+    );
+
+    if (exists) {
+      return res.status(409).json({
+        success: false,
+        message: "Такой логин уже занят."
+      });
+    }
+
+    const id = generateUserId();
+    const user = {
+      username,
+      password: hashPassword(password),
+      inGameNick,
+      inGameId,
+      friends: [],
+      pendingRequests: [],
+      clanId: null,
+      isAdmin: ADMIN_LOGINS.includes(normalized),
+      stats: getDefaultStats(),
+      createdAt: Date.now()
+    };
+
+    users[id] = user;
+    saveData();
+
+    return res.status(201).json({
+      success: true,
+      message: "Регистрация успешна. Теперь войдите.",
+      user: safeUser(id)
+    });
+  } catch (err) {
+    console.error("Ошибка регистрации:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Не удалось зарегистрировать аккаунт."
+    });
+  }
+});
+
+app.post("/api/login", (req, res) => {
+  try {
+    const username = String(req.body?.username || "").trim();
+    const password = String(req.body?.password || "");
+
+    if (!username || !password) {
+      return res.status(400).json({
+        success: false,
+        message: "Введите логин и пароль."
+      });
+    }
+
+    const normalized = username.toLowerCase();
+    const entry = Object.entries(users).find(
+      ([, user]) => String(user.username || "").toLowerCase() === normalized
+    );
+
+    if (!entry) {
+      return res.status(401).json({
+        success: false,
+        message: "Неверный логин или пароль."
+      });
+    }
+
+    const [id, user] = entry;
+
+    if (isBanned(id)) {
+      const left = Math.max(1, Math.ceil((user.ban.until - Date.now()) / 60000));
+      return res.status(403).json({
+        success: false,
+        message: `Аккаунт заблокирован. Осталось примерно ${left} мин.`
+      });
+    }
+
+    const hash = hashPassword(password);
+    if (String(user.password || "") !== hash) {
+      return res.status(401).json({
+        success: false,
+        message: "Неверный логин или пароль."
+      });
+    }
+
+    if (normalized === ADMIN_LOGINS[0]) {
+      user.isAdmin = true;
+      saveData();
+    }
+
+    return res.json({
+      success: true,
+      message: "Вход выполнен.",
+      user: safeUser(id),
+      party: getPartyForUser(id)
+    });
+  } catch (err) {
+    console.error("Ошибка входа:", err);
+    return res.status(500).json({
+      success: false,
+      message: "Не удалось выполнить вход."
+    });
+  }
+});
+
+app.get("/api/me", (req, res) => {
+  const userId = String(req.query.userId || "");
+
+  if (!userId || !users[userId]) {
+    return res.status(401).json({
+      success: false,
+      message: "Сессия недействительна. Войдите снова."
+    });
+  }
+
+  if (isBanned(userId)) {
+    return res.status(403).json({
+      success: false,
+      message: "Аккаунт заблокирован."
+    });
+  }
+
+  return res.json({
+    success: true,
+    user: safeUser(userId),
+    party: getPartyForUser(userId)
+  });
+});
+
 // Восстанавливаем таймеры активных матчей после перезапуска сервера.
 setTimeout(() => {
   for (const match of pendingMatches) {
