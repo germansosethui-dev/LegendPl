@@ -155,21 +155,83 @@ function detectClientPlatform(){
 function leaguePlatformAllowed(league){ return String(league||'pc')===detectClientPlatform(); }
 
 function renderModes(){
-  const leagueHost=document.getElementById('modes');
-  if(leagueHost && !document.getElementById('leaguePC')) leagueHost.insertAdjacentHTML('beforebegin',`<div class="league-switch card"><h3>Лига</h3><div class="row"><button id="leaguePC" data-league="pc">🖥️ PC лига</button><button id="leaguePhone" data-league="phone">📱 Phone лига</button></div><p id="leagueHint" class="muted"></p></div>`);
-  let selectedLeague=detectClientPlatform();
-  const setLeague=(lg)=>{selectedLeague=lg;document.querySelectorAll('#leaguePC,#leaguePhone').forEach(b=>b.classList.toggle('active',b.dataset.league===lg));$('leagueHint').textContent=leaguePlatformAllowed(lg)?'Ваша платформа подходит для этой лиги.':'Ваша платформа не может играть в этой лиге.';};
-  document.querySelectorAll('#leaguePC,#leaguePhone').forEach(b=>b.onclick=()=>setLeague(b.dataset.league)); setLeague(selectedLeague);
-  const specs=[['1v1','1x1 Дуэль',2],['2v2','2x2 Напарники',4],['5v5','5x5 Соревновательный',10]];
-  const leagues=[['pc','🖥️ PC лига','Игры для игроков на компьютере.'],['phone','📱 Phone лига','Игры для игроков на телефонах. PC-игрок тоже может выбрать эту лигу.']];
-  $('modes').innerHTML=leagues.map(([league,title,desc])=>`<section class="league-block card"><div class="league-title"><div><h2>${title}</h2><p class="muted">${desc}</p></div><span class="league-badge league-${league}">${league==='pc'?'PC':'PHONE'}</span></div><div class="grid league-grid">${specs.map(([m,n,need])=>`<div class="card mode"><h3>${n}</h3><div class="row"><button class="join" data-league="${league}" data-mode="${m}" data-ranked="false">Обычный</button><button class="join" data-league="${league}" data-mode="${m}" data-ranked="true">Ранговый</button></div><div class="queue"><span>Обычный <b id="q-${league}-${m}-u">0/${need}</b></span><span>Ранговый <b id="q-${league}-${m}-r">0/${need}</b></span></div><button class="secondary leave" data-league="${league}" data-mode="${m}" data-ranked="false" hidden>Выйти из очереди</button><button class="secondary leave" data-league="${league}" data-mode="${m}" data-ranked="true" hidden>Выйти из очереди</button></div>`).join('')}</div></section>`).join('');
-  $('modes').querySelectorAll('.join').forEach(b=>b.onclick=()=>{
-    const league=b.dataset.league,mode=b.dataset.mode,ranked=b.dataset.ranked==='true';
-    if(ranked&&!rankedAllowedLocal(mode)){toast(`Нельзя играть в ранговый режим: сначала сыграйте 3 обычных матча в ${mode}.`,'error');return}
-    socket.emit('joinQueue',{league,mode,ranked,partyId:party?.id});
-  });
-  $('modes').querySelectorAll('.leave').forEach(b=>b.onclick=()=>socket.emit('leaveQueue',{league:b.dataset.league,mode:b.dataset.mode,ranked:b.dataset.ranked==='true'}));
+  const host=$('modes');
+  if(!host)return;
+
+  const platform=detectClientPlatform();
+  let selectedLeague=localStorage.getItem('legendpl_league')||platform;
+  if(selectedLeague!==platform)selectedLeague=platform;
+
+  const setLeague=(lg,save=true)=>{
+    if(lg!==platform){
+      toast(platform==='pc'?'Эта лига не для тебя. С ПК доступна только PC лига.':'Эта лига не для тебя. С телефона доступна только Phone лига.','error');
+      return;
+    }
+    selectedLeague=lg;
+    if(save)localStorage.setItem('legendpl_league',lg);
+    renderLeague();
+  };
+
+  const renderLeague=()=>{
+    const specs=[['1v1','1x1 Дуэль',2],['2v2','2x2 Напарники',4],['5v5','5x5 Соревновательный',10]];
+    const isPC=selectedLeague==='pc';
+    const title=isPC?'🖥️ PC лига':'📱 Phone лига';
+    const desc=isPC?'Игры только для игроков на компьютере.':'Игры только для игроков на телефонах.';
+    const badge=isPC?'PC':'PHONE';
+
+    host.innerHTML=`
+      <div class="league-switch card">
+        <h3>Выберите лигу</h3>
+        <div class="row">
+          <button id="leaguePC" data-league="pc" class="${isPC?'active':''}" ${platform!=='pc'?'disabled':''}>🖥️ PC лига</button>
+          <button id="leaguePhone" data-league="phone" class="${!isPC?'active':''}" ${platform!=='phone'?'disabled':''}>📱 Phone лига</button>
+        </div>
+        <p class="muted">Ваше устройство: <b>${platform==='pc'?'PC':'Phone'}</b>. Доступна только соответствующая лига.</p>
+      </div>
+      <section class="league-block card">
+        <div class="league-title">
+          <div><h2>${title}</h2><p class="muted">${desc}</p></div>
+          <span class="league-badge league-${selectedLeague}">${badge}</span>
+        </div>
+        <div class="grid league-grid">
+          ${specs.map(([m,n,need])=>`
+            <div class="card mode">
+              <h3>${n}</h3>
+              <div class="row">
+                <button class="join" data-league="${selectedLeague}" data-mode="${m}" data-ranked="false">Обычный</button>
+                <button class="join" data-league="${selectedLeague}" data-mode="${m}" data-ranked="true">Ранговый</button>
+              </div>
+              <div class="queue">
+                <span>Обычный <b id="q-${selectedLeague}-${m}-u">0/${need}</b></span>
+                <span>Ранговый <b id="q-${selectedLeague}-${m}-r">0/${need}</b></span>
+              </div>
+              <button class="secondary leave" data-league="${selectedLeague}" data-mode="${m}" data-ranked="false" hidden>Выйти из очереди</button>
+              <button class="secondary leave" data-league="${selectedLeague}" data-mode="${m}" data-ranked="true" hidden>Выйти из очереди</button>
+            </div>`).join('')}
+        </div>
+      </section>`;
+
+    $('leaguePC').onclick=()=>setLeague('pc');
+    $('leaguePhone').onclick=()=>setLeague('phone');
+
+    host.querySelectorAll('.join').forEach(b=>b.onclick=()=>{
+      const league=b.dataset.league,mode=b.dataset.mode,ranked=b.dataset.ranked==='true';
+      if(!leaguePlatformAllowed(league)){
+        toast(platform==='pc'?'Эта лига не для тебя. С ПК можно играть только в PC лиге.':'Эта лига не для тебя. С телефона можно играть только в Phone лиге.','error');
+        return;
+      }
+      if(ranked&&!rankedAllowedLocal(mode)){
+        toast(`Нельзя играть в ранговый режим: сначала сыграйте 3 обычных матча в ${mode}.`,'error');
+        return;
+      }
+      socket.emit('joinQueue',{league,mode,ranked,partyId:party?.id});
+    });
+    host.querySelectorAll('.leave').forEach(b=>b.onclick=()=>socket.emit('leaveQueue',{league:b.dataset.league,mode:b.dataset.mode,ranked:b.dataset.ranked==='true'}));
+  };
+
+  renderLeague();
 }
+
 function rankedAllowedLocal(m){
   const n=m==='1v1'?me.stats.unrankedMatches1v1:m==='2v2'?me.stats.unrankedMatches2v2:me.stats.unrankedMatches5v5;
   return Number(n||0)>=3;
