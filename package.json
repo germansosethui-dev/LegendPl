@@ -1,7 +1,7 @@
 {
-  "name": "standknife-server",
+  "name": "legend-pl-server",
   "version": "1.0.0",
-  "description": "StandKnife game server",
+  "description": "Legend Pl game server",
   "main": "server.js",
   "type": "commonjs",
   "scripts": {

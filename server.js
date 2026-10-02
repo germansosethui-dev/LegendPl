@@ -97,10 +97,10 @@ const MODES = {
 
 const MAPS = [
   "Sandstone",
-  "Rust",
-  "Province",
-  "Dune",
   "Breeze",
+  "Province",
+  "Rust",
+  "Dune",
   "Hanami",
   "Prison"
 ];
@@ -153,7 +153,11 @@ function getDefaultStats() {
     unrankedWins2v2: 0,
     unrankedWins5v5: 0,
 
-    matchHistory: []
+    matchHistory: [],
+
+    unrankedMatches1v1: 0,
+    unrankedMatches2v2: 0,
+    unrankedMatches5v5: 0
   };
 }
 
@@ -246,14 +250,12 @@ function normalizeStats(old) {
       0
     );
 
-  base.unrankedWins1v1 =
-    Number(old.unrankedWins1v1) || 0;
-
-  base.unrankedWins2v2 =
-    Number(old.unrankedWins2v2) || 0;
-
-  base.unrankedWins5v5 =
-    Number(old.unrankedWins5v5) || 0;
+  base.unrankedWins1v1 = Number(old.unrankedWins1v1) || 0;
+  base.unrankedWins2v2 = Number(old.unrankedWins2v2) || 0;
+  base.unrankedWins5v5 = Number(old.unrankedWins5v5) || 0;
+  base.unrankedMatches1v1 = Number(old.unrankedMatches1v1) || 0;
+  base.unrankedMatches2v2 = Number(old.unrankedMatches2v2) || 0;
+  base.unrankedMatches5v5 = Number(old.unrankedMatches5v5) || 0;
 
   base.matchHistory =
     Array.isArray(old.matchHistory)
@@ -277,7 +279,8 @@ function saveData() {
       privateMessages,
       clans,
       reports,
-      matchHistory
+      matchHistory,
+      queues
     };
 
     const tmp = DATA_FILE + ".tmp";
@@ -316,6 +319,12 @@ function loadData() {
     reports = data.reports || [];
     matchHistory = data.matchHistory || [];
 
+    if (data.queues && typeof data.queues === "object") {
+      for (const key of Object.keys(queues)) {
+        queues[key] = Array.isArray(data.queues[key]) ? data.queues[key] : [];
+      }
+    }
+
     for (const [id, user] of Object.entries(users)) {
       user.friends ||= [];
       user.pendingRequests ||= [];
@@ -323,6 +332,9 @@ function loadData() {
       user.isAdmin = Boolean(user.isAdmin);
 
       user.stats = normalizeStats(user.stats);
+      if (typeof user.password === "string" && user.password.length !== 64) {
+        user.password = hashPassword(user.password);
+      }
 
       if (
         ADMIN_LOGINS.includes(
@@ -345,6 +357,18 @@ function loadData() {
 }
 
 loadData();
+
+// Восстанавливаем таймеры активных матчей после перезапуска сервера.
+setTimeout(() => {
+  for (const match of pendingMatches) {
+    if (match.status === "waiting_accept") {
+      const left = Math.max(0, 20000 - (Date.now() - Number(match.createdAt || Date.now())));
+      setTimeout(() => checkMatchTimeout(match.id), left);
+    } else if (match.status === "draft") {
+      scheduleDraft(match);
+    }
+  }
+}, 0);
 
 setInterval(saveData, 10000);
 
@@ -480,7 +504,7 @@ function queueSize(mode, ranked) {
   const key =
     `${mode}_${ranked ? "ranked" : "unranked"}`;
 
-  return queues[key].length;
+  return queues[key].reduce((total, entry) => total + (Array.isArray(entry.userIds) ? entry.userIds.length : 0), 0);
 }
 
 function queueState() {
@@ -532,21 +556,10 @@ function isMuted(userId) {
 
 function rankedAllowed(userId, mode) {
   const stats = users[userId]?.stats;
-
   if (!stats) return false;
-
-  if (mode === "1v1") {
-    return stats.unrankedWins1v1 >= 3;
-  }
-
-  if (mode === "2v2") {
-    return stats.unrankedWins2v2 >= 3;
-  }
-
-  if (mode === "5v5") {
-    return stats.unrankedWins5v5 >= 3;
-  }
-
+  if (mode === "1v1") return Number(stats.unrankedMatches1v1 || 0) >= 3;
+  if (mode === "2v2") return Number(stats.unrankedMatches2v2 || 0) >= 3;
+  if (mode === "5v5") return Number(stats.unrankedMatches5v5 || 0) >= 3;
   return false;
 }
 
@@ -675,161 +688,162 @@ function findMatch(mode, ranked) {
   return null;
 }
 
-function shuffleArray(items) {
-  const arr = [...items];
-  for (let i = arr.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [arr[i], arr[j]] = [arr[j], arr[i]];
-  }
-  return arr;
-}
-
 function createMatch(mode, ranked, participants) {
+  const shuffled = [...participants];
+
+  for (
+    let i = shuffled.length - 1;
+    i > 0;
+    i--
+  ) {
+    const j =
+      Math.floor(Math.random() * (i + 1));
+
+    [
+      shuffled[i],
+      shuffled[j]
+    ] = [
+      shuffled[j],
+      shuffled[i]
+    ];
+  }
+
+  const half = shuffled.length / 2;
+  const teamA = shuffled.slice(0, half);
+  const teamB = shuffled.slice(half);
+  const captains = [teamA[0], teamB[0]];
+  const rounds = ROUND_OPTIONS[Math.floor(Math.random() * ROUND_OPTIONS.length)];
+  const map = MAPS[Math.floor(Math.random() * MAPS.length)];
+  const lobbyCreatorId = shuffled[Math.floor(Math.random() * shuffled.length)];
+
   const match = {
     id: generateMatchId(),
     mode,
     ranked,
-    participants: [...participants],
+    map,
+    rounds,
+    maxMoney: 16000,
+    participants,
+    teamA,
+    teamB,
+    captains,
+    lobbyCreatorId,
     accepted: [],
     screenshots: [],
     status: "waiting_accept",
     createdAt: Date.now(),
-    resolved: false,
-    draft: null,
-    teamA: [],
-    teamB: [],
-    captains: { A: null, B: null },
-    hostId: null,
-    lobby: null
+    resolved: false
   };
 
   pendingMatches.push(match);
+
   saveData();
 
-  emitMatchFound(match);
-  scheduleMatchTimeout(match);
+  const publicMatch = {
+    id: match.id,
+    matchId: match.id,
+    mode: match.mode,
+    ranked: match.ranked,
+    map: match.map,
+    rounds: match.rounds,
+    maxMoney: match.maxMoney,
+    timeout: Math.max(1, Math.ceil((20000 - (Date.now() - match.createdAt)) / 1000)),
+    accepted: match.accepted.length,
+    total: match.participants.length,
+    participants: match.participants.map(
+      safeUser
+    )
+  };
+
+  sendMatchToParticipants(
+    match,
+    "matchFound",
+    publicMatch
+  );
+
+  setTimeout(() => {
+    checkMatchTimeout(match.id);
+  }, 20000);
 
   return match;
 }
 
-function publicMatchFound(match) {
-  return {
-    matchId: match.id,
-    mode: match.mode,
-    ranked: match.ranked,
-    timeout: Math.max(
-      0,
-      20 - Math.floor((Date.now() - match.createdAt) / 1000)
-    ),
-    accepted: match.accepted.length,
-    participants: match.participants.map(safeUser)
-  };
-}
+function checkMatchTimeout(matchId) {
+  const match =
+    pendingMatches.find(
+      m => m.id === matchId
+    );
 
-function emitMatchFound(match) {
-  sendMatchToParticipants(
-    match,
-    "matchFound",
-    publicMatchFound(match)
-  );
-}
+  if (!match) return;
 
-function scheduleMatchTimeout(match) {
-  if (!match || match.status !== "waiting_accept") return;
-
-  const remaining = Math.max(
-    0,
-    20000 - (Date.now() - Number(match.createdAt || Date.now()))
-  );
-
-  if (remaining <= 0) {
-    checkMatchTimeout(match.id);
+  if (
+    match.status !== "waiting_accept"
+  ) {
     return;
   }
 
-  setTimeout(() => checkMatchTimeout(match.id), remaining);
-}
-
-function checkMatchTimeout(matchId) {
-  const match = pendingMatches.find(m => m.id === matchId);
-  if (!match || match.status !== "waiting_accept") return;
-
   match.status = "cancelled";
-  match.cancelledAt = Date.now();
 
   sendMatchToParticipants(
     match,
     "matchCancelled",
     {
       matchId,
-      reason: "Не все игроки приняли матч за 20 секунд."
+      reason:
+        "Не все игроки приняли матч за 20 секунд."
     }
   );
 
   saveData();
 }
 
-function restoreMatchTimers() {
-  for (const match of pendingMatches) {
-    if (match.status === "waiting_accept") {
-      scheduleMatchTimeout(match);
-    }
-  }
-}
-
 /* =========================================================
    FINISH MATCH
 ========================================================= */
 
-function finishMatchForPlayers(match) {
-  const shuffled = shuffleArray(match.participants);
-  const half = shuffled.length / 2;
-
-  match.teamA = shuffled.slice(0, half);
-  match.teamB = shuffled.slice(half);
-
-  const captainA = shuffleArray(match.teamA)[0];
-  const captainB = shuffleArray(match.teamB)[0];
-  const hostId = shuffleArray(match.participants)[0];
-  const rounds = ROUND_OPTIONS[Math.floor(Math.random() * ROUND_OPTIONS.length)];
-  const map = MAPS[Math.floor(Math.random() * MAPS.length)];
-
-  match.captains = { A: captainA, B: captainB };
-  match.hostId = hostId;
-  match.draft = {
-    rounds,
-    map,
-    maxMoney: 16000,
-    createdAt: Date.now()
-  };
-  match.lobby = {
-    hostId,
-    hostInGameId: users[hostId]?.inGameId || "—",
-    rounds,
-    map,
-    maxMoney: 16000
-  };
-  match.status = "awaiting_result";
-
-  const payload = {
+function buildMatchLobbyPayload(match) {
+  return {
     matchId: match.id,
     mode: match.mode,
     ranked: match.ranked,
-    rounds,
-    map,
-    maxMoney: 16000,
+    map: match.map,
+    rounds: match.rounds,
+    maxMoney: match.maxMoney,
+    captains: (match.captains || []).map(safeUser),
+    lobbyCreator: safeUser(match.lobbyCreatorId),
     teamA: match.teamA.map(safeUser),
     teamB: match.teamB.map(safeUser),
-    captainA: safeUser(captainA),
-    captainB: safeUser(captainB),
-    host: safeUser(hostId),
-    lobby: match.lobby,
-    screenshots: match.screenshots || [],
-    message: "Драфт завершён. Создайте лобби с указанными параметрами и после игры загрузите скриншот результата."
+    screenshots: match.screenshots || []
   };
+}
 
-  sendMatchToParticipants(match, "matchLobby", payload);
+function finalizeDraft(match) {
+  if (!match || match.status !== "draft") return;
+  match.status = "awaiting_result";
+  sendMatchToParticipants(match, "matchLobby", buildMatchLobbyPayload(match));
   saveData();
+}
+
+function scheduleDraft(match) {
+  const elapsed = Date.now() - Number(match.draftStartedAt || Date.now());
+  const left = Math.max(0, Number(match.draftDuration || 6000) - elapsed);
+  if (left <= 0) return finalizeDraft(match);
+  setTimeout(() => finalizeDraft(match), left);
+}
+
+function finishMatchForPlayers(match) {
+  match.status = "draft";
+  match.draftStartedAt = Date.now();
+  match.draftDuration = 6000;
+
+  sendMatchToParticipants(match, "matchDraft", {
+    ...buildMatchLobbyPayload(match),
+    draftSeconds: 6,
+    message: "Драфт завершён: команды, капитаны, карта и параметры лобби определены сервером."
+  });
+
+  saveData();
+  scheduleDraft(match);
 }
 
 function eloChange(winnerElo, loserElo) {
@@ -851,393 +865,101 @@ function eloChange(winnerElo, loserElo) {
   );
 }
 
-function resolveMatch(match, winningTeam) {
-  if (match.resolved) {
-    return {
-      success: false,
-      message: "Матч уже обработан."
-    };
+function resolveMatch(match, winningTeam, eloChanges = {}) {
+  if (match.resolved) return { success: false, message: "Матч уже обработан." };
+  if (!match.screenshots || match.screenshots.length === 0) {
+    return { success: false, message: "Сначала нужен хотя бы один скриншот результата." };
+  }
+  if (winningTeam !== "A" && winningTeam !== "B") {
+    return { success: false, message: "Выберите победившую команду." };
   }
 
-  if (
-    winningTeam !== "A" &&
-    winningTeam !== "B"
-  ) {
-    return {
-      success: false,
-      message: "Неверная команда."
-    };
-  }
+  const winners = winningTeam === "A" ? match.teamA : match.teamB;
+  const losers = winningTeam === "A" ? match.teamB : match.teamA;
 
-  const winners =
-    winningTeam === "A"
-      ? match.teamA
-      : match.teamB;
-
-  const losers =
-    winningTeam === "A"
-      ? match.teamB
-      : match.teamA;
-
-  for (const userId of winners) {
+  for (const userId of match.participants) {
     const user = users[userId];
-
     if (!user) continue;
-
     const stats = user.stats[match.mode];
-
+    const won = winners.includes(userId);
     stats.matches++;
-    stats.wins++;
-
-    stats.streak++;
-    stats.bestStreak =
-      Math.max(
-        stats.bestStreak,
-        stats.streak
-      );
-
-    if (match.ranked) {
-      const averageLoserElo =
-        losers.reduce(
-          (sum, id) =>
-            sum +
-            (
-              users[id]?.stats?.[match.mode]?.elo ||
-              100
-            ),
-          0
-        ) /
-        Math.max(losers.length, 1);
-
-      const delta = eloChange(
-        stats.elo,
-        averageLoserElo
-      );
-
-      stats.elo += delta;
-
-      if (match.mode === "1v1") {
-        user.stats.unrankedWins1v1 += 0;
-      }
-
-      if (match.mode === "2v2") {
-        user.stats.unrankedWins2v2 += 0;
-      }
-
-      if (match.mode === "5v5") {
-        user.stats.unrankedWins5v5 += 0;
-      }
+    if (won) {
+      stats.wins++;
+      stats.streak++;
+      stats.bestStreak = Math.max(stats.bestStreak, stats.streak);
+      user.stats.totalWins++;
     } else {
-      if (match.mode === "1v1") {
-        user.stats.unrankedWins1v1++;
-      }
+      stats.losses++;
+      stats.streak = 0;
+      user.stats.totalLosses++;
+    }
 
-      if (match.mode === "2v2") {
-        user.stats.unrankedWins2v2++;
-      }
+    const rawDelta = eloChanges && Object.prototype.hasOwnProperty.call(eloChanges, userId)
+      ? Number(eloChanges[userId]) : 0;
+    const delta = Number.isFinite(rawDelta) ? Math.trunc(rawDelta) : 0;
+    stats.elo = Math.max(100, Number(stats.elo || 100) + delta);
+    stats.level = getLevel(stats.elo);
 
-      if (match.mode === "5v5") {
-        user.stats.unrankedWins5v5++;
+    if (!match.ranked) {
+      // Counters live on stats root; keep them there.
+      if (match.mode === "1v1") user.stats.unrankedMatches1v1 = Number(user.stats.unrankedMatches1v1 || 0) + 1;
+      if (match.mode === "2v2") user.stats.unrankedMatches2v2 = Number(user.stats.unrankedMatches2v2 || 0) + 1;
+      if (match.mode === "5v5") user.stats.unrankedMatches5v5 = Number(user.stats.unrankedMatches5v5 || 0) + 1;
+      if (won) {
+        if (match.mode === "1v1") user.stats.unrankedWins1v1++;
+        if (match.mode === "2v2") user.stats.unrankedWins2v2++;
+        if (match.mode === "5v5") user.stats.unrankedWins5v5++;
       }
     }
 
-    stats.level = getLevel(stats.elo);
-
-    user.stats.totalWins++;
-  }
-
-  for (const userId of losers) {
-    const user = users[userId];
-
-    if (!user) continue;
-
-    const stats = user.stats[match.mode];
-
-    stats.matches++;
-    stats.losses++;
-
-    stats.streak = 0;
-
-    if (match.ranked) {
-      const averageWinnerElo =
-        winners.reduce(
-          (sum, id) =>
-            sum +
-            (
-              users[id]?.stats?.[match.mode]?.elo ||
-              100
-            ),
-          0
-        ) /
-        Math.max(winners.length, 1);
-
-      const delta = eloChange(
-        averageWinnerElo,
-        stats.elo
-      );
-
-      stats.elo =
-        Math.max(
-          100,
-          stats.elo - delta
-        );
-    }
-
-    stats.level = getLevel(stats.elo);
-
-    user.stats.totalLosses++;
+    user.stats.matchHistory ||= [];
+    user.stats.matchHistory.unshift({
+      matchId: match.id,
+      mode: match.mode,
+      ranked: match.ranked,
+      map: match.map,
+      rounds: match.rounds,
+      winner: won,
+      winnerTeam: winningTeam,
+      eloDelta: delta,
+      eloAfter: stats.elo,
+      timestamp: Date.now()
+    });
+    user.stats.matchHistory = user.stats.matchHistory.slice(0, 100);
   }
 
   match.resolved = true;
   match.status = "resolved";
   match.winnerTeam = winningTeam;
+  match.eloChanges = Object.fromEntries(match.participants.map(id => [id, Number(eloChanges[id] || 0)]));
   match.resolvedAt = Date.now();
 
   matchHistory.push({
     matchId: match.id,
     mode: match.mode,
     ranked: match.ranked,
+    map: match.map,
+    rounds: match.rounds,
     winnerTeam: winningTeam,
+    eloChanges: match.eloChanges,
     timestamp: Date.now()
   });
-
-  for (const userId of match.participants) {
-    const user = users[userId];
-
-    if (!user) continue;
-
-    user.stats.matchHistory ||= [];
-
-    user.stats.matchHistory.unshift({
-      matchId: match.id,
-      mode: match.mode,
-      ranked: match.ranked,
-      winner:
-        winners.includes(userId),
-      winnerTeam: winningTeam,
-      timestamp: Date.now()
-    });
-
-    user.stats.matchHistory =
-      user.stats.matchHistory.slice(0, 100);
-  }
-
   saveData();
-
-  sendMatchToParticipants(
-    match,
-    "matchResolved",
-    {
-      matchId: match.id,
-      winnerTeam: winningTeam
-    }
-  );
-
-  return {
-    success: true
-  };
+  sendMatchToParticipants(match, "matchResolved", { matchId: match.id, winnerTeam: winningTeam, eloChanges: match.eloChanges });
+  return { success: true };
 }
-
-/* =========================================================
-   AUTH
-========================================================= */
-
-app.post("/api/register", (req, res) => {
-  const {
-    username,
-    password,
-    inGameNick,
-    inGameId
-  } = req.body;
-
-  if (
-    !username ||
-    !password ||
-    !inGameNick ||
-    !inGameId
-  ) {
-    return res.status(400).json({
-      success: false,
-      message: "Заполните все поля."
-    });
-  }
-
-  const exists =
-    Object.values(users).some(
-      u =>
-        String(u.username).toLowerCase() ===
-        String(username).toLowerCase()
-    );
-
-  if (exists) {
-    return res.status(400).json({
-      success: false,
-      message: "Такой логин уже существует."
-    });
-  }
-
-  const userId = generateUserId();
-
-  users[userId] = {
-    username,
-    password: hashPassword(password),
-
-    inGameNick,
-    inGameId,
-
-    isAdmin:
-      ADMIN_LOGINS.includes(
-        String(username).toLowerCase()
-      ),
-
-    friends: [],
-    pendingRequests: [],
-
-    clanId: null,
-
-    stats: getDefaultStats()
-  };
-
-  saveData();
-
-  res.json({
-    success: true,
-    userId,
-    message:
-      `Регистрация успешна. ID сайта: ${userId}`
-  });
-});
-
-app.post("/api/login", (req, res) => {
-  const {
-    username,
-    password
-  } = req.body;
-
-  const entry =
-    Object.entries(users).find(
-      ([, user]) =>
-        String(user.username).toLowerCase() ===
-          String(username).toLowerCase() &&
-        user.password ===
-          hashPassword(password)
-    );
-
-  if (!entry) {
-    return res.status(400).json({
-      success: false,
-      message: "Неверный логин или пароль."
-    });
-  }
-
-  const [id, user] = entry;
-
-  if (isBanned(id)) {
-    return res.status(403).json({
-      success: false,
-      message:
-        `Вы заблокированы до ${new Date(
-          user.ban.until
-        ).toLocaleString()}.`
-    });
-  }
-
-  if (
-    ADMIN_LOGINS.includes(
-      String(user.username).toLowerCase()
-    )
-  ) {
-    user.isAdmin = true;
-  }
-
-  saveData();
-
-  res.json({
-    success: true,
-    user: safeUser(id)
-  });
-});
-
-app.get("/api/me", (req, res) => {
-  const userId = req.query.userId;
-
-  if (!users[userId]) {
-    return res.status(404).json({
-      success: false
-    });
-  }
-
-  res.json({
-    success: true,
-    user: safeUser(userId),
-    party: getPartyForUser(userId),
-
-    matches:
-      pendingMatches.filter(
-        match =>
-          match.participants.includes(userId) &&
-          !match.resolved &&
-          match.status !== "cancelled"
-      )
-  });
-});
-
-app.get("/api/user/:id", (req, res) => {
-  const user = safeUser(req.params.id);
-
-  if (!user) {
-    return res.status(404).json({
-      success: false,
-      message: "Игрок не найден."
-    });
-  }
-
-  res.json({
-    success: true,
-    user
-  });
-});
-
-/* =========================================================
-   AVATAR
-========================================================= */
 
 app.post(
   "/api/upload-avatar",
   upload.single("avatar"),
   (req, res) => {
     const userId = req.body.userId;
-
-    if (!users[userId]) {
-      return res.status(404).json({
-        success: false,
-        message: "Пользователь не найден."
-      });
-    }
-
-    if (!req.file) {
-      return res.status(400).json({
-        success: false,
-        message: "Файл не выбран."
-      });
-    }
-
-    users[userId].stats.avatar =
-      `/uploads/${req.file.filename}`;
-
+    if (!users[userId]) return res.status(404).json({ success:false, message:"Пользователь не найден." });
+    if (!req.file) return res.status(400).json({ success:false, message:"Файл не выбран." });
+    users[userId].stats.avatar = `/uploads/${req.file.filename}`;
     saveData();
-
-    sendUser(
-      userId,
-      "userUpdated",
-      safeUser(userId)
-    );
-
-    res.json({
-      success: true,
-      avatar:
-        users[userId].stats.avatar
-    });
+    sendUser(userId, "userUpdated", safeUser(userId));
+    res.json({ success:true, avatar:users[userId].stats.avatar });
   }
 );
 
@@ -1848,9 +1570,14 @@ io.on("connection", socket => {
           "matchFound",
           {
             matchId: match.id,
+            id: match.id,
             mode: match.mode,
             ranked: match.ranked,
             map: match.map,
+            rounds: match.rounds,
+            maxMoney: match.maxMoney,
+            accepted: match.accepted.length,
+            total: match.participants.length,
             timeout: Math.max(
               0,
               20 -
@@ -1859,14 +1586,20 @@ io.on("connection", socket => {
                     1000
                 )
             ),
-            accepted: match.accepted.length,
-            acceptedUsers: [...match.accepted],
             participants:
               match.participants.map(
                 safeUser
               )
           }
         );
+      }
+
+      if (match.status === "draft") {
+        socket.emit("matchDraft", {
+          ...buildMatchLobbyPayload(match),
+          draftSeconds: Math.max(1, Math.ceil((Number(match.draftDuration || 6000) - (Date.now() - Number(match.draftStartedAt || Date.now()))) / 1000))
+        });
+        scheduleDraft(match);
       }
 
       if (
@@ -1879,19 +1612,17 @@ io.on("connection", socket => {
             matchId: match.id,
             mode: match.mode,
             ranked: match.ranked,
-            rounds: match.draft?.rounds || 13,
-            maxMoney: match.draft?.maxMoney || 16000,
-            map: match.draft?.map || "—",
+            map: match.map,
+            rounds: match.rounds,
+            maxMoney: match.maxMoney,
+            captains: match.captains.map(safeUser),
+            lobbyCreator: safeUser(match.lobbyCreatorId),
             teamA:
-              (match.teamA || []).map(safeUser),
+              match.teamA.map(safeUser),
             teamB:
-              (match.teamB || []).map(safeUser),
-            captainA: safeUser(match.captains?.A),
-            captainB: safeUser(match.captains?.B),
-            host: safeUser(match.hostId),
-            lobby: match.lobby || null,
+              match.teamB.map(safeUser),
             screenshots:
-              match.screenshots || []
+              match.screenshots
           }
         );
       }
@@ -1916,14 +1647,9 @@ io.on("connection", socket => {
 
       if (!MODES[mode]) return;
 
-      const partyMembersForQueue =
-        partyId && parties[partyId] && parties[partyId].members.includes(userId)
-          ? parties[partyId].members
-          : [userId];
-
       if (
         ranked &&
-        partyMembersForQueue.some(id => !rankedAllowed(id, mode))
+        !rankedAllowed(userId, mode)
       ) {
         socket.emit(
           "queueError",
@@ -1941,12 +1667,17 @@ io.on("connection", socket => {
       if (
         partyId &&
         parties[partyId] &&
-        parties[partyId].members.includes(
-          userId
-        )
+        parties[partyId].members.includes(userId)
       ) {
-        userIds =
-          parties[partyId].members;
+        userIds = parties[partyId].members.slice();
+      }
+
+      if (ranked) {
+        const blocked = userIds.find(id => !rankedAllowed(id, mode));
+        if (blocked) {
+          socket.emit("queueError", { message: "Все участники пати должны сыграть минимум 3 обычных матча в этом режиме." });
+          return;
+        }
       }
 
       const needed = MODES[mode];
@@ -2078,13 +1809,13 @@ io.on("connection", socket => {
         }
       );
 
-      saveData();
-
       if (
         match.accepted.length ===
         match.participants.length
       ) {
-        finishMatchForPlayers(match);
+        finishMatchForPlayers(
+          match
+        );
       }
     }
   );
@@ -2180,7 +1911,7 @@ io.on("connection", socket => {
           user.inGameNick,
 
         avatar:
-          user.stats?.avatar || "",
+          user.avatar,
 
         isAdmin:
           user.isAdmin,
@@ -2339,6 +2070,27 @@ function requireAdmin(req, res) {
 
   return adminId;
 }
+
+app.get("/api/check-admin", (req, res) => {
+  const userId = req.query.userId;
+  res.json({ isAdmin: Boolean(userId && users[userId]?.isAdmin) });
+});
+
+app.post("/api/admin-action", (req, res) => {
+  req.body = { ...req.body };
+  const { adminId, targetUserId, action, durationHours, reason } = req.body;
+  if (!users[adminId]?.isAdmin) return res.status(403).json({ success:false, message:"Недостаточно прав." });
+  if (!users[targetUserId]) return res.status(404).json({ success:false, message:"Игрок не найден." });
+  if (users[targetUserId].isAdmin) return res.status(400).json({ success:false, message:"Нельзя применить это действие к администратору." });
+  const hours = Math.max(1, Number(durationHours || 1));
+  if (action === "ban") users[targetUserId].ban = { until:Date.now()+hours*3600000, reason:String(reason||"").slice(0,300) };
+  else if (action === "unban") delete users[targetUserId].ban;
+  else if (action === "mute") users[targetUserId].mute = { until:Date.now()+hours*3600000, reason:String(reason||"").slice(0,300) };
+  else if (action === "unmute") delete users[targetUserId].mute;
+  else return res.status(400).json({ success:false, message:"Неизвестное действие." });
+  saveData();
+  res.json({ success:true, message:"Действие выполнено." });
+});
 
 app.get(
   "/api/admin/stats",
@@ -2530,20 +2282,6 @@ app.post(
       });
     }
 
-    if (match.status !== "awaiting_result") {
-      return res.status(400).json({
-        success: false,
-        message: "Матч ещё не перешёл в состояние ожидания результата."
-      });
-    }
-
-    if (!Array.isArray(match.screenshots) || match.screenshots.length === 0) {
-      return res.status(400).json({
-        success: false,
-        message: "Сначала дождитесь скриншота результата от игроков."
-      });
-    }
-
     const result =
       resolveMatch(
         match,
@@ -2678,8 +2416,6 @@ app.get("/api/top", (req, res) => {
 /* =========================================================
    SERVER
 ========================================================= */
-
-restoreMatchTimers();
 
 const PORT =
   process.env.PORT || 3000;
