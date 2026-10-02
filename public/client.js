@@ -1,5 +1,5 @@
 const socket=io();
-let me=null,party=null,currentMatch=null,pmTarget=null,pmHistory=[],queueMine={};
+let me=null,party=null,currentMatch=null,pmTarget=null,pmHistory=[],queueMine={},lastCompletedMatch=null;
 const $=id=>document.getElementById(id);
 const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 function avatar(u){return u?.avatar||avatarFallback()}
@@ -147,44 +147,43 @@ async function leaveParty(){
   try{await post('/api/leave-party',{userId:me.id,partyId:party.id});party=null;renderParty()}
   catch(e){toast(e.message,'error')}
 }
+
+function detectClientPlatform(){
+  return /Android|iPhone|iPad|iPod|Mobile|Windows Phone/i.test(navigator.userAgent) ? 'phone' : 'pc';
+}
+function leaguePlatformAllowed(league){ return String(league||'pc')===detectClientPlatform(); }
+
 function renderModes(){
+  const leagueHost=document.getElementById('modes');
+  if(leagueHost && !document.getElementById('leaguePC')) leagueHost.insertAdjacentHTML('beforebegin',`<div class="league-switch card"><h3>Лига</h3><div class="row"><button id="leaguePC" data-league="pc">🖥️ PC лига</button><button id="leaguePhone" data-league="phone">📱 Phone лига</button></div><p id="leagueHint" class="muted"></p></div>`);
+  let selectedLeague=detectClientPlatform();
+  const setLeague=(lg)=>{selectedLeague=lg;document.querySelectorAll('#leaguePC,#leaguePhone').forEach(b=>b.classList.toggle('active',b.dataset.league===lg));$('leagueHint').textContent=leaguePlatformAllowed(lg)?'Ваша платформа подходит для этой лиги.':'Ваша платформа не может играть в этой лиге.';};
+  document.querySelectorAll('#leaguePC,#leaguePhone').forEach(b=>b.onclick=()=>setLeague(b.dataset.league)); setLeague(selectedLeague);
   const specs=[['1v1','1x1 Дуэль',2],['2v2','2x2 Напарники',4],['5v5','5x5 Соревновательный',10]];
-  $('modes').innerHTML=specs.map(([m,n,need])=>`
-    <div class="card mode">
-      <h3>${n}</h3>
-      <div class="row"><button class="join" data-mode="${m}" data-ranked="false">Обычный</button><button class="join" data-mode="${m}" data-ranked="true">Ранговый</button></div>
-      <div class="queue"><span>Обычный <b id="q-${m}-u">0/${need}</b></span><span>Ранговый <b id="q-${m}-r">0/${need}</b></span></div>
-      <button class="secondary leave" data-mode="${m}" data-ranked="false" hidden>Выйти из очереди</button>
-      <button class="secondary leave" data-mode="${m}" data-ranked="true" hidden>Выйти из очереди</button>
-    </div>`).join('');
+  const leagues=[['pc','🖥️ PC лига','Игры для игроков на компьютере.'],['phone','📱 Phone лига','Игры для игроков на телефонах. PC-игрок тоже может выбрать эту лигу.']];
+  $('modes').innerHTML=leagues.map(([league,title,desc])=>`<section class="league-block card"><div class="league-title"><div><h2>${title}</h2><p class="muted">${desc}</p></div><span class="league-badge league-${league}">${league==='pc'?'PC':'PHONE'}</span></div><div class="grid league-grid">${specs.map(([m,n,need])=>`<div class="card mode"><h3>${n}</h3><div class="row"><button class="join" data-league="${league}" data-mode="${m}" data-ranked="false">Обычный</button><button class="join" data-league="${league}" data-mode="${m}" data-ranked="true">Ранговый</button></div><div class="queue"><span>Обычный <b id="q-${league}-${m}-u">0/${need}</b></span><span>Ранговый <b id="q-${league}-${m}-r">0/${need}</b></span></div><button class="secondary leave" data-league="${league}" data-mode="${m}" data-ranked="false" hidden>Выйти из очереди</button><button class="secondary leave" data-league="${league}" data-mode="${m}" data-ranked="true" hidden>Выйти из очереди</button></div>`).join('')}</div></section>`).join('');
   $('modes').querySelectorAll('.join').forEach(b=>b.onclick=()=>{
-    const mode=b.dataset.mode,ranked=b.dataset.ranked==='true';
-    if(ranked&&!rankedAllowedLocal(mode)){
-      toast(`Нельзя играть в ранговый режим: сначала сыграйте 3 обычных матча в ${mode}.`,'error');return;
-    }
-    socket.emit('joinQueue',{mode,ranked,partyId:party?.id});
+    const league=b.dataset.league,mode=b.dataset.mode,ranked=b.dataset.ranked==='true';
+    if(ranked&&!rankedAllowedLocal(mode)){toast(`Нельзя играть в ранговый режим: сначала сыграйте 3 обычных матча в ${mode}.`,'error');return}
+    socket.emit('joinQueue',{league,mode,ranked,partyId:party?.id});
   });
-  $('modes').querySelectorAll('.leave').forEach(b=>b.onclick=()=>{
-    socket.emit('leaveQueue',{mode:b.dataset.mode,ranked:b.dataset.ranked==='true'});
-  });
+  $('modes').querySelectorAll('.leave').forEach(b=>b.onclick=()=>socket.emit('leaveQueue',{league:b.dataset.league,mode:b.dataset.mode,ranked:b.dataset.ranked==='true'}));
 }
 function rankedAllowedLocal(m){
   const n=m==='1v1'?me.stats.unrankedMatches1v1:m==='2v2'?me.stats.unrankedMatches2v2:me.stats.unrankedMatches5v5;
   return Number(n||0)>=3;
 }
 function updateQueue(q){
-  for(const m of ['1v1','2v2','5v5']){
-    const need=MODES(m);
-    $('q-'+m+'-u').textContent=(q[m]?.unranked||0)+'/'+need;
-    $('q-'+m+'-r').textContent=(q[m]?.ranked||0)+'/'+need;
+  for(const league of ['pc','phone']) for(const m of ['1v1','2v2','5v5']){
+    const need=MODES(m);const st=q?.[league]?.[m]||{};
+    const u=$(`q-${league}-${m}-u`),r=$(`q-${league}-${m}-r`);
+    if(u)u.textContent=(st.unranked||0)+'/'+need;
+    if(r)r.textContent=(st.ranked||0)+'/'+need;
   }
 }
 function updateQueueMine(mine){
   queueMine=mine||{};
-  document.querySelectorAll('.leave').forEach(b=>{
-    const k=b.dataset.mode+'_'+(b.dataset.ranked==='true'?'ranked':'unranked');
-    b.hidden=!queueMine[k];
-  });
+  document.querySelectorAll('.leave').forEach(b=>{const k=`${b.dataset.league}_${b.dataset.mode}_${b.dataset.ranked==='true'?'ranked':'unranked'}`;b.hidden=!queueMine[k]});
 }
 function MODES(m){return m==='1v1'?2:m==='2v2'?4:10}
 
@@ -192,7 +191,7 @@ function showMatch(m){
   currentMatch=m;playMatchSound();
   if(navigator.vibrate)navigator.vibrate([120,80,120,80,250]);
   let left=m.timeout||20;
-  const x=modal(`<div class="modal-box match-found-box"><h2>🎯 Матч найден!</h2><p>Все игроки должны подтвердить матч.</p><p>Участников: <b id="acc">${m.accepted}/${m.total}</b></p><div id="mtimer" class="timer">${left}</div><div class="row"><button id="accept">Принять матч</button><button id="decline" class="danger">Отказаться</button></div></div>`);
+  const x=modal(`<div class="modal-box match-found-box"><h2>🎯 Матч найден!</h2><p><b>${esc(m.leagueName||'Лига')}</b> · ${esc(m.mode)} · ${m.ranked?'Ранговый':'Обычный'}</p><p>Все игроки должны подтвердить матч.</p><p>Участников: <b id="acc">${m.accepted}/${m.total}</b></p><div id="mtimer" class="timer">${left}</div><div class="row"><button id="accept">Принять матч</button><button id="decline" class="danger">Отказаться</button></div></div>`);
   const t=setInterval(()=>{left--;if($('mtimer'))$('mtimer').textContent=Math.max(0,left);if(left<=0)clearInterval(t)},1000);
   $('accept').onclick=()=>{socket.emit('acceptMatch',{matchId:m.matchId});x?.remove();clearInterval(t);cleanupModalRoot()};
   $('decline').onclick=()=>{socket.emit('declineMatch',{matchId:m.matchId});x?.remove();clearInterval(t);cleanupModalRoot()};
@@ -213,7 +212,7 @@ function renderDraftState(state){
 function renderDraftChat(){const box=$('draftChat');if(!box)return;box.innerHTML=(window._draftChat||[]).map(m=>`<div class="draft-chat-msg"><img src="${avatar(m)}"><div><b>${esc(m.nickname)}</b><span>${esc(m.text)}</span></div></div>`).join('');box.scrollTop=box.scrollHeight}
 function showDraft(d){
   window._draftChat=d.chat||[];
-  const x=modal(`<div class="modal-box draft-modal"><button class="close" id="closeDraft">✕</button><div class="draft-head"><div><h2>🗺 Драфт · ${esc(d.matchId)}</h2><p id="draftTurn"></p></div><div class="draft-total"><span>Осталось</span><b id="draftTimer">${d.seconds}</b><small>сек.</small></div></div>
+  const x=modal(`<div class="modal-box draft-modal"><button class="close" id="closeDraft">✕</button><div class="draft-head"><div><h2>🗺 Драфт · ${esc(d.matchId)}</h2><p class="muted">${esc(d.leagueName||'Лига')} · ${esc(d.mode||'')}</p><p id="draftTurn"></p></div><div class="draft-total"><span>Осталось</span><b id="draftTimer">${d.seconds}</b><small>сек.</small></div></div>
   <div class="draft-layout"><div class="draft-main"><h3>Баны карт</h3><div id="draftMaps" class="draft-map-grid"></div><div id="draftBans" class="draft-bans"></div><h3>Количество раундов</h3><p class="muted">Проголосовало: <b id="roundVotedCount">0</b>/${d.totalParticipants||d.participants?.length||'всех игроков'}</p><div id="draftRounds" class="draft-round-grid"></div></div><div class="draft-chat-panel"><h3>💬 Чат игроков</h3><div id="draftChat" class="draft-chat"></div><div class="draft-chat-send"><input id="draftChatInput" placeholder="Сообщение"><button id="draftChatSend">➤</button></div></div></div></div>`);
   $('closeDraft').onclick=()=>{x?.remove();cleanupModalRoot()};
   renderDraftState(d);renderDraftChat();
@@ -222,9 +221,9 @@ function showDraft(d){
   $('draftChatInput').addEventListener('keydown',e=>{if(e.key==='Enter')$('draftChatSend').click()});
 }
 function showLobby(m){
-  currentMatch=m;const host=m.hostCaptain||m.captains?.[0]||null;
+  currentMatch={...m,status:'awaiting_result'};const host=m.hostCaptain||m.captains?.[0]||null;
   const hostName=host?.inGameNick||'Капитан';const hostGameId=host?.inGameId||'—';
-  const x=modal(`<div class="modal-box"><button class="close" id="closeLobby">✕</button><h2>Лобби · ${esc(m.matchId)}</h2><p>${esc(m.mode)} · ${m.ranked?'Ранговый':'Обычный'} · <b>${esc(m.map)}</b> · ${m.rounds} раундов · $${m.maxMoney}</p>
+  const x=modal(`<div class="modal-box"><button class="close" id="closeLobby">✕</button><h2>Лобби · ${esc(m.matchId)}</h2><p><b>${esc(m.leagueName||'Лига')}</b> · ${esc(m.mode)} · ${m.ranked?'Ранговый':'Обычный'} · <b>${esc(m.map)}</b> · ${m.rounds} раундов · $${m.maxMoney}</p>
   <div class="card lobby-host"><h3>🎮 Создатель игрового лобби</h3><p><b>${esc(hostName)}</b></p><p>Игровой ID: <b id="hostGameId">${esc(hostGameId)}</b></p><div class="row"><button id="copyHostId">Скопировать ID</button>${host?`<button id="pmHost" class="secondary">Написать капитану</button>`:''}</div><p class="muted">Капитан создаёт лобби в игре. Остальные игроки отправляют ему точку «.» в личные сообщения.</p></div>
   <div class="teams"><div class="team"><h3>🟥 T (террористы)</h3>${m.teamT.map(u=>`<div class="member"><img src="${avatar(u)}" alt=""><button class="profile-link" data-id="${u.id}">${esc(u.inGameNick)}</button></div>`).join('')}</div>
   <div class="team"><h3>🟦 CT (спецназ)</h3>${m.teamCT.map(u=>`<div class="member"><img src="${avatar(u)}" alt=""><button class="profile-link" data-id="${u.id}">${esc(u.inGameNick)}</button></div>`).join('')}</div></div>
@@ -244,19 +243,27 @@ function promptSafe(title,msg){
 async function showProfile(id){
   try{
     const d=await api('/api/user/'+encodeURIComponent(id)),u=d.user;
+    const reportCtx=getReportContext(id);
+    const reportButton=id!==me.id?(reportCtx?.pending?'<button class="danger" disabled>Репорт доступен после матча</button>':reportCtx?.completed?'<button id="reportP" class="danger">Репорт за матч</button>':'<button id="reportP" class="danger">Репорт</button>'):'';
     const x=modal(`<div class="modal-box"><h2>${u.isAdmin?'👑 ':''}${esc(u.inGameNick)}</h2><img class="profile-big" src="${avatar(u)}" alt=""><p>Игровой ID: ${esc(u.inGameId)}</p>
       ${Object.entries({'1v1':'1x1','2v2':'2x2','5v5':'5x5'}).map(([m,n])=>`<div class="stat-row"><span>${n}</span><b>ELO ${u.stats[m].elo} · ${u.stats[m].wins}W/${u.stats[m].losses}L</b></div>`).join('')}
-      <div class="row actions">${id!==me.id?`<button id="addF">Добавить в друзья</button><button id="reportP" class="danger">Репорт</button>`:''}<button class="secondary" id="closeP">Закрыть</button></div></div>`);
+      <div class="row actions">${id!==me.id?`<button id="addF">Добавить в друзья</button>${reportButton}`:''}<button class="secondary" id="closeP">Закрыть</button></div></div>`);
     $('closeP').onclick=()=>x.remove();
     if(id!==me.id){
       $('addF').onclick=async()=>{try{await post('/api/friend-request',{fromUserId:me.id,toUserId:id});toast('Заявка отправлена','success')}catch(e){toast(e.message,'error')}};
-      $('reportP').onclick=()=>reportUser(id);
+      if($('reportP'))$('reportP').onclick=()=>reportUser(id,reportCtx?.matchId||null);
     }
   }catch(e){toast(e.message,'error')}
 }
-async function reportUser(id){
-  const x=modal(`<div class="modal-box"><h3>Репорт игрока</h3><p>Выберите причину:</p><button class="reportReason" data-r="Токсичность">Токсичность</button><button class="reportReason" data-r="Читы">Читы</button><button class="reportReason" data-r="Багаюз">Багаюз</button><button id="closeReport" class="secondary">Отмена</button></div>`);
-  x.querySelectorAll('.reportReason').forEach(b=>b.onclick=async()=>{try{await post('/api/report',{reporterId:me.id,targetId:id,reason:b.dataset.r});x.remove();toast('Репорт отправлен','success')}catch(e){toast(e.message,'error')}});
+function getReportContext(targetId){
+  const active=currentMatch?.participants?.find?.(u=>u?.id===targetId);
+  if(currentMatch?.league==='phone'&&active?.platform==='pc'&&currentMatch?.status!=='resolved')return {pending:true,matchId:currentMatch.matchId};
+  if(lastCompletedMatch?.league==='phone'&&lastCompletedMatch?.participants?.some(u=>u?.id===targetId&&u?.platform==='pc'))return {completed:true,matchId:lastCompletedMatch.matchId};
+  return null;
+}
+async function reportUser(id,matchId=null){
+  const x=modal(`<div class="modal-box"><h3>Репорт игрока</h3><p>Выберите причину:</p><button class="reportReason" data-r="Токсичность">Токсичность</button><button class="reportReason" data-r="Читы">Читы</button><button class="reportReason" data-r="Багаюз">Багаюз</button><button class="reportReason" data-r="Игра не в своей лиге">Игра не в своей лиге</button><button id="closeReport" class="secondary">Отмена</button></div>`);
+  x.querySelectorAll('.reportReason').forEach(b=>b.onclick=async()=>{try{await post('/api/report',{reporterId:me.id,targetId:id,reason:b.dataset.r,matchId});x.remove();toast('Репорт отправлен','success')}catch(e){toast(e.message,'error')}});
   $('closeReport').onclick=()=>x.remove();
 }
 async function loadFriends(){
@@ -326,6 +333,16 @@ async function adminReports(){const d=await adminApi('/api/admin/reports');$('ad
 async function adminCloseReport(id){await post('/api/admin/report/'+id,{adminId:me.id,status:'closed'});await loadAdmin()}
 async function adminUsers(){const d=await adminApi('/api/admin/users');$('adminUsers').innerHTML='<h2>Игроки</h2>'+(d.users.length?d.users.map(u=>{const ban=!!u.ban,mute=!!u.mute;return `<div class="member admin-user"><img src="${avatar(u)}"><div class="admin-user-info"><b>${u.isAdmin?'<span class="admin">ADMIN</span> ':''}${adminEsc(u.inGameNick)}</b><div class="muted">${adminEsc(u.username)} · ID ${u.id} · ELO 1v1 ${u.stats['1v1'].elo}</div>${ban?`<div class="restriction-badge ban-badge">БАН до ${new Date(u.ban.until).toLocaleString('ru-RU')} · ${adminEsc(u.ban.reason||'без причины')}</div>`:''}${mute?`<div class="restriction-badge mute-badge">МУТ до ${new Date(u.mute.until).toLocaleString('ru-RU')} · ${adminEsc(u.mute.reason||'без причины')}</div>`:''}</div>${!u.isAdmin?`${ban?`<button class="success" onclick="adminRestriction('${u.id}','unban')">Разбан</button>`:`<button class="danger" onclick="adminRestriction('${u.id}','ban')">Бан</button>`}${mute?`<button class="success" onclick="adminRestriction('${u.id}','unmute')">Размут</button>`:`<button onclick="adminRestriction('${u.id}','mute')">Мут</button>`}`:''}</div>`}).join(''):'<p>Нет игроков.</p>')}
 
+function showPostMatchReports(d){
+  lastCompletedMatch=d;currentMatch=null;
+  const targets=(d.participants||[]).filter(u=>u?.id!==me.id&&u?.platform==='pc');
+  if(d.league!=='phone'||!targets.length)return;
+  const x=modal(`<div class="modal-box post-match-report"><button class="close" id="closePostReports">✕</button><h2>🏁 Матч завершён</h2><p>Это была <b>Phone лига</b>. Репорт на игрока с ПК доступен только сейчас, после завершения катки.</p><div id="postReportPlayers"></div><button class="secondary" id="postReportClose2">Закрыть</button></div>`);
+  const box=$('postReportPlayers');
+  box.innerHTML=targets.map(u=>`<div class="card post-report-player"><div class="member"><img src="${avatar(u)}"><b>${esc(u.inGameNick)}</b><span class="platform-tag pc-tag">PC</span></div><button class="danger post-report-btn" data-id="${u.id}">Репорт</button></div>`).join('');
+  box.querySelectorAll('.post-report-btn').forEach(b=>b.onclick=()=>reportUser(b.dataset.id,d.matchId));
+  $('closePostReports').onclick=()=>{x.remove();cleanupModalRoot()};$('postReportClose2').onclick=()=>{x.remove();cleanupModalRoot()};
+}
 async function loadPMData(){
   try{
     const d=await api('/api/private-messages?userId='+me.id);
@@ -482,6 +499,8 @@ socket.on('matchCancelled',d=>{currentMatch=null;closeModalRoot();toast(d.reason
 socket.on('draftStart',showDraft);socket.on('draftUpdate',d=>renderDraftState(d));socket.on('draftChat',m=>{window._draftChat ||= [];window._draftChat.push(m);renderDraftChat()});socket.on('draftFinished',d=>{toast(`Драфт завершён: ${d.map} · ${d.rounds} раундов`,'success')});
 socket.on('matchLobby',showLobby);
 socket.on('matchResolved',async d=>{
+  lastCompletedMatch=d;currentMatch=null;
+  showPostMatchReports(d);
   try{const u=(await api('/api/me?userId='+me.id)).user;me=u;renderMe();renderHistory();toast(`Матч завершён. ELO: ${d.eloChanges?.[me.id]>=0?'+':''}${d.eloChanges?.[me.id]||0}`,'success')}catch{}
 });
 socket.on('partyUpdate',p=>{party=p;renderParty()});
