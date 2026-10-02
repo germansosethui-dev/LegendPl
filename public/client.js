@@ -104,20 +104,45 @@ async function api(
   url,
   options = {}
 ) {
-  const response =
-    await fetch(
-      url,
-      options
-    );
+  let response;
 
-  const data =
-    await response.json();
+  try {
+    response = await fetch(url, options);
+  } catch (err) {
+    throw new Error("Не удалось подключиться к серверу.");
+  }
+
+  const contentType = response.headers.get("content-type") || "";
+  let data = null;
+  let raw = "";
+
+  try {
+    if (contentType.includes("application/json")) {
+      data = await response.json();
+    } else {
+      raw = await response.text();
+      try { data = JSON.parse(raw); } catch { data = null; }
+    }
+  } catch {
+    data = null;
+  }
 
   if (!response.ok) {
-    throw new Error(
-      data.message ||
-      "Ошибка сервера"
-    );
+    if (data?.message) throw new Error(String(data.message));
+
+    if (response.status === 404) {
+      throw new Error("Запрос не найден на сервере. Перезапусти сервер с последней версией проекта.");
+    }
+
+    if (response.status === 401) {
+      throw new Error("Неверный логин или пароль.");
+    }
+
+    throw new Error("Ошибка сервера. Попробуйте ещё раз.");
+  }
+
+  if (!data || typeof data !== "object") {
+    throw new Error("Сервер вернул некорректный ответ.");
   }
 
   return data;
@@ -225,6 +250,32 @@ $("loginBtn").onclick =
 $("registerBtn").onclick =
   register;
 
+const authMenuBtn = $("authMenuBtn");
+const authMenu = $("authMenu");
+const authMenuOverlay = $("authMenuOverlay");
+
+function closeAuthMenu() {
+  if (authMenu) authMenu.classList.remove("open");
+  if (authMenuOverlay) authMenuOverlay.classList.remove("open");
+}
+
+if (authMenuBtn) {
+  authMenuBtn.onclick = () => {
+    authMenu?.classList.toggle("open");
+    authMenuOverlay?.classList.toggle("open");
+  };
+}
+
+if (authMenuOverlay) authMenuOverlay.onclick = closeAuthMenu;
+
+const authAboutBtn = $("authAboutBtn");
+if (authAboutBtn) {
+  authAboutBtn.onclick = () => {
+    closeAuthMenu();
+    document.getElementById("authAbout")?.scrollIntoView({ behavior: "smooth", block: "center" });
+  };
+}
+
 async function login() {
   const username =
     $("loginUsername").value.trim();
@@ -238,6 +289,8 @@ async function login() {
 
     return;
   }
+
+  $("authMessage").textContent = "Выполняется вход…";
 
   try {
     const data =
@@ -317,13 +370,17 @@ async function register() {
     );
 
     $("authMessage").textContent =
-      "Регистрация успешна. Теперь войдите.";
+      "Аккаунт создан. Теперь войдите.";
 
     $("registerForm").style.display =
       "none";
 
     $("loginForm").style.display =
       "block";
+
+    $("loginUsername").value = username;
+    $("loginPassword").value = "";
+    $("loginPassword").focus();
 
   } catch (err) {
     $("authMessage").textContent =

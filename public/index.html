@@ -24,9 +24,18 @@
 
 <section
   id="loginScreen"
-  class="screen"
+  class="screen login-screen"
 >
 
+  <button id="authMenuBtn" class="auth-menu-btn" aria-label="Открыть меню">☰</button>
+  <div id="authMenuOverlay" class="auth-menu-overlay"></div>
+  <aside id="authMenu" class="auth-menu">
+    <div class="auth-menu-title">Legend Pl</div>
+    <button id="authAboutBtn" class="auth-menu-item">ℹ️ О проекте</button>
+    <a class="auth-menu-item" href="https://t.me/inknight666" target="_blank" rel="noopener">✈️ Telegram создателя</a>
+  </aside>
+
+  <div class="login-page-content">
   <div class="login-box">
 
     <h1>Legend Pl</h1>
@@ -113,6 +122,15 @@
       class="auth-message"
     ></div>
 
+  </div>
+
+  <section id="authAbout" class="auth-about card">
+    <h2>О проекте</h2>
+    <h3>Legend Pl</h3>
+    <p>Платформа для поиска матчей, рейтинговых игр и общения игроков.</p>
+    <p>Создатель проекта:</p>
+    <a href="https://t.me/inknight666" target="_blank" rel="noopener">Telegram создателя</a>
+  </section>
   </div>
 
 </section>
