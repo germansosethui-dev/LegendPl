@@ -665,3 +665,49 @@ nav {
     width: 100%;
   }
 }
+/* =========================================================
+   MATCH DRAFT / LOBBY
+========================================================= */
+.draft-summary {
+  margin: 16px 0;
+  padding: 16px;
+  background: #0d1525;
+  border: 1px solid #26334a;
+}
+.draft-summary h3 {
+  margin-bottom: 12px;
+}
+.draft-summary > div {
+  margin: 7px 0;
+}
+.draft-summary span {
+  color: #94a3b8;
+}
+
+.leave-queue {
+  margin-top: 10px;
+}
+
+.admin-prefix {
+  color: #ef4444;
+  font-weight: 800;
+  margin-right: 5px;
+}
+
+.modal-buttons button:disabled {
+  opacity: .65;
+  cursor: not-allowed;
+}
+
+.clan-create-form {
+  display: grid;
+  grid-template-columns: 1fr 160px auto;
+  gap: 10px;
+  margin-top: 16px;
+}
+
+@media (max-width: 700px) {
+  .clan-create-form {
+    grid-template-columns: 1fr;
+  }
+}

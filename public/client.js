@@ -985,6 +985,11 @@ function renderQueue(data) {
       `queue-${mode}-ranked`
     ).textContent =
       `${ranked}/${normalMax}`;
+    document.querySelectorAll(`.leave-queue[data-mode="${mode}"]`).forEach(btn => {
+      const isRanked = btn.dataset.ranked === "true";
+      const count = isRanked ? ranked : normal;
+      btn.style.display = count > 0 ? "inline-block" : "none";
+    });
   }
 }
 
@@ -1026,11 +1031,8 @@ function openMatchModal(
         )}
       </p>
 
-      <p>
-        <b>Карта:</b>
-        ${escapeHTML(
-          match.map
-        )}
+      <p id="matchAcceptedCount">
+        Приняли: ${Number(match.accepted || 0)}/${match.participants.length}
       </p>
 
       <div class="teams">
@@ -1063,9 +1065,17 @@ function openMatchModal(
       </div>
     `;
 
-  startMatchTimer(
-    Number(match.timeout) || 20
-  );
+  const accepted = Array.isArray(match.acceptedUsers)
+    ? match.acceptedUsers.includes(currentUser?.id)
+    : false;
+
+  $("acceptMatchBtn").disabled = accepted;
+  $("acceptMatchBtn").textContent = accepted ? "Принято ✓" : "Принять";
+
+  const counter = $("matchAcceptedCount");
+  if (counter) counter.textContent = `Приняли: ${Number(match.accepted || 0)}/${match.participants.length}`;
+
+  startMatchTimer(Number(match.timeout) || 20);
 }
 
 function playerCard(
@@ -1162,9 +1172,13 @@ $("declineMatchBtn").onclick =
 socket.on(
   "matchAcceptedUpdate",
   data => {
-    notify(
-      `Приняли: ${data.accepted}/${data.total}`
-    );
+    if (currentMatch && currentMatch.matchId === data.matchId) {
+      currentMatch.accepted = data.accepted;
+      currentMatch.total = data.total;
+    }
+    const counter = $("matchAcceptedCount");
+    if (counter) counter.textContent = `Приняли: ${data.accepted}/${data.total}`;
+    notify(`Приняли: ${data.accepted}/${data.total}`);
   }
 );
 
@@ -1211,33 +1225,29 @@ function closeMatchModal() {
 
   $("acceptMatchBtn")
     .disabled = false;
+  $("acceptMatchBtn").textContent = "Принять";
 }
 
-function openGameModal(
-  match
-) {
-  $("gameModal").style.display =
-    "flex";
+function openGameModal(match) {
+  $("gameModal").style.display = "flex";
 
-  $("gameMatchId").textContent =
-    `ID матча: ${match.matchId}`;
+  $("gameMatchId").textContent = `ID матча: ${match.matchId}`;
+  $("gameMap").textContent = `Карта: ${match.map || "—"}`;
+  $("gameRounds").textContent = `Количество раундов: ${match.rounds || "—"}`;
+  $("gameMoney").textContent = `Максимум денег: $${Number(match.maxMoney || 16000).toLocaleString("en-US")}`;
 
-  $("gameMap").textContent =
-    `Карта: ${match.map}`;
+  $("gameCaptains").innerHTML = `
+    <div><b>Капитан команды A:</b> ${match.captainA ? escapeHTML(match.captainA.inGameNick) : "—"} · ID: ${match.captainA ? escapeHTML(match.captainA.inGameId) : "—"}</div>
+    <div><b>Капитан команды B:</b> ${match.captainB ? escapeHTML(match.captainB.inGameNick) : "—"} · ID: ${match.captainB ? escapeHTML(match.captainB.inGameId) : "—"}</div>
+  `;
 
-  $("teamA").innerHTML =
-    match.teamA
-      .map(playerCard)
-      .join("");
+  $("gameHost").innerHTML = match.host
+    ? `<b>Создать лобби должен:</b> ${escapeHTML(match.host.inGameNick)} · ID: ${escapeHTML(match.host.inGameId)}<br><span>Параметры: ${escapeHTML(match.map)} · ${match.rounds} раундов · максимум $${Number(match.maxMoney || 16000).toLocaleString("en-US")}</span>`
+    : "Создатель лобби: —";
 
-  $("teamB").innerHTML =
-    match.teamB
-      .map(playerCard)
-      .join("");
-
-  renderScreenshots(
-    match.screenshots || []
-  );
+  $("teamA").innerHTML = (match.teamA || []).map(playerCard).join("");
+  $("teamB").innerHTML = (match.teamB || []).map(playerCard).join("");
+  renderScreenshots(match.screenshots || []);
 }
 
 $("closeGameBtn").onclick =
@@ -2029,17 +2039,31 @@ async function loadClan() {
         .innerHTML =
         `
           <h3>Вы не состоите в клане</h3>
-
-          <p>
-            Система кланов уже подключена.
-          </p>
-
-          <p>
-            Создание клана можно расширить
-            через админ-панель.
-          </p>
+          <p>Создайте свой клан прямо здесь.</p>
+          <div class="clan-create-form">
+            <input id="clanNameInput" placeholder="Название клана" maxlength="32">
+            <input id="clanTagInput" placeholder="Тег, например LP" maxlength="5">
+            <button id="createClanBtn">Создать клан</button>
+          </div>
         `;
 
+      const createBtn = $("createClanBtn");
+      if (createBtn) {
+        createBtn.onclick = async () => {
+          try {
+            await post("/api/clan/create", {
+              userId: currentUser.id,
+              name: $("clanNameInput").value.trim(),
+              tag: $("clanTagInput").value.trim()
+            });
+            await refreshMe();
+            await loadClan();
+            notify("Клан создан.");
+          } catch (err) {
+            notify(err.message);
+          }
+        };
+      }
       return;
     }
 
@@ -2157,6 +2181,7 @@ async function loadAdminMatches() {
                   ? "Ранговый"
                   : "Обычный"
               }
+              ${match.draft ? `· ${escapeHTML(match.draft.map)} · ${match.draft.rounds} раундов` : ""}
             </p>
 
             <div class="admin-team">
