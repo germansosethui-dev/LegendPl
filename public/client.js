@@ -19,7 +19,51 @@ async function api(url,opt={}){
   return d;
 }
 const post=(u,b)=>api(u,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(b)});
-function modal(html){$('modalRoot').innerHTML=html;return $('modalRoot').firstElementChild}
+function cleanupModalRoot(){
+  const root=$('modalRoot');
+  if(!root)return;
+  if(!root.firstElementChild){
+    root.hidden=true;
+    root.setAttribute('aria-hidden','true');
+    root.style.display='none';
+    root.style.pointerEvents='none';
+    document.body.classList.remove('modal-open');
+    document.body.style.overflow='';
+  }
+}
+function closeModalRoot(){
+  const root=$('modalRoot');
+  if(!root)return;
+  root.innerHTML='';
+  cleanupModalRoot();
+}
+function modal(html){
+  const root=$('modalRoot');
+  if(!root)return null;
+  root.hidden=false;
+  root.removeAttribute('aria-hidden');
+  root.style.display='';
+  root.style.pointerEvents='auto';
+  root.innerHTML=html;
+  document.body.classList.add('modal-open');
+  return root.firstElementChild;
+}
+
+// The app removes modal boxes with x.remove(). A MutationObserver makes sure
+// the modal container itself is also hidden, so an empty invisible overlay
+// can never remain on top of the page and block clicks/scrolling.
+if($('modalRoot')){
+  const mr=$('modalRoot');
+  mr.hidden=true;
+  mr.setAttribute('aria-hidden','true');
+  mr.style.display='none';
+  mr.style.pointerEvents='none';
+  new MutationObserver(()=>queueMicrotask(cleanupModalRoot)).observe(mr,{childList:true});
+  mr.addEventListener('click',e=>{
+    if(e.target===mr)closeModalRoot();
+  });
+}
+
 function saveSession(){localStorage.setItem('legendpl_user',me.id)}
 function clearSession(){localStorage.removeItem('legendpl_user')}
 async function login(){
@@ -379,7 +423,7 @@ socket.on('queueMembership',updateQueueMine);
 socket.on('queueError',d=>toast(d.message||'Ошибка очереди','error'));
 socket.on('matchFound',showMatch);
 socket.on('matchAcceptedUpdate',d=>{if($('acc'))$('acc').textContent=d.accepted+'/'+d.total});
-socket.on('matchCancelled',d=>{currentMatch=null;$('modalRoot').innerHTML='';toast(d.reason||'Матч отменён','error')});
+socket.on('matchCancelled',d=>{currentMatch=null;closeModalRoot();toast(d.reason||'Матч отменён','error')});
 socket.on('draftStart',showDraft);socket.on('draftUpdate',()=>{});
 socket.on('matchLobby',showLobby);
 socket.on('matchResolved',async d=>{
@@ -402,4 +446,24 @@ function addChat(m){
   $('globalChat').querySelectorAll('.profile-link').forEach(b=>b.onclick=()=>showProfile(b.dataset.id));
 }
 document.querySelectorAll('.tabs button').forEach(b=>b.onclick=()=>loadTop(b.dataset.mode));
+
+// Universal close behavior: ESC closes dialogs/menus; clicking outside the
+// auth menu closes it; navigation always closes the drawer.
+document.addEventListener('keydown',e=>{
+  if(e.key==='Escape'){
+    closeModalRoot();
+    closeSideMenu();
+    const am=$('authMenu');
+    if(am)am.classList.remove('open');
+  }
+});
+document.addEventListener('click',e=>{
+  const am=$('authMenu');
+  const btn=$('authMenuBtn');
+  if(am && am.classList.contains('open') && !am.contains(e.target) && e.target!==btn){
+    am.classList.remove('open');
+  }
+});
+window.addEventListener('pagehide',()=>{closeModalRoot();closeSideMenu()});
+
 boot();
