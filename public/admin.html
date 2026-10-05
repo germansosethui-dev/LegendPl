@@ -1,0 +1,77 @@
+<!DOCTYPE html>
+<html lang="ru"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<link rel="icon" href="/img/favicon.png"><title>InkPlatform · Админ-панель</title>
+<style>
+:root{--bg:#0b0a12;--card:#15131f;--line:#27233a;--tx:#f1effa;--mu:#9a95b5;--ac:#8b6dff;--ac2:#ff5c93;--ok:#34d399}
+*{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--tx);font:15px/1.5 system-ui,sans-serif;padding:14px;max-width:980px;margin:auto}
+h1{font-size:22px;margin:6px 0}h1 b{color:var(--ac)}.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:14px;margin:10px 0}
+input,select{background:var(--bg);color:var(--tx);border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit}
+button{border:0;border-radius:99px;padding:8px 16px;font:inherit;font-weight:700;cursor:pointer;background:linear-gradient(135deg,var(--ac),var(--ac2));color:#fff}
+button.g{background:none;border:1px solid var(--line);color:var(--tx)}button.r{background:#c0305a}
+.row{display:flex;gap:8px;flex-wrap:wrap;align-items:center}.sp{flex:1}.mu{color:var(--mu);font-size:13px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap;margin:12px 0}.tabs button{background:var(--card);border:1px solid var(--line);color:var(--mu)}.tabs button.on{background:var(--ac);color:#fff;border-color:var(--ac)}
+.b{font-size:11px;font-weight:700;letter-spacing:.1em;text-transform:uppercase;border:1px solid var(--line);border-radius:99px;padding:3px 10px}
+.stat{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px}.stat div{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:10px}.stat b{font-size:22px;display:block}
+img{max-height:110px;border-radius:10px;border:1px solid var(--line);cursor:zoom-in}
+#err{color:var(--ac2);min-height:20px}table{width:100%;border-collapse:collapse;font-size:13px}td,th{padding:6px;border-bottom:1px solid var(--line);text-align:left}
+</style></head><body>
+<h1 style="display:flex;align-items:center;gap:8px"><img src="/img/logo.png" height="26" alt=""><span>Ink<b>Platform</b> · Админ-панель</span></h1><div id="err"></div><p class="mu"><a href="/" style="color:var(--ac)">← На сайт</a> · Автор: <a href="https://t.me/inknight666" style="color:var(--ac)">t.me/inknight666</a></p><div id="app"></div>
+<script>
+const $=s=>document.querySelector(s),esc=s=>String(s??'').replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+let T=sessionStorage.getItem('t')||localStorage.getItem('t'),ME=null,tab='subs',filt='pending',uq='',uid=0,uname='',rf='open';
+async function api(p,m='GET',b){const r=await fetch('/api'+p,{method:m,headers:{...(T?{Authorization:'Bearer '+T}:{}),...(b?{'Content-Type':'application/json'}:{})},body:b?JSON.stringify(b):undefined});
+ const j=await r.json().catch(()=>({}));if(!r.ok)throw new Error(j.error==='banned'?'Аккаунт заблокирован':j.error||r.status);return j}
+const err=e=>{$('#err').textContent=e?(e.message||e):''};
+const date=t=>new Date(t*1000).toLocaleString('ru-RU');
+function login(){$('#app').innerHTML=`<div class="card"><div class="row"><input id="n" placeholder="Ник"><input id="p" type="password" placeholder="Пароль"><button id="go">Войти</button></div></div>`;
+ $('#go').onclick=async()=>{try{err();const r=await api('/auth/login','POST',{nick:$('#n').value,password:$('#p').value});T=r.token;
+  if(r.user.role==='user'){T=null;throw new Error('Нет доступа: нужна роль moderator или admin')}sessionStorage.setItem('t',T);start()}catch(e){err(e)}}}
+async function start(){try{const o=await api('/admin/overview');ME=o.me;draw(o)}catch(e){T=null;sessionStorage.removeItem('t');login();if(e.message!=='unauthorized')err(e)}}
+function draw(o){$('#app').innerHTML=`<div class="row"><span class="mu">${esc(ME.nick)} · <span class="b">${ME.role}</span></span><span class="sp"></span><button class="g" id="out">Выйти</button></div>
+<div class="stat"><div><b>${o.pending}</b>заявок на проверке</div><div><b>${o.review}</b>спорных матчей</div><div><b>${o.banned}</b>в бане</div><div><b>${o.queue.pc}/${o.queue.phone}</b>очередь PC/Phone</div><div><b>${o.reports}</b>открытых репортов</div></div>
+<div class="tabs">${[['subs','Результаты'],['reports','Репорты'],['users','Игроки'],['matches','Матчи'],['audit','Журнал']].map(t=>`<button data-t="${t[0]}" class="${tab==t[0]?'on':''}">${t[1]}</button>`).join('')}</div><div id="body"></div>`;
+ $('#out').onclick=()=>{sessionStorage.removeItem('t');T=null;login()};
+ document.querySelectorAll('[data-t]').forEach(b=>b.onclick=()=>{tab=b.dataset.t;start()});load()}
+async function load(){const b=$('#body');try{err();
+ if(tab=='subs'){const L=await api('/admin/subs?status='+filt);
+  b.innerHTML=`<select id="f">${['pending','approved','rejected'].map(x=>`<option ${x==filt?'selected':''}>${x}</option>`).join('')}</select>`+(L.length?L.map(s=>`<div class="card"><div class="row"><b>Матч №${s.match}</b><span class="b">${esc(s.nick)} · команда ${s.team}</span><span class="b">победа: ${s.winner}</span><span class="mu">K/D/A ${s.k}/${s.d}/${s.a} · ${date(s.created)}</span><span class="b">${s.mstatus}</span></div>
+   <div class="row" style="margin-top:8px"><img data-f="${esc(s.file)}" alt="скриншот">${s.status=='pending'?`<span class="sp"></span><select id="w${s.id}"><option ${s.winner=='A'?'selected':''}>A</option><option ${s.winner=='B'?'selected':''}>B</option></select><button data-a="ok" data-id="${s.id}">Подтвердить</button><button class="r" data-a="no" data-id="${s.id}">Отклонить</button>`:''}</div></div>`).join(''):'<p class="mu">Пусто</p>');
+  $('#f').onchange=e=>{filt=e.target.value;load()};
+  b.querySelectorAll('img[data-f]').forEach(async i=>{try{const r=await fetch('/api/admin/shot/'+i.dataset.f,{headers:{Authorization:'Bearer '+T}});i.src=URL.createObjectURL(await r.blob());i.onclick=()=>window.open(i.src)}catch{}})}
+ if(tab=='users'){const L=await api('/admin/users?q='+encodeURIComponent(uq)),adm=ME.role=='admin';
+  b.innerHTML=`<div class="row"><input id="q" placeholder="Ник или StandKnife ID" value="${esc(uq)}"><button id="s">Найти</button></div>`+L.map(u=>{const ban=u.banned_until>Date.now()/1000,cal=u.played>=10?`Elo ${u.elo}`:`калибровка ${u.played}/10 (скрытое Elo ${u.elo})`;return `<div class="card"><div class="row"><b>${esc(u.nick)}</b><span class="mu">ID ${u.sid} · ${cal} · ${u.points} IP</span><span class="b">${u.role}</span>${ban?`<span class="b" style="color:var(--ac2)">бан: ${esc(u.ban_reason||'')}${u.banned_until>=4e9?' · навсегда':' · до '+date(u.banned_until)}</span>`:''}</div>
+  <div class="row" style="margin-top:8px">${ban?`<button class="g" data-a="unban" data-id="${u.id}">Разбанить</button>`:`<button class="r" data-a="ban" data-id="${u.id}">Забанить</button>`}<button class="g" data-a="um" data-id="${u.id}" data-n="${esc(u.nick)}">Матчи</button>
+  ${adm?`<select data-a="role" data-id="${u.id}">${['user','moderator','admin'].map(r=>`<option ${r==u.role?'selected':''}>${r}</option>`).join('')}</select><button class="g" data-a="adj" data-id="${u.id}">± IP / Elo</button><button class="g" data-a="cal" data-id="${u.id}">Калибровка</button><button class="g" data-a="addm" data-id="${u.id}">+ Матчи</button><button class="r" data-a="deluser" data-id="${u.id}">Удалить аккаунт</button>`:''}</div></div>`}).join('');
+  $('#s').onclick=()=>{uq=$('#q').value;load()}}
+ if(tab=='um'){const L=await api(`/admin/users/${uid}/matches`),adm=ME.role=='admin';
+  b.innerHTML=`<button class="g" data-a="back">← Назад</button><h3>Матчи: ${esc(uname)}</h3>`+(L.length?L.map(m=>`<div class="card row"><b>№${m.id}</b><span class="b">${m.league}${m.mode?' · '+m.mode:''}</span><span class="mu">${m.map}</span><span class="b">${m.status}${m.winner?' · '+(m.winner==m.team?'победа':'поражение'):''}</span><span class="mu">K/D/A ${m.k}/${m.d}/${m.a} · Elo ${m.elo_delta>=0?'+':''}${m.elo_delta}</span><span class="sp"></span>${adm?`<button class="r" data-a="dmatch" data-id="${m.id}">Удалить</button>`:''}</div>`).join(''):'<p class="mu">Нет матчей</p>')}
+ if(tab=='reports'){const L=await api('/admin/reports?status='+rf);
+  b.innerHTML=`<select id="rf">${['open','resolved','rejected'].map(x=>`<option ${x==rf?'selected':''}>${x}</option>`).join('')}</select>`+(L.length?L.map(r=>`<div class="card"><div class="row"><b>${esc(r.reporter)} → ${esc(r.target)}</b><span class="b">${esc(r.label)}</span>${r.match_id?`<span class="b">матч №${esc(r.match_id)}</span>`:''}<span class="mu">${date(r.created)} · жалоб на игрока: ${r.total}</span></div>${r.comment?`<p>${esc(r.comment)}</p>`:''}${r.status=='open'?`<div class="row"><span class="sp"></span><button class="r" data-a="ban" data-id="${r.target_id}">Бан игрока</button><button data-a="rres" data-id="${r.id}">Принять</button><button class="g" data-a="rrej" data-id="${r.id}">Отклонить</button></div>`:`<p class="mu">${r.status} · ${esc(r.handler||'')} ${esc(r.note||'')}</p>`}</div>`).join(''):'<p class="mu">Пусто</p>');
+  $('#rf').onchange=e=>{rf=e.target.value;load()}}
+ if(tab=='matches'){const L=await api('/admin/matches'),adm=ME.role=='admin';
+  b.innerHTML=L.map(m=>`<div class="card row"><b>№${m.id}</b><span class="b">${m.league}${m.mode?' · '+m.mode:''}</span><span class="mu">${m.map} · ${date(m.created)}</span><span class="b">${m.status}${m.winner?' · '+m.winner:''}</span><span class="sp"></span>
+  ${['done','cancelled'].includes(m.status)?'':`<button class="g" data-a="fin" data-id="${m.id}" data-w="A">Победа A</button><button class="g" data-a="fin" data-id="${m.id}" data-w="B">Победа B</button><button class="r" data-a="cancel" data-id="${m.id}">Отменить</button>`}${adm?`<button class="r" data-a="dmatch" data-id="${m.id}">Удалить</button>`:''}</div>`).join('')||'<p class="mu">Пусто</p>'}
+ if(tab=='audit'){const L=await api('/admin/audit');b.innerHTML=`<div class="card" style="overflow:auto"><table><tr><th>Время</th><th>Кто</th><th>Действие</th><th>Цель</th><th>Детали</th></tr>${L.map(a=>`<tr><td>${date(a.ts)}</td><td>${esc(a.actor)}</td><td>${esc(a.action)}</td><td>${esc(a.target)}</td><td>${esc(a.info)}</td></tr>`).join('')}</table></div>`}
+}catch(e){err(e)}}
+document.addEventListener('click',async e=>{const t=e.target.closest('[data-a]');if(!t||t.tagName=='SELECT')return;const a=t.dataset.a,id=t.dataset.id;
+ try{err();
+ if(a=='ok')await api(`/admin/subs/${id}/approve`,'POST',{winner:$('#w'+id).value});
+ if(a=='no'){if(!confirm('Отклонить заявку?'))return;await api(`/admin/subs/${id}/reject`,'POST')}
+ if(a=='ban'){const reason=prompt('Причина бана');if(reason===null)return;const h=prompt('На сколько часов? (0 = навсегда)','0');if(h===null)return;await api(`/admin/users/${id}/ban`,'POST',{reason,hours:+h})}
+ if(a=='unban')await api(`/admin/users/${id}/unban`,'POST');
+ if(a=='adj'){const p=prompt('Изменить Ink Points на (можно с минусом)','0'),el=prompt('Изменить Elo на','0');if(p===null||el===null)return;await api(`/admin/users/${id}/adjust`,'POST',{points:+p,elo:+el})}
+ if(a=='fin')await api(`/admin/matches/${id}/finalize`,'POST',{winner:t.dataset.w});
+ if(a=='cancel'){if(!confirm('Отменить матч?'))return;await api(`/admin/matches/${+id}/cancel`,'POST')}
+ if(a=='um'){uid=id;uname=t.dataset.n;tab='um'}
+ if(a=='back')tab='users';
+ if(a=='dmatch'){if(!confirm('Удалить матч №'+id+'? Elo, калибровка и статистика игроков откатятся'))return;await api(`/admin/matches/${+id}`,'DELETE')}
+ if(a=='cal'){const c=prompt('1 — снять калибровку (игрок станет откалиброванным)\n2 — сбросить калибровку (Elo 100, 0/10)','1');if(c===null)return;
+  if(c=='2')await api(`/admin/users/${id}/calibration`,'POST',{action:'reset'});else{const e=prompt('Elo после снятия калибровки (пусто — оставить текущее)','');if(e===null)return;await api(`/admin/users/${id}/calibration`,'POST',{action:'skip',elo:e===''?undefined:+e})}}
+ if(a=='addm'){const kda=prompt('K/D/A, например 20/10/5','10/10/3');if(kda===null)return;const [k,d,aa]=kda.split('/').map(Number);const w=prompt('Результат: 1 — победа, 0 — поражение','1');if(w===null)return;const n=prompt('Сколько таких матчей (1–20)','1');if(n===null)return;
+  await api(`/admin/users/${id}/addmatch`,'POST',{k,d,a:aa,win:w=='1',count:+n})}
+ if(a=='deluser'){if(!confirm('Удалить аккаунт навсегда? Это нельзя отменить'))return;await api(`/admin/users/${id}`,'DELETE')}
+ if(a=='rres'||a=='rrej'){const note=prompt('Комментарий (необязательно)','');if(note===null)return;await api(`/admin/reports/${id}/resolve`,'POST',{action:a=='rrej'?'rejected':'resolved',note})}
+ start()}catch(x){err(x)}});
+document.addEventListener('change',async e=>{const t=e.target;if(t.dataset.a!='role')return;try{await api(`/admin/users/${t.dataset.id}/role`,'POST',{role:t.value});start()}catch(x){err(x);load()}});
+T?start():login();
+</script></body></html>
