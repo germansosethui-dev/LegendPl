@@ -127,8 +127,6 @@ footer{padding:24px 0;color:var(--mu);font-size:13px}
 .logo img{height:auto;max-width:40px}
 #hp{white-space:nowrap}
 .lvf{display:inline-grid;place-items:center;border-radius:50%;border:2px solid var(--ac);color:var(--ac);font-weight:800;background:var(--card);vertical-align:middle}
-@media(max-width:520px){.nav{gap:6px;height:56px}.logo{font-size:17px;gap:5px}.logo img{max-width:30px}.ib{width:38px}.lpc{padding:1px 9px}.lpc b{font-size:17px}#hp{padding:9px 14px;font-size:13px}}
-@media(max-width:360px){.logo span{display:none}}
 /* ПК: меню слева вместо нижней панели, контент по центру в широкой сетке */
 @media(min-width:1000px){
  body{padding-bottom:30px;padding-left:230px}
@@ -137,11 +135,65 @@ footer{padding:24px 0;color:var(--mu);font-size:13px}
  .pill a{flex:none;flex-direction:row;gap:12px;font-size:15px;padding:12px 16px;border-radius:14px}
  header{position:fixed;left:0;right:0;top:0;z-index:11;padding-left:230px}
  header .nav{height:64px}
- main#v{padding-top:76px}
  .logo{font-size:23px}.logo img{max-width:46px}
  .two{grid-template-columns:1fr 1fr}.shop{grid-template-columns:repeat(4,minmax(0,1fr))}
  .hero{padding:90px 0 30px}
 }
+/* ===== драфт: принятие матча, лобби, чат ===== */
+.ov{position:fixed;inset:0;z-index:60;background:color-mix(in srgb,var(--bg) 95%,#000);overflow:auto;padding:calc(16px + env(safe-area-inset-top,0px)) 14px 28px;display:flex;justify-content:center;align-items:flex-start}
+.ov:empty{display:none}
+.ovc{width:100%;max-width:520px;margin-top:24px;padding:20px}
+.dh{margin:6px 0 8px;font-size:clamp(26px,7vw,34px);letter-spacing:-.5px}
+.tmb{border:1px solid color-mix(in srgb,#f5b301 45%,var(--line));background:color-mix(in srgb,#f5b301 10%,var(--card));border-radius:20px;padding:10px 18px;text-align:center;flex:none}.tmb b{display:block;font-size:34px;line-height:1.1}
+.acg{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-top:14px}
+.ac{aspect-ratio:1;border-radius:50%;border:3px solid var(--line);display:grid;place-items:center;background:var(--bg);color:var(--mu)}.ac svg{width:55%;height:55%;fill:currentColor;stroke:none}
+.ac.on{border-color:var(--ok);box-shadow:0 0 14px var(--ok)}
+.dp{display:inline-block;font-size:12px;font-weight:800;letter-spacing:.16em;text-transform:uppercase;padding:10px 16px;border-radius:99px;border:1px solid var(--line);background:var(--card);margin:4px 0;line-height:1.35}
+.dp.blue{border-color:#2f6f9f;color:#7fc4f2;background:color-mix(in srgb,#2f6f9f 18%,var(--card))}
+.dp.warn{border-color:#a8841e;color:#f0c24b;background:color-mix(in srgb,#f5b301 10%,var(--card))}
+.dbox{border:1px solid var(--line);border-radius:18px;padding:14px 16px;color:var(--mu);margin-top:12px}
+.wide{display:block;width:100%;text-align:center;box-sizing:border-box}
+.sm{padding:7px 14px;font-size:12px}
+.lob>*{margin-bottom:12px}
+.g2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin:14px 0}
+.sb{border:1px solid var(--line);border-radius:18px;padding:12px;text-align:center}.sb b{display:flex;justify-content:center;align-items:center;gap:8px;font-size:28px;color:var(--ac2)}
+.tpill{display:block;width:max-content;font-size:12px;font-weight:800;letter-spacing:.24em;text-transform:uppercase;padding:12px 20px;border-radius:99px;border:1px solid;margin:18px 0 10px}
+.tpill.ct{color:#9fd0ff;border-color:#2f6f9f;background:color-mix(in srgb,#2f6f9f 20%,var(--card))}
+.tpill.tt{color:#f0c24b;border-color:#a8841e;background:color-mix(in srgb,#f5b301 12%,var(--card));margin-left:auto}
+.tinfo{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:14px 16px;margin-bottom:10px}.tinfo.mir{flex-direction:row-reverse;text-align:right}
+.tnm{font-size:20px;font-weight:800;overflow:hidden;text-overflow:ellipsis}.tel b{display:block;font-size:26px;color:var(--ac2)}
+.pc{background:var(--card);border:1px solid var(--line);border-radius:26px;padding:14px;margin-bottom:10px}
+.pt{display:flex;align-items:center;gap:12px}.pc.mir .pt{flex-direction:row-reverse;text-align:right}
+.pn{flex:1;min-width:0}.pnm{font-weight:800;font-size:18px;display:flex;align-items:center;gap:6px;flex-wrap:wrap;word-break:break-word}.pc.mir .pnm{justify-content:flex-end}
+.capb{font-size:11px;font-weight:800;letter-spacing:.15em;border:1px solid var(--ac2);color:var(--ac2);border-radius:99px;padding:3px 10px}
+.psid{color:var(--mu);font-size:14px}
+.pe{display:grid;justify-items:end;gap:4px;flex:none}.pc.mir .pe{justify-items:start}.delo{font-size:24px;font-weight:800}.dcal{font-size:15px;font-weight:800;color:var(--ac)}
+.ps{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;border-top:1px solid var(--line);margin-top:12px;padding-top:12px}
+.ps div{border:1px solid var(--line);border-radius:16px;padding:8px 10px;min-width:0}.ps b{display:block;font-size:17px}.ps b.ac{color:var(--ac2)}.ps i{font-style:normal;font-size:11px;letter-spacing:.2em;color:var(--mu)}.pc.mir .ps div{text-align:right}
+.srv{padding:18px;margin:14px 0}.srv h4{text-align:center;letter-spacing:.3em;text-transform:uppercase;color:var(--ac2);font-size:14px;margin:4px 0 14px}
+.srv .inner{border:1px solid var(--line);border-radius:22px;padding:14px}
+.dtx{color:var(--mu);line-height:1.6;margin:10px 0 0}
+.fc{border:1px solid var(--line);border-radius:22px;padding:16px;margin-top:12px;background:var(--bg)}.fn{font-size:46px;font-weight:300;line-height:1}.fv{color:var(--mu);margin:14px 0}
+.mc{margin-top:12px;border:1px solid var(--line);border-radius:22px;overflow:hidden;background:var(--bg)}.mi{height:120px;background-size:cover;background-position:center;display:flex;align-items:flex-end;padding:12px 16px;font-size:28px;font-weight:700;text-shadow:0 2px 8px #000;color:#fff}
+.mr{display:flex;justify-content:space-between;align-items:center;gap:10px;padding:12px 16px}
+.mc.bn{opacity:.45}.mc.bn .mi{filter:grayscale(1)}
+.info{border:1px solid var(--line);border-radius:22px;padding:16px;margin-top:12px;background:var(--bg)}.info .lb2{margin-bottom:8px}.info>b{font-size:24px;display:block}
+.flag{height:150px;border-radius:20px;overflow:hidden;display:flex;align-items:flex-end;padding:14px 18px;font-size:26px;font-weight:700;color:#fff;background:linear-gradient(#e8ecf5 0 33.3%,#1c3f94 33.3% 66.6%,#b3261e 66.6%);text-shadow:0 2px 8px rgba(0,0,0,.7)}
+.host{display:flex;gap:14px;align-items:center}.host b{font-size:22px}
+.warn2{color:#f0c24b;font-size:17px;line-height:1.5;margin:0 0 10px}
+.ini{font-weight:800;color:var(--mu)}.av.dk{background:#0e0d16;color:var(--mu)}
+.fab{position:fixed;right:16px;bottom:calc(112px + env(safe-area-inset-bottom,0px));z-index:12;width:58px;height:58px;border-radius:50%;border:1px solid var(--ac);background:color-mix(in srgb,var(--ac) 22%,var(--card));color:var(--ac);place-items:center;box-shadow:0 0 22px color-mix(in srgb,var(--ac) 40%,transparent);cursor:pointer;padding:0}
+.fab u{position:absolute;top:-6px;right:-6px;text-decoration:none;background:var(--ac2);color:#fff;font-size:12px;font-weight:700;border-radius:99px;min-width:22px;height:22px;display:none;place-items:center}
+.sheet{position:fixed;left:0;right:0;bottom:0;z-index:70;background:var(--card);border-top:1px solid var(--line);border-radius:22px 22px 0 0;padding:14px 16px calc(14px + env(safe-area-inset-bottom,0px));display:none;flex-direction:column;max-height:70vh}
+.sheet.open{display:flex}#drMsgs{overflow:auto;flex:1;min-height:120px;max-height:45vh;font-size:14px;margin-top:8px}
+@media(min-width:1000px){.fab{bottom:24px;right:24px}.sheet{left:auto;right:24px;bottom:24px;width:380px;border-radius:22px;border:1px solid var(--line)}}
+/* шапка: всегда сверху экрана, название проекта всегда видно */
+header{position:fixed!important;left:0;right:0;top:env(safe-area-inset-top,0px)!important;z-index:40!important}
+body{padding-top:62px}
+.nav>*{flex-shrink:0}.nav .logo{flex-shrink:1;min-width:0}.logo span{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+@media(max-width:520px){body{padding-top:58px}.nav{gap:6px;height:56px}.logo{font-size:17px;gap:5px}.logo img{max-width:30px}.ib{width:38px}.lpc{padding:1px 9px}.lpc b{font-size:17px}#hp{padding:9px 14px;font-size:13px}}
+@media(max-width:400px){.w{padding:0 12px}.nav{gap:5px}.logo{font-size:15px;gap:4px}.logo img{max-width:24px}.ib{width:34px;height:36px}.lpc{padding:1px 7px}.lpc small{font-size:9px}.lpc b{font-size:15px}#hp{padding:8px 11px;font-size:12px}}
+@media(min-width:1000px){body{padding-top:64px}header{left:0!important}}
 </style>
 </head>
 <body>
@@ -282,7 +334,7 @@ tl('Винрейт',wr+'%','shield')+tl('Средние киллы',ak,'search')
 '<div class="card" style="margin-top:14px"><h2 style="font-size:30px;text-transform:uppercase">Default</h2>'+tl('Победы',w,'trophy')+tl('Поражения',n-w,'shield')+tl('Киллы',k,'search')+tl('Смерти',d,'shield')+'<div class="inner"><div class="sub" style="margin:0">Kills / Deaths / Assists</div><div class="big2" style="margin-top:8px">'+k+' / '+d+' / '+a+'</div></div></div>'+
 '<div class="card" style="margin-top:14px"><h2 style="font-size:30px">Последние матчи</h2>'+(n?H.map(function(h){var c=h.w?'var(--ok)':'var(--ac2)';return '<a class="mr" href="#/match/'+h.id+'" style="border-color:'+c+';background:color-mix(in srgb,'+c+' 10%,var(--card))"><span class="lv" style="width:54px;height:54px;font-size:18px;border-color:'+c+';color:'+c+';flex:none">'+(h.w?'W':'L')+'</span><div style="flex:1"><div style="font-size:20px">'+h.map+'</div><div class="sub" style="margin:0">'+h.k+'/'+h.d+'/'+h.a+'</div></div><div style="text-align:right"><div style="font-size:20px">'+(h.cal?'Калибровка':'Рейтинг')+'</div><div class="sub" style="margin:0">'+(h.w?'Победа':'Поражение')+'</div></div></a>'}).join(''):'<div class="dash" style="margin-top:12px">Матчей пока нет. Найди матч во вкладке «Поиск».</div>')+'</div></div>'},
 
-draft:function(){return '<div class="pg"><div class="card"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h2 style="margin:0">Драфт матча</h2><span class="ba" id="drT">—</span></div><div id="drTop"></div></div><div class="card" style="margin-top:12px"><h3 style="margin:0 0 8px">Чат драфта</h3><div id="drMsgs" style="max-height:180px;overflow:auto;font-size:14px"></div><div class="row" style="flex-wrap:nowrap;margin-top:8px"><input type="text" id="dci" maxlength="200" placeholder="Сообщение" style="flex:1;min-width:0"><button class="btn" data-a="dchat" style="flex:none">→</button></div></div></div>'},
+draft:function(){S.sheet=false;S.unread=S.unread||0;return '<div class="pg" id="drRoot"><div class="ov" id="drOv"></div><div id="drTop"></div><button class="fab" id="drFab" data-a="dchatopen" aria-label="Чат драфта" style="display:none">'+CHATI+'<u id="drDot"></u></button><div class="sheet" id="drSheet"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><b>Чат драфта</b><button class="ib" data-a="dchatopen" style="width:36px;height:32px" aria-label="Закрыть">✕</button></div><div id="drMsgs"></div><div class="row" style="flex-wrap:nowrap;margin-top:8px"><input type="text" id="dci" maxlength="200" placeholder="Сообщение" style="flex:1;min-width:0"><button class="btn" data-a="dchat" style="flex:none">→</button></div></div></div>'},
 match:function(){var v=S.mv;if(!v)return '<div class="pg"><p class="sub">Загрузка матча…</p></div>';
 var stl={accept:'Принятие матча',ban:'Драфт карт',rounds:'Выбор раундов',live:'Матч идёт',pending:'Результат на проверке',review:'Спорный результат',done:'Матч завершён',cancelled:'Матч отменён'},
  dt=new Date(v.created*1000).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
@@ -387,32 +439,67 @@ var AC=null,DRS=['accept','ban','rounds'];
 function unlockAudio(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume()}catch(e){}}
 document.addEventListener('click',unlockAudio);document.addEventListener('touchstart',unlockAudio);
 function beep(){if(AC)[880,1175,1480].forEach(function(f,i){var o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+i*.18;o.type='sine';o.frequency.value=f;o.connect(g);g.connect(AC.destination);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.4,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.16);o.start(t);o.stop(t+.17)});if(navigator.vibrate)navigator.vibrate([200,100,200])}
-var drBusy=false;
+var drBusy=false,CROWN='<svg viewBox="0 0 24 24" style="width:18px;height:18px;color:var(--ac2);fill:currentColor;stroke:none"><path d="M3 8l4.5 4L12 5l4.5 7L21 8l-2 11H5z"/></svg>',
+ SWD='<svg viewBox="0 0 24 24" style="width:22px;height:22px"><path d="M4 4l10 10M20 4L10 14M3 21l4-4M21 21l-4-4M14 14l3 3M10 14l-3 3"/></svg>',
+ CHATI='<svg viewBox="0 0 24 24" style="width:26px;height:26px"><path d="M21 12a8 8 0 0 1-11.6 7.1L4 20l1.1-4.6A8 8 0 1 1 21 12z"/></svg>';
+function fmtN(n){return String(n).replace(/\B(?=(\d{3})+(?!\d))/g,'\u00a0')}
 async function drPoll(){if(drBusy||!T||location.hash.indexOf('#/draft/')!=0)return;drBusy=true;
- try{var id=parseInt(location.hash.split('/')[2],10);if(S.did!=id){S.did=id;S.dchat=[];S.drc=0;S.dr=null;S.beepT=0}
-  var d=await api('/matches/'+id+'/draft?after='+S.drc);
-  if(d.chat.length){S.dchat=S.dchat.concat(d.chat);S.drc=d.chat[d.chat.length-1].id}
+ try{var id=parseInt(location.hash.split('/')[2],10);if(S.did!=id){S.did=id;S.dchat=[];S.drc=0;S.dr=null;S.beepT=0;S.turnB=-1;S.unread=0;S.sheet=false}
+  var d=await api('/matches/'+id+'/draft?after='+S.drc),prev=S.dr&&S.dr.status;
+  if(d.chat.length){S.dchat=S.dchat.concat(d.chat);S.drc=d.chat[d.chat.length-1].id;if(!S.sheet)S.unread+=d.chat.filter(function(c){return c.nick!=S.nick}).length}
   S.dr=d;
-  if(d.status=='cancelled'){toast('Матч отменён: не все приняли. Принявшие вернулись в поиск');go('#/queue');return}
-  if(d.status!='accept'&&d.status!='ban'&&d.status!='rounds'){S.last=d.id;S.q.on=false;S.q.done=true;await lobby();toast('Драфт завершён — матч начался!');go('#/queue');return}
+  if(d.status=='cancelled'){toast(prev=='accept'?'Матч отменён: не все приняли. Принявшие вернулись в поиск':'Матч отменён по голосам игроков');go('#/queue');return}
+  if(['accept','rounds','ban','live'].indexOf(d.status)<0){S.last=d.id;S.q.on=false;S.q.done=true;await lobby();go('#/queue');return}
   if(d.status=='accept'&&!d.accepted&&Date.now()-S.beepT>3000){beep();S.beepT=Date.now()}
+  if(d.myTurn&&S.turnB!=d.banned.length){S.turnB=d.banned.length;beep()}
   paintDraft()}catch(e){}finally{drBusy=false}}
 setInterval(drPoll,1000);
-function paintDraft(){var d=S.dr,top=$('#drTop');if(!d||!top)return;
- var TN={A:'Атака (Т)',B:'Оборона (КТ)'},tm=function(t){return '<div style="flex:1;min-width:0"><b>'+TN[t]+'</b>'+d.players.filter(function(p){return p.team==t}).map(function(p){return '<div class="sub" style="margin:2px 0">'+(p.cap?'★ ':'')+esc(p.nick)+(p.me?' (ты)':'')+(d.status=='accept'?(p.accepted?' ✓':' …'):d.status=='rounds'?(p.voted?' ✓':''):'')+'</div>'}).join('')+'</div>'};
- $('#drT').textContent=d.left+' c';
- var h='<div class="row" style="flex-wrap:nowrap;align-items:flex-start;margin-top:12px">'+tm('A')+tm('B')+'</div>';
- if(d.status=='accept'){h+='<p class="sub c">Матч найден! Прими его, иначе он отменится.</p><div class="c"><button class="btn" data-a="dacc"'+(d.accepted?' disabled':'')+'>'+(d.accepted?'Принято — ждём остальных':'Принять матч')+'</button></div>'}
- else if(d.status=='ban'){h+='<p class="sub c">Капитаны: Т — <b>'+esc(d.caps.A||'—')+'</b>, КТ — <b>'+esc(d.caps.B||'—')+'</b><br>Сейчас банит: <b>'+TN[d.turn]+'</b>'+(d.myTurn?' — твой ход!':'')+'</p><div class="grid" style="grid-template-columns:repeat(2,1fr);gap:8px">'+d.maps.map(function(m){var b=d.banned.indexOf(m)>-1;return '<button class="btn'+(b?' g':'')+'" data-a="dban" data-v="'+m+'"'+(b||!d.myTurn?' disabled':'')+' style="'+(b?'text-decoration:line-through;opacity:.4':'')+'">'+m+'</button>'}).join('')+'</div>'}
- else{h+='<p class="sub c">Карта: <b>'+esc(d.map)+'</b>. Выбери количество раундов — победит вариант с большим числом голосов.</p><div class="grid" style="grid-template-columns:repeat(2,1fr);gap:8px">'+d.roundsOpts.map(function(r){return '<button class="btn'+(d.myVote==r?'':' g')+'" data-a="dvote" data-v="'+r+'">'+r+' · голосов: '+d.votes[r]+'</button>'}).join('')+'</div>'}
- if(top.dataset.h!=h){top.innerHTML=h;top.dataset.h=h}
- var mg=$('#drMsgs'),ch=S.dchat.map(function(c){return '<div><b style="color:'+(c.team=='A'?'#e5a13a':'#4aa3ff')+'">'+esc(c.nick)+':</b> '+esc(c.text)+'</div>'}).join('');
- if(mg.dataset.h!=ch){mg.innerHTML=ch;mg.dataset.h=ch;mg.scrollTop=mg.scrollHeight}}
+// аватар игрока в лобби: фото или инициалы; в купленной рамке, если она есть
+function dAv(p,z){var inn=p.ava?AVI(p.uid,p.ava):'<span class="ini" style="font-size:'+Math.round(z/3)+'px">'+esc((p.nick||'?').slice(0,2).toUpperCase())+'</span>',f=p.frame?FRI(p.frame):-1;
+ return f>-1?fb(FR[f],Math.round(z*.8),inn):'<div class="av dk" style="width:'+z+'px;height:'+z+'px;border-radius:'+Math.round(z/4)+'px;flex:none">'+inn+'</div>'}
+function dCard(p,mir){var cal=p.played<10;
+ return '<div class="pc'+(mir?' mir':'')+'"><div class="pt">'+dAv(p,64)+'<div class="pn"><div class="pnm">'+esc(p.nick)+(p.cap?CROWN+'<span class="capb">CAP</span>':'')+(p.me?'<small style="color:var(--mu);font-weight:600">(ты)</small>':'')+'</div><div class="psid">'+esc(p.sid)+'</div></div>'
+ +'<div class="pe">'+(cal?'<span class="dcal">'+p.played+'/10</span>':'<span class="delo">'+fmtN(p.elo)+'</span>')+badge(cal?null:p.elo,34)+'</div></div>'
+ +'<div class="ps"><div><b>'+p.n+'</b><i>M</i></div><div><b class="ac">'+String(p.wr).replace('.',',')+'%</b><i>WR</i></div><div><b>'+String(p.avg).replace('.',',')+'</b><i>AVG</i></div><div><b>'+String(p.kd).replace('.',',')+'</b><i>K/D</i></div></div></div>'}
+function dTeam(d,t){var tm=d.teams[t],mir=t=='A';
+ return '<span class="tpill '+(mir?'tt':'ct')+'">'+(mir?'Атака (Т)':'Оборона (КТ)')+'</span><div class="card tinfo'+(mir?' mir':'')+'"><div><div class="tnm">'+esc(tm.name)+'</div><div class="lb2">Команда капитана</div></div><div class="tel"><div class="lb2">Среднее Elo</div><b>'+fmtN(tm.avg)+'</b></div></div>'
+ +d.players.filter(function(p){return p.team==t}).map(function(p){return dCard(p,mir)}).join('')}
+function dSrv(d){var h='<div class="card srv"><h4>Сервер и распик</h4><div class="inner"><span class="dp blue">Регион выбран</span>',body='',fmt,mp;
+ if(d.status=='rounds'){h+=' <span class="dp">Осталось форматов: '+d.roundsOpts.length+'</span> <span class="dp">Выберите формат раундов голосованием</span> <span class="dp warn">Формат выберется через <b data-tm></b></span><p class="dtx">Все игроки голосуют за формат раундов 15 секунд. После этого формат выбирается по наибольшему числу голосов.</p></div>';
+  body=d.roundsOpts.map(function(r){var mine=d.myVote==r;return '<div class="fc"><div class="fn">'+r+'</div><div class="dtx" style="margin:2px 0 0">раундов</div><div class="fv">Голосов: '+d.votes[r]+'</div><button class="btn wide" data-a="dvote" data-v="'+r+'"'+(mine?' disabled':'')+'>'+(mine?'Ваш голос':'Голосовать')+'</button></div>'}).join('');
+  fmt='Идёт голосование';mp='Сначала выберите формат голосованием'}
+ else if(d.status=='ban'){var left=d.maps.length-d.banned.length;h+=' <span class="dp">Осталось карт: '+left+'</span> <span class="dp">Банит карту: '+esc(d.turnNick.toUpperCase())+'</span> <span class="dp warn">Автобан карты через <b data-tm></b></span><p class="dtx">После выбора формата капитаны банят карты по очереди: сначала АТАКА (Т), затем ОБОРОНА (КТ), пока не останется одна карта.</p></div>';
+  body=d.maps.map(function(m){var b=d.banned.indexOf(m)>-1;return '<div class="mc'+(b?' bn':'')+'"><div class="mi" style="background-image:url(/img/maps/'+m.toLowerCase()+'.jpg),linear-gradient(135deg,#3a2f6b,#14121f)">'+m+'</div><div class="mr"><span class="sub" style="margin:0">'+(b?'Забанена':'Доступна для бана')+'</span><button class="btn" data-a="dban" data-v="'+m+'"'+(b||!d.myTurn?' disabled':'')+'>Бан</button></div></div>'}).join('');
+  fmt=d.rounds+' раундов';mp='Идёт бан карт'}
+ else{h+=' <span class="dp">Карта: '+esc(d.map)+'</span> <span class="dp">Раундов: '+d.rounds+'</span></div>';fmt='До '+d.rounds+' раундов';mp=d.map}
+ h+=body+'<div class="info"><div class="lb2">Регион сервера</div><div class="flag">'+esc(d.region)+'</div></div>'
+ +'<div class="info"><div class="lb2">Формат матча</div><b>'+esc(fmt)+'</b></div><div class="info"><div class="lb2">Карта матча</div><b>'+esc(mp)+'</b></div>'
+ +(d.host?'<div class="info"><div class="lb2">Host</div><div class="host">'+dAv({uid:d.host.uid,nick:d.host.nick,ava:d.host.ava,frame:d.host.frame},96)+'<div style="min-width:0"><b>'+esc(d.host.nick)+'</b><div class="psid">ID: '+esc(d.host.sid)+'</div></div></div><button class="btn g wide" style="margin-top:12px" data-a="dcopy" data-v="'+esc(d.host.sid)+'">Копировать ID</button></div>':'')+'</div>';
+ return h}
+function dLobby(d){var c=d.cancel;
+ return '<div class="lob"><div class="card"><div class="row"><span class="tag">Матч #'+esc(d.id)+'</span><span class="tag">'+(d.status=='live'?'Матч идёт':'Распик карт')+'</span></div><h2 class="dh">Лобби матча</h2>'
+ +'<div class="g2"><div class="sb"><div class="lb2">Игроков</div><b>'+SWD+d.total+'</b></div><div class="sb"><div class="lb2">Загрузок</div><b>'+d.uploads+'</b></div></div>'
+ +'<div class="dtx">Отметки на отмену: <b style="color:var(--tx)">'+c.marks+'/'+c.need+'</b></div><button class="btn g sm" style="margin-top:10px" data-a="dcancel">'+(c.mine?'Снять отметку':'Отметить отмену')+'</button></div>'
+ +dTeam(d,'B')+dSrv(d)+dTeam(d,'A')
+ +'<div class="card" style="margin-top:14px"><h3 style="margin:0 0 8px">Загрузка результатов матча</h3><p class="warn2">При загрузке неверного или поддельного скриншота результатов к аккаунту может быть применено наказание.</p><span class="dp">'+(d.uploads?'Скриншотов: '+d.uploads:'Ожидание скриншотов')+'</span>'
+ +(d.status=='live'?'<a class="btn wide" style="margin-top:12px" href="#/result">Отправить результат</a>':'<div class="dbox">Сейчас загрузка недоступна для этого статуса матча.</div>')+'</div></div>'}
+function dAcc(d){var ac=d.players.map(function(p){return '<div class="ac'+(p.accepted?' on':'')+'">'+USR+'</div>'}).join('');
+ return '<div class="card ovc"><div class="row" style="flex-wrap:nowrap;justify-content:space-between;align-items:flex-start"><div><h2 class="dh">Подтвердите матч</h2><p class="sub">У вас есть <b data-tm></b>, чтобы принять найденный матч. Кто не подтвердит, получит блокировку поиска на 5 минут.</p></div><div class="tmb"><div class="lb2">Таймер</div><b data-tm></b></div></div>'
+ +'<div class="card" style="margin:12px 0"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><div><b>Статус подтверждения</b><div class="sub" style="margin:4px 0 0">Подтвердили '+d.acceptedCount+' из '+d.total+' игроков</div></div><span class="dp">'+(d.accepted?'Принято':'Ожидание')+'</span></div><div class="acg">'+ac+'</div></div>'
+ +'<button class="btn wide" data-a="dacc"'+(d.accepted?' disabled':'')+'>'+(d.accepted?'Матч подтверждён':'Принять матч')+'</button><div class="dbox">'+(d.accepted?'Ваш голос засчитан. Ждём остальных игроков.':'Окно нельзя закрыть до завершения ready-check.')+'</div></div>'}
+function paintDraft(){var d=S.dr,top=$('#drTop'),ov=$('#drOv');if(!d||!top||!ov)return;
+ var acc=d.status=='accept',h1=acc?dAcc(d):'',h2=acc?'':dLobby(d);
+ if(ov.dataset.h!=h1){ov.innerHTML=h1;ov.dataset.h=h1}
+ if(top.dataset.h!=h2){top.innerHTML=h2;top.dataset.h=h2}
+ [].forEach.call(document.querySelectorAll('[data-tm]'),function(e){e.textContent=d.left+'с'});
+ $('#drFab').style.display=acc?'none':'grid';var u=$('#drDot');u.textContent=S.unread;u.style.display=S.unread&&!S.sheet?'grid':'none';
+ var mg=$('#drMsgs'),ch=S.dchat.map(function(c){return '<div style="margin:3px 0"><b style="color:'+(c.team=='A'?'#e5a13a':'#4aa3ff')+'">'+esc(c.nick)+':</b> '+esc(c.text)+'</div>'}).join('');
+ if(mg.dataset.h!=ch){mg.innerHTML=ch||'<div class="sub">Сообщений пока нет</div>';mg.dataset.h=ch;mg.scrollTop=mg.scrollHeight}}
 // если матч найден, а пользователь не на экране драфта (в т.ч. после перезагрузки страницы) — ведём его на драфт
 setInterval(async function(){if(!T||qi||location.hash.indexOf('#/draft/')==0)return;
  try{var s=await api('/queue/status');if(s.match&&DRS.indexOf(s.phase)>-1&&S.yank!=s.match){S.yank=s.match;go('#/draft/'+s.match)}}catch(e){}},4000);
 
-document.addEventListener('click',async function(e){var t=e.target.closest('[data-a]');if(!t||t.tagName=='SELECT')return;var a=t.dataset.a,v=t.dataset.v,q=S.q,busy=['praise','rep','auth','sub','find','req','acc','del','claim','buyf','q','dacc','dban','dvote','dchat'].indexOf(a)>-1,old=t.textContent;if(busy){if(t.disabled)return;t.disabled=true;if(a=='auth')t.textContent='Подождите…'}
+document.addEventListener('click',async function(e){var t=e.target.closest('[data-a]');if(!t||t.tagName=='SELECT')return;var a=t.dataset.a,v=t.dataset.v,q=S.q,busy=['praise','rep','auth','sub','find','req','acc','del','claim','buyf','q','dacc','dban','dvote','dchat','dcancel'].indexOf(a)>-1,old=t.textContent;if(busy){if(t.disabled)return;t.disabled=true;if(a=='auth')t.textContent='Подождите…'}
  try{
  var ae=$('#ae');if(ae)ae.textContent='';
  if(a=='am'){S.reg=v=='1';render()}
@@ -433,6 +520,9 @@ document.addEventListener('click',async function(e){var t=e.target.closest('[dat
  else if(a=='find'){var qq=$('#fn').value.trim();S.fq=qq;if(!qq){toast('Введи ник или StandKnife ID');return}
    var fr=await api('/friends/search?q='+encodeURIComponent(qq));S.fres=fr.user?{n:fr.user.nick,id:fr.user.sid}:null;if(!fr.user)toast('Игрок не найден');render()}
  else if(a=='req'){if(!S.fres)return;var rs=await api('/friends/request','POST',{nick:S.fres.n});S.fres=null;S.fq='';toast(rs.status=='ok'?'Вы теперь друзья':'Заявка отправлена');render()}
+ else if(a=='dchatopen'){S.sheet=!S.sheet;$('#drSheet').classList.toggle('open',S.sheet);if(S.sheet){S.unread=0;var dm=$('#drMsgs');if(dm)dm.scrollTop=dm.scrollHeight;var dc=$('#dci');if(dc)dc.focus()}paintDraft()}
+ else if(a=='dcancel'){await api('/matches/'+S.did+'/cancel-mark','POST');drPoll()}
+ else if(a=='dcopy'){try{await navigator.clipboard.writeText(v)}catch(e){var ta=document.createElement('textarea');ta.value=v;document.body.appendChild(ta);ta.select();document.execCommand('copy');ta.remove()}toast('ID скопирован')}
  else if(a=='dacc'){await api('/matches/'+S.did+'/accept','POST');drPoll()}
  else if(a=='dban'){await api('/matches/'+S.did+'/ban','POST',{map:v});drPoll()}
  else if(a=='dvote'){await api('/matches/'+S.did+'/vote','POST',{rounds:+v});drPoll()}
