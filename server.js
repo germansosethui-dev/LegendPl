@@ -49,7 +49,7 @@ try { db.exec('ALTER TABLE matches ADD COLUMN mode TEXT'); db.exec("UPDATE match
 
 for (const q of ['ALTER TABLE matches ADD COLUMN rounds INT', 'ALTER TABLE matches ADD COLUMN deadline INT DEFAULT 0', 'ALTER TABLE matches ADD COLUMN turn TEXT',
   'ALTER TABLE matches ADD COLUMN banned TEXT', 'ALTER TABLE matches ADD COLUMN cap_a INT', 'ALTER TABLE matches ADD COLUMN cap_b INT',
-  'ALTER TABLE mp ADD COLUMN accepted INT DEFAULT 1', 'ALTER TABLE mp ADD COLUMN vote INT', 'ALTER TABLE users ADD COLUMN avatar TEXT', 'ALTER TABLE users ADD COLUMN ava_v INT DEFAULT 0']) { try { db.exec(q); } catch {} }
+  'ALTER TABLE mp ADD COLUMN accepted INT DEFAULT 1', 'ALTER TABLE mp ADD COLUMN vote INT', 'ALTER TABLE users ADD COLUMN avatar TEXT', 'ALTER TABLE users ADD COLUMN ava_v INT DEFAULT 0', 'ALTER TABLE users ADD COLUMN q_ban INT DEFAULT 0', 'ALTER TABLE mp ADD COLUMN cancel INT DEFAULT 0']) { try { db.exec(q); } catch {} }
 db.exec('CREATE TABLE IF NOT EXISTS draft_chat(id INTEGER PRIMARY KEY, match_id INT, nick TEXT, team TEXT, text TEXT, ts INT)');
 
 const RANK = { user: 0, moderator: 1, admin: 2 };
@@ -166,7 +166,7 @@ app.get('/api/stats', (q, s) => s.json({ players: db.prepare('SELECT COUNT(*) c 
 
 /* ---------- Подбор матча (PC League / Phone League) ---------- */
 const MAPS = ['Sandstone', 'Province', 'Breeze', 'Dune', 'Rust', 'Hanami'];   // пул драфта: банят по очереди, остаётся одна
-const ROUNDS = [10, 13, 16, 19], DSEC = 30, DRAFT = ['accept', 'ban', 'rounds'];
+const ROUNDS = [10, 13, 16, 19], DSEC = 30, VOTE_SEC = 15, BAN_SEC = 15, QBAN_SEC = 300, DRAFT = ['accept', 'ban', 'rounds'];
 const rnd = a => a[Math.floor(Math.random() * a.length)];
 const MODES = { '1x1': 2, '2x2': 4, '5x5': 10 };                      // режим -> число игроков
 // Отдельная очередь на каждую лигу и каждый режим: PC и Phone не пересекаются
@@ -208,6 +208,7 @@ app.post('/api/queue/join', auth, (q, s) => {
   if (!MODES[mode]) return bad(s, 400, 'Неизвестный режим');
   if (lg !== device(q) && q.user.role !== 'admin') return bad(s, 403, lg === 'pc' ? 'PC League доступна только с компьютера' : 'Phone League доступна только с телефона');
   if (liveOf(q.user.id)) return bad(s, 409, 'Сначала заверши текущий матч');
+  if ((q.user.q_ban || 0) > now()) return bad(s, 403, 'Блокировка поиска ещё ' + Math.ceil((q.user.q_ban - now()) / 60) + ' мин.: ты не принял найденный матч');
   unqueue(q.user.id);
   Q[lg][mode].push({ id: q.user.id, elo: q.user.elo, ts: now() });
   tryMatch(lg, mode); s.json({ ok: true });
@@ -225,30 +226,31 @@ app.get('/api/queue/status', auth, (q, s) => {
 
 /* ---------- Драфт: принятие -> баны карт -> голосование за раунды ---------- */
 const mget = id => db.prepare('SELECT * FROM matches WHERE id=?').get(id);
-function cancelAccept(m) {   // не все приняли: матч отменяется, принявшие возвращаются в очередь
+function cancelAccept(m) {   // не все приняли: матч отменяется; принявшие возвращаются в очередь, не принявшие — блокировка поиска на 5 минут
   db.prepare("UPDATE matches SET status='cancelled' WHERE id=?").run(m.id);
-  if (!Q[m.league] || !Q[m.league][m.mode]) return;
-  for (const p of db.prepare('SELECT u.id,u.elo FROM mp p JOIN users u ON u.id=p.user_id WHERE p.match_id=? AND p.accepted=1').all(m.id))
-    if (!liveOf(p.id)) { unqueue(p.id); Q[m.league][m.mode].push({ id: p.id, elo: p.elo, ts: now() }); }
+  for (const p of db.prepare('SELECT u.id,u.elo,x.accepted FROM mp x JOIN users u ON u.id=x.user_id WHERE x.match_id=?').all(m.id)) {
+    if (!p.accepted) { db.prepare('UPDATE users SET q_ban=? WHERE id=?').run(now() + QBAN_SEC, p.id); continue; }
+    if (Q[m.league] && Q[m.league][m.mode] && !liveOf(p.id)) { unqueue(p.id); Q[m.league][m.mode].push({ id: p.id, elo: p.elo, ts: now() }); }
+  }
 }
-function startBans(id) { db.prepare("UPDATE matches SET status='ban',deadline=?,turn=? WHERE id=?").run(now() + DSEC, rnd(['A', 'B']), id); }
-function doBan(m, map) {
-  const b = JSON.parse(m.banned || '[]'); b.push(map);
-  const left = MAPS.filter(x => !b.includes(x));
-  if (left.length === 1) db.prepare("UPDATE matches SET banned=?,map=?,status='rounds',deadline=? WHERE id=?").run(JSON.stringify(b), left[0], now() + DSEC, m.id);
-  else db.prepare('UPDATE matches SET banned=?,turn=?,deadline=? WHERE id=?').run(JSON.stringify(b), m.turn === 'A' ? 'B' : 'A', now() + DSEC, m.id);
-}
-function finishVote(id) {   // побеждает вариант с наибольшим числом голосов; ничья — случайный из лидеров
+function startVote(id) { db.prepare("UPDATE matches SET status='rounds',deadline=? WHERE id=?").run(now() + VOTE_SEC, id); }
+function finishVote(id) {   // побеждает формат с наибольшим числом голосов; ничья — случайный из лидеров. Дальше баны карт, первой банит АТАКА (Т)
   const v = Object.fromEntries(ROUNDS.map(r => [r, 0]));
   db.prepare('SELECT vote FROM mp WHERE match_id=? AND vote IS NOT NULL').all(id).forEach(x => { if (x.vote in v) v[x.vote]++; });
   const top = Math.max(...Object.values(v));
-  db.prepare("UPDATE matches SET rounds=?,status='live' WHERE id=?").run(+rnd(ROUNDS.filter(r => v[r] === top)), id);
+  db.prepare("UPDATE matches SET rounds=?,status='ban',banned='[]',turn='A',deadline=? WHERE id=?").run(+rnd(ROUNDS.filter(r => v[r] === top)), now() + BAN_SEC, id);
+}
+function doBan(m, map) {
+  const b = JSON.parse(m.banned || '[]'); b.push(map);
+  const left = MAPS.filter(x => !b.includes(x));
+  if (left.length === 1) db.prepare("UPDATE matches SET banned=?,map=?,status='live',deadline=0 WHERE id=?").run(JSON.stringify(b), left[0], m.id);
+  else db.prepare('UPDATE matches SET banned=?,turn=?,deadline=? WHERE id=?').run(JSON.stringify(b), m.turn === 'A' ? 'B' : 'A', now() + BAN_SEC, m.id);
 }
 function advance(id) {   // переход по таймеру
   const m = mget(id); if (!m || !DRAFT.includes(m.status) || now() < m.deadline) return;
   if (m.status === 'accept') cancelAccept(m);
-  else if (m.status === 'ban') doBan(m, rnd(MAPS.filter(x => !JSON.parse(m.banned || '[]').includes(x))));
-  else finishVote(id);
+  else if (m.status === 'rounds') finishVote(id);
+  else doBan(m, rnd(MAPS.filter(x => !JSON.parse(m.banned || '[]').includes(x))));
 }
 setInterval(() => { for (const m of db.prepare("SELECT id FROM matches WHERE status IN('accept','ban','rounds') AND deadline<=?").all(now())) advance(m.id); }, 1000);
 function inDraft(q, s) {   // матч в драфте + участник ли пользователь
@@ -259,21 +261,37 @@ function inDraft(q, s) {   // матч в драфте + участник ли �
 }
 app.get('/api/matches/:id/draft', auth, (q, s) => {
   const c = inDraft(q, s); if (!c) return; const { m, p } = c;
-  const pl = db.prepare('SELECT u.id uid,u.nick,u.elo,x.team,x.accepted,x.vote FROM mp x JOIN users u ON u.id=x.user_id WHERE x.match_id=? ORDER BY x.team,u.elo DESC').all(m.id);
+  const pl = db.prepare('SELECT u.id uid,u.nick,u.sid,u.elo,u.played,u.frame,u.ava_v,x.team,x.accepted,x.vote,x.cancel FROM mp x JOIN users u ON u.id=x.user_id WHERE x.match_id=? ORDER BY x.team,u.elo DESC').all(m.id);
+  const stq = db.prepare("SELECT COUNT(*) n, COALESCE(SUM(CASE WHEN m.winner=p.team THEN 1 ELSE 0 END),0) w, COALESCE(AVG(p.k),0) avg, COALESCE(SUM(p.k),0) sk, COALESCE(SUM(p.d),0) sd FROM mp p JOIN matches m ON m.id=p.match_id WHERE p.user_id=? AND m.status='done'");
   const votes = Object.fromEntries(ROUNDS.map(r => [r, pl.filter(x => x.vote === r).length]));
-  const capId = { A: m.cap_a, B: m.cap_b };
-  s.json({ id: pad(m.id), status: m.status, league: m.league, mode: m.mode, left: Math.max(0, (m.deadline || 0) - now()), maps: MAPS, banned: JSON.parse(m.banned || '[]'),
-    map: m.map, rounds: m.rounds, turn: m.turn, team: p.team, accepted: !!p.accepted, myVote: p.vote || null, votes, roundsOpts: ROUNDS,
+  const capId = { A: m.cap_a, B: m.cap_b }, nickOf = id => (pl.find(x => x.uid === id) || {}).nick;
+  const r1 = (n, k) => Math.round(n * k) / k;
+  const teamOf2 = t => { const a = pl.filter(x => x.team === t); return { name: (nickOf(capId[t]) || '—') + '_Team', avg: a.length ? Math.round(a.reduce((z, x) => z + x.elo, 0) / a.length) : 0 }; };
+  const host = pl.find(x => x.uid === capId.B) || pl[0], need = Math.max(1, Math.ceil(pl.length * 0.6));
+  s.json({ id: pad(m.id), status: m.status, left: Math.max(0, (m.deadline || 0) - now()), maps: MAPS, banned: JSON.parse(m.banned || '[]'), map: m.map, rounds: m.rounds,
+    turn: m.turn, turnNick: nickOf(capId[m.turn]) || '', team: p.team, accepted: !!p.accepted, myVote: p.vote || null, votes, roundsOpts: ROUNDS, region: 'Россия',
     isCap: capId[p.team] === q.user.id, myTurn: m.status === 'ban' && m.turn === p.team && capId[p.team] === q.user.id,
-    caps: { A: (pl.find(x => x.uid === capId.A) || {}).nick, B: (pl.find(x => x.uid === capId.B) || {}).nick },
-    players: pl.map(x => ({ nick: x.nick, team: x.team, accepted: !!x.accepted, cap: x.uid === capId[x.team], voted: x.vote != null, me: x.uid === q.user.id })),
+    total: pl.length, acceptedCount: pl.filter(x => x.accepted).length, uploads: db.prepare('SELECT COUNT(*) c FROM subs WHERE match_id=?').get(m.id).c,
+    cancel: { marks: pl.filter(x => x.cancel).length, need, mine: !!p.cancel },
+    teams: { A: teamOf2('A'), B: teamOf2('B') }, host: host && { nick: host.nick, sid: host.sid, uid: host.uid, frame: host.frame, ava: host.ava_v || 0 },
+    players: pl.map(x => { const st = stq.get(x.uid);
+      return { uid: x.uid, nick: x.nick, sid: x.sid, team: x.team, elo: x.elo, played: x.played, frame: x.frame, ava: x.ava_v || 0, accepted: !!x.accepted, voted: x.vote != null,
+        cap: x.uid === capId[x.team], me: x.uid === q.user.id, n: st.n, wr: st.n ? r1(st.w / st.n * 100, 10) : 0, avg: r1(st.avg, 10), kd: st.sd ? r1(st.sk / st.sd, 100) : st.sk }; }),
     chat: db.prepare('SELECT id,nick,team,text,ts FROM draft_chat WHERE match_id=? AND id>? ORDER BY id LIMIT 100').all(m.id, parseInt(q.query.after) || 0) });
+});
+app.post('/api/matches/:id/cancel-mark', auth, (q, s) => {   // «отметка на отмену»: набрали 60% игроков — матч отменяется без изменения Elo
+  const c = inDraft(q, s); if (!c) return;
+  if (!['rounds', 'ban', 'live'].includes(c.m.status)) return bad(s, 409, 'Сейчас отметить отмену нельзя');
+  db.prepare('UPDATE mp SET cancel=1-COALESCE(cancel,0) WHERE match_id=? AND user_id=?').run(c.m.id, q.user.id);
+  const t = db.prepare('SELECT COUNT(*) n, COALESCE(SUM(cancel),0) c FROM mp WHERE match_id=?').get(c.m.id);
+  if (t.c >= Math.max(1, Math.ceil(t.n * 0.6))) db.prepare("UPDATE matches SET status='cancelled' WHERE id=?").run(c.m.id);
+  s.json({ ok: true });
 });
 app.post('/api/matches/:id/accept', auth, (q, s) => {
   const c = inDraft(q, s); if (!c) return;
   if (c.m.status !== 'accept') return bad(s, 409, 'Приём матча уже закрыт');
   db.prepare('UPDATE mp SET accepted=1 WHERE match_id=? AND user_id=?').run(c.m.id, q.user.id);
-  if (!db.prepare('SELECT 1 FROM mp WHERE match_id=? AND accepted=0').get(c.m.id)) startBans(c.m.id);
+  if (!db.prepare('SELECT 1 FROM mp WHERE match_id=? AND accepted=0').get(c.m.id)) startVote(c.m.id);
   s.json({ ok: true });
 });
 app.post('/api/matches/:id/ban', auth, (q, s) => {
