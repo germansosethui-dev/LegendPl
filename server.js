@@ -214,6 +214,10 @@ app.post('/api/queue/join', auth, (q, s) => {
   tryMatch(lg, mode); s.json({ ok: true });
 });
 app.post('/api/queue/leave', auth, (q, s) => { unqueue(q.user.id); s.json({ ok: true }); });
+app.get('/api/queue/count', (q, s) => {   // сколько игроков сейчас ищут матч, по лигам и режимам
+  const o = {}; for (const lg in Q) { o[lg] = {}; for (const md in Q[lg]) o[lg][md] = Q[lg][md].length; }
+  s.json(o);
+});
 app.get('/api/queue/status', auth, (q, s) => {
   const m = liveOf(q.user.id); if (m) return s.json({ match: pad(m.id), phase: db.prepare('SELECT status FROM matches WHERE id=?').get(m.id).status });
   for (const lg in Q) for (const md in MODES) {
@@ -329,6 +333,11 @@ const matchView = (id, meId) => {
   return { ...m, id: pad(m.id), mvp, canPraise: inMatch && m.status === 'done',
     players: pl.map(({ uid, mine, ...x }) => ({ ...x, mine: !!mine, me: uid === meId })) };
 };
+// Мои матчи (страница «Отправка результата» и список матчей). Маршрут должен стоять ДО /api/matches/:id
+app.get('/api/matches/mine', auth, (q, s) => s.json(db.prepare(`SELECT m.id,m.league,m.mode,m.map,m.status,m.winner,m.created,
+  (SELECT x.status FROM subs x WHERE x.match_id=m.id AND x.user_id=p.user_id) sub
+  FROM mp p JOIN matches m ON m.id=p.match_id WHERE p.user_id=? AND m.status IN('live','pending','review','done') ORDER BY m.id DESC LIMIT 50`)
+  .all(q.user.id).map(x => ({ ...x, id: pad(x.id) }))));
 app.get('/api/matches/:id', auth, (q, s) => {
   const v = matchView(+q.params.id, q.user.id); if (!v) return bad(s, 404, 'Матч не найден');
   if (!v.players.some(p => p.nick === q.user.nick) && RANK[q.user.role] < 1) return bad(s, 403, 'forbidden');
@@ -555,8 +564,12 @@ app.post('/api/admin/subs/:id/reject', A, (q, s) => {
   db.prepare("UPDATE matches SET status='live' WHERE id=? AND status IN('pending','review') AND NOT EXISTS(SELECT 1 FROM subs WHERE match_id=? AND status='pending')").run(sub.match_id, sub.match_id);
   audit(q.user.nick, 'reject_sub', pad(sub.match_id), sub.file); s.json({ ok: true });
 });
-app.get('/api/admin/matches', A, (q, s) => s.json(db.prepare('SELECT id,league,mode,map,status,winner,created FROM matches WHERE (?=\'\' OR status=?) ORDER BY id DESC LIMIT 100')
-  .all(q.query.status || '', q.query.status || '').map(x => ({ ...x, id: pad(x.id) }))));
+app.get('/api/admin/matches', A, (q, s) => {
+  const L = db.prepare("SELECT id,league,mode,map,status,winner,created FROM matches WHERE (?='' OR status=?) ORDER BY id DESC LIMIT 100")
+    .all(q.query.status || '', q.query.status || '');
+  const pq = db.prepare('SELECT u.nick,u.sid,p.team,p.k,p.d,p.a FROM mp p JOIN users u ON u.id=p.user_id WHERE p.match_id=? ORDER BY p.team,p.k DESC');
+  s.json(L.map(x => ({ ...x, players: pq.all(x.id), id: pad(x.id) })));
+});
 app.post('/api/admin/matches/:id/cancel', A, (q, s) => {
   db.prepare("UPDATE matches SET status='cancelled' WHERE id=? AND status!='done'").run(+q.params.id);
   audit(q.user.nick, 'cancel_match', pad(+q.params.id)); s.json({ ok: true });
