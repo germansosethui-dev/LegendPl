@@ -12,7 +12,7 @@ node server.js
 ```
 Сайт: `http://localhost:3000` (положи свой `inkplatform.html` как `public/index.html`).
 Админ-панель: `http://localhost:3000/admin`.
-Переменные: `PORT`, `DB_FILE`, `JWT_SECRET` (обязательна), `ADMIN_NICKS`.
+Переменные: `PORT`, `DB_FILE`, `JWT_SECRET` (обязательна), `ADMIN_NICKS`, `DATABASE_URL` (PostgreSQL: сюда сохраняется снимок базы и скриншоты, чтобы данные не пропадали на Render).
 
 ## Как добавлять админов и модераторов
 Роли: `user` < `moderator` < `admin`.
