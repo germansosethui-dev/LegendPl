@@ -275,6 +275,7 @@ app.get('/api/matches/:id/draft', auth, (q, s) => {
   s.json({ id: pad(m.id), status: m.status, left: Math.max(0, (m.deadline || 0) - now()), maps: MAPS, banned: JSON.parse(m.banned || '[]'), map: m.map, rounds: m.rounds,
     turn: m.turn, turnNick: nickOf(capId[m.turn]) || '', team: p.team, accepted: !!p.accepted, myVote: p.vote || null, votes, roundsOpts: ROUNDS, region: 'Россия',
     isCap: capId[p.team] === q.user.id, myTurn: m.status === 'ban' && m.turn === p.team && capId[p.team] === q.user.id,
+    canUpload: !m.cap_b || m.cap_b === q.user.id || RANK[q.user.role] >= 1,
     total: pl.length, acceptedCount: pl.filter(x => x.accepted).length, uploads: db.prepare('SELECT COUNT(*) c FROM subs WHERE match_id=?').get(m.id).c,
     cancel: { marks: pl.filter(x => x.cancel).length, need, mine: !!p.cancel },
     teams: { A: teamOf2('A'), B: teamOf2('B') }, host: host && { nick: host.nick, sid: host.sid, uid: host.uid, frame: host.frame, ava: host.ava_v || 0 },
@@ -335,9 +336,9 @@ const matchView = (id, meId) => {
 };
 // Мои матчи (страница «Отправка результата» и список матчей). Маршрут должен стоять ДО /api/matches/:id
 app.get('/api/matches/mine', auth, (q, s) => s.json(db.prepare(`SELECT m.id,m.league,m.mode,m.map,m.status,m.winner,m.created,
-  (SELECT x.status FROM subs x WHERE x.match_id=m.id AND x.user_id=p.user_id) sub
+  (SELECT x.status FROM subs x WHERE x.match_id=m.id AND x.user_id=p.user_id) sub, (m.cap_b IS NULL OR m.cap_b=p.user_id) host
   FROM mp p JOIN matches m ON m.id=p.match_id WHERE p.user_id=? AND m.status IN('live','pending','review','done') ORDER BY m.id DESC LIMIT 50`)
-  .all(q.user.id).map(x => ({ ...x, id: pad(x.id) }))));
+  .all(q.user.id).map(({ host, ...x }) => ({ ...x, id: pad(x.id), can: !!host || RANK[q.user.role] >= 1 }))));
 app.get('/api/matches/:id', auth, (q, s) => {
   const v = matchView(+q.params.id, q.user.id); if (!v) return bad(s, 404, 'Матч не найден');
   if (!v.players.some(p => p.nick === q.user.nick) && RANK[q.user.role] < 1) return bad(s, 403, 'forbidden');
@@ -384,6 +385,7 @@ app.post('/api/matches/:id/result', auth, up.single('screenshot'), (q, s) => {
   if (!p) { drop(); return bad(s, 403, 'Тебя не было в этом матче'); }
   const m = db.prepare('SELECT * FROM matches WHERE id=?').get(id);
   if (!['live', 'pending', 'review'].includes(m.status)) { drop(); return bad(s, 409, 'Матч уже закрыт'); }
+  if (m.cap_b && m.cap_b !== q.user.id && RANK[q.user.role] < 1) { drop(); return bad(s, 403, 'Результат загружает только хост матча'); }
   if (!q.file) return bad(s, 400, 'Нужен скриншот (png/jpg/webp до 5 МБ)');
   const winner = q.body.winner, [k, d, a] = ['k', 'd', 'a'].map(x => Math.max(0, Math.min(99, parseInt(q.body[x]) || 0)));
   if (!['A', 'B'].includes(winner)) { drop(); return bad(s, 400, 'Укажи победившую команду: A или B'); }
@@ -567,8 +569,17 @@ app.post('/api/admin/subs/:id/reject', A, (q, s) => {
 app.get('/api/admin/matches', A, (q, s) => {
   const L = db.prepare("SELECT id,league,mode,map,status,winner,created FROM matches WHERE (?='' OR status=?) ORDER BY id DESC LIMIT 100")
     .all(q.query.status || '', q.query.status || '');
-  const pq = db.prepare('SELECT u.nick,u.sid,p.team,p.k,p.d,p.a FROM mp p JOIN users u ON u.id=p.user_id WHERE p.match_id=? ORDER BY p.team,p.k DESC');
+  const pq = db.prepare('SELECT u.id uid,u.nick,u.sid,p.team,p.k,p.d,p.a FROM mp p JOIN users u ON u.id=p.user_id WHERE p.match_id=? ORDER BY p.team,p.k DESC');
   s.json(L.map(x => ({ ...x, players: pq.all(x.id), id: pad(x.id) })));
+});
+app.post('/api/admin/matches/:id/stats', A, (q, s) => {   // поправить K/D/A игрока в матче (если хост/админ указал неверно)
+  const id = +q.params.id, uid = +q.body.uid;
+  const p = db.prepare('SELECT * FROM mp WHERE match_id=? AND user_id=?').get(id, uid);
+  if (!p) return bad(s, 404, 'Этого игрока нет в матче');
+  const [k, d, a] = ['k', 'd', 'a'].map(x => Math.max(0, Math.min(99, parseInt(q.body[x]) || 0)));
+  db.prepare('UPDATE mp SET k=?,d=?,a=? WHERE match_id=? AND user_id=?').run(k, d, a, id, uid);
+  const u = db.prepare('SELECT nick FROM users WHERE id=?').get(uid) || {};
+  audit(q.user.nick, 'edit_kda', pad(id), `${u.nick}: ${p.k}/${p.d}/${p.a} -> ${k}/${d}/${a}`); s.json({ ok: true });
 });
 app.post('/api/admin/matches/:id/cancel', A, (q, s) => {
   db.prepare("UPDATE matches SET status='cancelled' WHERE id=? AND status!='done'").run(+q.params.id);
