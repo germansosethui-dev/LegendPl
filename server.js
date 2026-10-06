@@ -501,7 +501,7 @@ app.post('/api/admin/users/:id/adjust', auth, need('admin'), (q, s) => {
   db.prepare('UPDATE users SET points=MAX(0,points+?),elo=MAX(100,elo+?) WHERE id=?').run(p, e, u.id);
   audit(q.user.nick, 'adjust', u.nick, `points ${p}, elo ${e}`); s.json({ ok: true });
 });
-app.post('/api/admin/users/:id/edit', adminOnly, (q, s) => {   // смена ника (логина), StandKnife ID и пароля игрока
+app.post('/api/admin/users/:id/edit', auth, need('admin'), (q, s) => {   // смена ника (логина), StandKnife ID и пароля игрока
   const u = db.prepare('SELECT * FROM users WHERE id=?').get(+q.params.id); if (!u) return bad(s, 404, 'Игрок не найден');
   const b = q.body || {}, nick = String(b.nick || '').trim() || u.nick, sid = String(b.sid || '').trim() || u.sid, pw = String(b.password || '');
   if (!/^[\wа-яА-ЯёЁ-]{3,16}$/.test(nick)) return bad(s, 400, 'Ник: 3–16 символов');
