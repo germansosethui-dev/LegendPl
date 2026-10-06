@@ -84,7 +84,7 @@ label{font-size:13px;color:var(--mu);font-weight:600}
 .cnt{display:inline-block;border:1px solid var(--line);border-radius:99px;padding:6px 16px;font-size:13px;letter-spacing:.18em;background:var(--bg);margin-bottom:12px}
 .inner{background:var(--bg);border:1px solid var(--line);border-radius:22px;padding:16px;margin-top:12px}
 .w100{width:100%;text-align:center}.btn svg{width:18px;height:18px;vertical-align:-3px;margin-right:6px}
-.av{background:#fff;color:#2a2740;display:grid;place-items:center}.av svg{width:55%;height:55%}
+.av{background:#fff;color:#2a2740;display:grid;place-items:center;overflow:hidden}.av img{width:100%;height:100%;object-fit:cover;display:block}.av svg{width:55%;height:55%}
 .fp{height:170px;display:grid;place-items:center;background:radial-gradient(circle,var(--line),var(--card));border-radius:22px 22px 0 0;margin:-16px -16px 14px}
 .fc{text-align:center}.fc .lb2{font-size:11px}.fc h3{margin:4px 0 0;font-size:clamp(15px,4.6vw,22px);letter-spacing:.02em;overflow-wrap:anywhere}.fc small{color:var(--mu);font-size:16px}.fc p{color:var(--mu);font-size:14px;margin:8px 0 12px}
 .pc{display:inline-block;color:#111;font-weight:700;letter-spacing:.15em;padding:12px 18px;border-radius:99px;margin-bottom:14px}
@@ -217,8 +217,9 @@ golden:'<path d="M34 2 L36 -14 L43 -6 L50 -18 L57 -6 L64 -14 L66 2Z" fill="#fbbf
 rocket:rocket(106,-6,45)+rocket(-6,106,225)+'<circle cx="-8" cy="8" r="2" fill="#fff"/><circle cx="108" cy="92" r="2.500" fill="#fff"/><circle cx="50" cy="-10" r="1.800" fill="#fde68a"/><circle cx="52" cy="108" r="2" fill="#fff"/>',
 minecraft:'<rect x="-8" y="-8" width="16" height="6" fill="#4d7c0f"/><rect x="-8" y="-2" width="16" height="10" fill="#7c4a1e"/><rect x="92" y="92" width="16" height="16" fill="#6b7280"/><rect x="95" y="96" width="4" height="4" fill="#22d3ee"/><rect x="101" y="101" width="4" height="4" fill="#22d3ee"/><rect x="96" y="102" width="3" height="3" fill="#22d3ee"/><rect x="97" y="-12" width="4" height="12" fill="#92400e"/><rect x="96" y="-18" width="6" height="6" fill="#fbbf24"/><path d="M-6 106 L10 90" stroke="#92400e" stroke-width="3"/><path d="M4 84 Q14 80 18 92" stroke="#9ca3af" stroke-width="4" fill="none"/>'
 };
-var fb=function(f,z){var k=f[0].toLowerCase();return '<div class="fw t-'+k+(k=='holographic'?' hue':'')+'" style="position:relative;display:inline-block;padding:'+Math.round(z*.09)+'px;background:'+f[4]+';border-radius:'+f[6]+';box-shadow:inset 2px 2px 3px rgba(255,255,255,.55),inset -2px -2px 4px rgba(0,0,0,.55),0 0 '+Math.round(z*.22)+'px '+f[5]+'"><svg viewBox="-30 -30 160 160" style="position:absolute;left:-30%;top:-30%;width:160%;height:160%;pointer-events:none;overflow:visible;stroke:none;stroke-width:1">'+(DEC[k]||'')+'</svg><div class="av" style="position:relative;z-index:1;width:'+z+'px;height:'+z+'px;border-radius:'+(f[6]=='50%'?'50%':'12px')+'">'+USR+'</div></div>'};
-var avt=function(z){return S.frame>=0?fb(FR[S.frame],z):'<div class="av" style="width:'+z+'px;height:'+z+'px;border-radius:'+Math.round(z/4)+'px">'+USR+'</div>'};
+var AVI=function(id,v){return v?'<img src="/api/avatar/'+id+'?v='+v+'" alt="">':USR};
+var fb=function(f,z,inn){var k=f[0].toLowerCase();return '<div class="fw t-'+k+(k=='holographic'?' hue':'')+'" style="position:relative;display:inline-block;padding:'+Math.round(z*.09)+'px;background:'+f[4]+';border-radius:'+f[6]+';box-shadow:inset 2px 2px 3px rgba(255,255,255,.55),inset -2px -2px 4px rgba(0,0,0,.55),0 0 '+Math.round(z*.22)+'px '+f[5]+'"><svg viewBox="-30 -30 160 160" style="position:absolute;left:-30%;top:-30%;width:160%;height:160%;pointer-events:none;overflow:visible;stroke:none;stroke-width:1">'+(DEC[k]||'')+'</svg><div class="av" style="position:relative;z-index:1;width:'+z+'px;height:'+z+'px;border-radius:'+(f[6]=='50%'?'50%':'12px')+'">'+(inn||USR)+'</div></div>'};
+var avt=function(z){var inn=AVI(S.id,S.ava);return S.frame>=0?fb(FR[S.frame],z,inn):'<div class="av" style="width:'+z+'px;height:'+z+'px;border-radius:'+Math.round(z/4)+'px">'+inn+'</div>'};
 var MAPS=['Sandstone','Province','Breeze','Dune','Rust','Hanami'];
 var mcard=function(k,m){var done=m[2]>=m[3],cl=S.claimed[k];return '<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h3 style="margin:0;font-size:22px">'+m[0]+'</h3><span class="ba">'+(cl?'Получена':done?'Выполнена':'Активна')+'</span></div><p class="sub" style="margin:8px 0 0">'+m[1]+'</p><div class="inner"><div class="row" style="justify-content:space-between"><span class="sub" style="margin:0">Прогресс</span><span class="sub" style="margin:0">'+m[2]+' / '+m[3]+'</span></div><div class="bar"><i style="width:'+Math.round(m[2]/m[3]*100)+'%"></i></div></div><div class="row" style="justify-content:space-between;margin-top:14px"><b style="color:var(--ac);font-size:20px">'+sv(I2.coin,'style="vertical-align:-5px;margin-right:8px"')+m[4]+' IP</b>'+(done&&!cl?'<button class="btn" data-a="claim" data-v="'+k+'" data-r="'+m[4]+'">Забрать</button>':'')+'</div></div>'};
 var LVB=[500,750,900,1050,1200,1350,1530,1750,2000]; // верхние границы уровней 1–9; от 2001 — 10
@@ -230,7 +231,7 @@ var MS={d:[['Сыграй 3 матча',2,3,100],['Выиграй матч',1,1,
 var SH=[[0,'Рамка «Чернила»',500],[1,'Значок ветерана',800],[2,'Фон профиля',1200],[3,'Буст опыта',300],[4,'Титул «Мастер»',1000],[5,'Цвет ника',450],[6,'Значок сезона',700],[7,'Анимация профиля',1500]];
 var CAPB=['linear-gradient(135deg,#fde68a,#f5b301)','linear-gradient(135deg,#f1f5f9,#a8b0c0)','linear-gradient(135deg,#f0b27a,#c47a35)'];
 var BOLT='<svg viewBox="0 0 24 24"><path d="M13 2L5 14h6l-1 8 8-12h-6z"/></svg>';
-var row=function(i,p){var f=p.frame?FRI(p.frame):-1,fr=f>-1?fb(FR[f],34):'<div class="av" style="width:42px;height:42px;border-radius:12px">'+USR+'</div>';
+var row=function(i,p){var f=p.frame?FRI(p.frame):-1,pi=AVI(p.id,p.ava_v),fr=f>-1?fb(FR[f],34,pi):'<div class="av" style="width:42px;height:42px;border-radius:12px">'+pi+'</div>';
  return '<div class="lbr'+(i<3?' g'+(i+1):'')+'"><span class="rk2"'+(i<3?' style="color:'+['#f5b301','#a8b0c0','#d08a4b'][i]+'"':'')+'>#'+(i+1)+'</span><div class="avc">'+fr+'</div><div class="who"><b>'+esc(p.nick)+'</b><span>ID: '+esc(p.sid)+'</span></div><div class="rt"><div class="row" style="gap:5px;flex-wrap:nowrap">'+badge(p.elo,34)+'<span class="cap" style="background:'+(CAPB[i]||'linear-gradient(135deg,var(--ac),var(--ac2))')+';color:'+(i<3?'#111':'#fff')+'">#'+(i+1)+'<i>'+BOLT+'</i></span></div><div class="e">'+p.elo+'</div><div class="m">'+p.played+' матчей</div></div></div>'};
 
 var pages={
@@ -274,7 +275,7 @@ profile:function(){var st=S.st,H=st.hist,n=st.matches,w=st.wins,k=st.kills,d=st.
 var wr=n?Math.round(w/n*100):0,ak=n?Math.round(k/n):0,kd=d?(k/d).toFixed(2):'0.00';
 var tl=function(l,v,ic){return '<div class="inner"><div class="row" style="justify-content:space-between"><span class="sub" style="margin:0">'+l+'</span><span style="color:var(--ac)">'+sv(I2[ic])+'</span></div><div class="big2" style="margin-top:8px">'+v+'</div></div>'};
 return '<div class="pg"><div class="card"><div class="inner c" style="padding:62px 0;margin-top:0">'+avt(120)+'</div><div style="margin-top:22px"><span class="tag">Профиль игрока</span></div><h1 style="font-size:clamp(34px,8vw,48px);margin:14px 0 6px">'+esc(S.nick)+'</h1><p class="sub" style="font-size:17px">StandKnife ID: '+S.sid+'</p>'+
-'<div class="row" style="justify-content:flex-end"><button class="btn g" data-a="edit">'+sv(I2.pen)+'Редактировать</button></div><div class="row" style="justify-content:flex-end;margin-top:10px">'+(S.role=='admin'||S.role=='moderator'?'<a class="btn" href="/admin">'+sv(I2.shield)+'Админ-панель</a>':'')+'<button class="btn g" data-a="help">'+sv(I2.help)+'Помощь</button><button class="btn g" data-a="out" aria-label="Выйти">'+sv(I2.out,'style="margin:0"')+'</button></div>'+
+'<div class="row" style="justify-content:flex-end"><button class="btn g" data-a="avatar">'+sv(I2.pen)+'Сменить аватар</button>'+(S.ava?'<button class="btn g" data-a="avdel">Убрать фото</button>':'')+'<input type="file" id="avf" accept="image/*" hidden></div><div class="row" style="justify-content:flex-end;margin-top:10px">'+(S.role=='admin'||S.role=='moderator'?'<a class="btn" href="/admin">'+sv(I2.shield)+'Админ-панель</a>':'')+'<button class="btn g" data-a="help">'+sv(I2.help)+'Помощь</button><button class="btn g" data-a="out" aria-label="Выйти">'+sv(I2.out,'style="margin:0"')+'</button></div>'+
 (S.edit?'<div class="inner"><label>Никнейм</label><div class="row"><input type="text" id="pn" value="'+esc(S.nick)+'" maxlength="16" style="flex:1;margin:0"><button class="btn" data-a="nick">Сохранить</button></div></div>':'')+
 '<div style="margin:22px 0 14px"><span class="btn">DEFAULT</span></div><div class="inner" style="border-color:var(--ac)"><div class="lb2">Default</div><h2 style="font-size:32px;margin:6px 0 14px">'+(S.played<10?'Калибровка рейтинга':'Рейтинг')+'</h2><div class="inner row" style="gap:20px;flex-wrap:nowrap">'+badge(S.played<10?null:S.elo,92)+'<div><div style="font-size:44px;font-weight:600;line-height:1.1">'+(S.played<10?S.played+'/10':S.elo)+'</div><div class="sub" style="margin:0;font-size:18px">'+(S.played<10?'Калибровка':'Elo · уровень '+lvl(S.elo))+'</div></div></div></div>'+
 tl('Винрейт',wr+'%','shield')+tl('Средние киллы',ak,'search')+tl('Матчи',n,'swords')+tl('K/D',kd,'trophy')+tl('Похвалы',st.praises||0,'trophy')+'</div>'+
@@ -323,7 +324,7 @@ async function api(p,m,b,fd){var h={};if(T)h.Authorization='Bearer '+T;if(b)h['C
   var e2=new Error(j.error==='unauthorized'?'Нужно войти':j.error||'Ошибка '+r.status);e2.status=r.status;if(r.status===401){setTok(null)}throw e2}return j}
 function fail(m){var e=$('#ae');if(e)e.textContent=m;toast(m)}
 var FRI=function(id){for(var i=0;i<FR.length;i++)if(FR[i][0].toLowerCase()==id)return i;return -1};
-function applyMe(m){var u=m.user,st=m.stats;S.nick=u.nick;S.sid=u.sid;S.elo=u.elo;S.played=u.played;S.pts=u.points;S.role=u.role;st.hist.forEach(function(h){h.cal=u.played<10});S.st=st;
+function applyMe(m){var u=m.user,st=m.stats;S.id=u.id;S.ava=u.ava;S.nick=u.nick;S.sid=u.sid;S.elo=u.elo;S.played=u.played;S.pts=u.points;S.role=u.role;st.hist.forEach(function(h){h.cal=u.played<10});S.st=st;
  S.owned={};m.owned.forEach(function(id){var i=FRI(id);if(i>-1)S.owned['f'+i]=1});S.frame=u.frame?FRI(u.frame):-1}
 function applyFr(f){S.friends=f.friends.map(function(x){return{n:x.nick,id:x.sid,on:x.online?1:0}});S.inc=f.incoming.map(function(x){return{n:x.nick,id:x.sid}});S.out=f.outgoing.map(function(x){return{n:x.nick,id:x.sid}})}
 var MSZ={'1x1':2,'2x2':4,'5x5':10},RS={cheat:'Читы',bug:'Багоюз',league:'Игра не в своей лиге',toxic:'Токсичность',ruin:'Руин игры'};
@@ -441,10 +442,18 @@ document.addEventListener('click',async function(e){var t=e.target.closest('[dat
  else if(a=='inv'){toast('Пати-режим появится в одном из следующих обновлений')}
  else if(a=='claim'){await api('/missions/'+v+'/claim','POST');toast('+'+t.dataset.r+' Ink Points');render()}
  else if(a=='buyf'){var i=+v,id=FR[i][0].toLowerCase();if(S.owned['f'+i]){await api('/shop/equip','POST',{id:id})}else{await api('/shop/buy','POST',{id:id});await api('/shop/equip','POST',{id:id});toast('Рамка куплена и надета')}render()}
- else if(a=='edit'){toast('Смена ника — через автора проекта: t.me/inknight666')}
+ else if(a=='avatar'){var af=$('#avf');if(af)af.click()}
+ else if(a=='avdel'){await api('/me/avatar','DELETE');S.ava=0;toast('Аватар убран');render()}
  else if(a=='help'){window.open('https://t.me/inknight666','_blank')}
  else if(a=='out'){setTok(null);stopQ();S.q={on:false,sec:0,found:0,done:false};go('#/auth')}
  }catch(x){fail(x.message)}finally{if(busy){t.disabled=false;if(a=='auth')t.textContent=old}}});
+
+document.addEventListener('change',function(e){var f=e.target;if(f.id!='avf'||!f.files||!f.files[0])return;var file=f.files[0];f.value='';
+ if(!/^image\//.test(file.type)){toast('Выбери картинку');return}
+ var img=new Image(),u=URL.createObjectURL(file);
+ img.onload=async function(){try{var c=document.createElement('canvas'),z=192;c.width=c.height=z;var m=Math.min(img.width,img.height),x=(img.width-m)/2,y=(img.height-m)/2;
+   c.getContext('2d').drawImage(img,x,y,m,m,0,0,z,z);var r=await api('/me/avatar','POST',{image:c.toDataURL('image/jpeg',.85)});S.ava=r.ava;toast('Аватар обновлён');render()}catch(x2){fail(x2.message)}finally{URL.revokeObjectURL(u)}};
+ img.onerror=function(){toast('Не удалось открыть картинку');URL.revokeObjectURL(u)};img.src=u});
 document.addEventListener('keydown',function(e){if(e.key=='Enter'&&e.target.id=='dci'){var cb=document.querySelector('[data-a="dchat"]');if(cb)cb.click()}if(e.key=='Enter'&&/^(an|as|ap)$/.test(e.target.id)){var b=document.querySelector('[data-a="auth"]');if(b)b.click()}});
 fetch('/api/health').then(function(r){return r.json()}).then(function(j){S.srv=!!j.ok}).catch(function(){S.srv=false;if(location.hash.indexOf('auth')>-1&&!($('#an')&&$('#an').value))paint('auth')});
 render();
