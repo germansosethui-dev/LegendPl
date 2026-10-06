@@ -584,5 +584,6 @@ app.use((e, q, s, n) => { if (e.code && String(e.code).startsWith('LIMIT')) retu
 setInterval(() => db.prepare("UPDATE matches SET status='cancelled' WHERE status='live' AND created<?").run(now() - 3 * 3600), 10 * 60e3);
 app.listen(PORT, () => console.log('InkPlatform: http://localhost:' + PORT + '  админка: /admin'));
 pgsync.start(db);
+for (const f of ['logo.png', 'lvl1.png', 'lvl10.png', 'lvq.png', 'favicon.png']) if (!fs.existsSync(path.join(__dirname, 'public', 'img', f))) console.error(`ВНИМАНИЕ: нет файла public/img/${f}: картинки не загрузятся. Проверь, что папка public/img залита в репозиторий.`);
 // В Termux не даём Android усыплять процесс в фоне (если установлен termux-wake-lock)
 require('child_process').execFile('termux-wake-lock', () => {});
