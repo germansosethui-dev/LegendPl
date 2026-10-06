@@ -198,7 +198,7 @@ minecraft:'<rect x="-8" y="-8" width="16" height="6" fill="#4d7c0f"/><rect x="-8
 };
 var fb=function(f,z){var k=f[0].toLowerCase();return '<div class="fw t-'+k+(k=='holographic'?' hue':'')+'" style="position:relative;display:inline-block;padding:'+Math.round(z*.09)+'px;background:'+f[4]+';border-radius:'+f[6]+';box-shadow:inset 2px 2px 3px rgba(255,255,255,.55),inset -2px -2px 4px rgba(0,0,0,.55),0 0 '+Math.round(z*.22)+'px '+f[5]+'"><svg viewBox="-30 -30 160 160" style="position:absolute;left:-30%;top:-30%;width:160%;height:160%;pointer-events:none;overflow:visible;stroke:none;stroke-width:1">'+(DEC[k]||'')+'</svg><div class="av" style="position:relative;z-index:1;width:'+z+'px;height:'+z+'px;border-radius:'+(f[6]=='50%'?'50%':'12px')+'">'+USR+'</div></div>'};
 var avt=function(z){return S.frame>=0?fb(FR[S.frame],z):'<div class="av" style="width:'+z+'px;height:'+z+'px;border-radius:'+Math.round(z/4)+'px">'+USR+'</div>'};
-var MAPS=['Prison','Dune','Sandstone','Province','Rust','Zone 9','Breeze'];
+var MAPS=['Sandstone','Province','Breeze','Dune','Rust','Hanami'];
 var mcard=function(k,m){var done=m[2]>=m[3],cl=S.claimed[k];return '<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h3 style="margin:0;font-size:22px">'+m[0]+'</h3><span class="ba">'+(cl?'Получена':done?'Выполнена':'Активна')+'</span></div><p class="sub" style="margin:8px 0 0">'+m[1]+'</p><div class="inner"><div class="row" style="justify-content:space-between"><span class="sub" style="margin:0">Прогресс</span><span class="sub" style="margin:0">'+m[2]+' / '+m[3]+'</span></div><div class="bar"><i style="width:'+Math.round(m[2]/m[3]*100)+'%"></i></div></div><div class="row" style="justify-content:space-between;margin-top:14px"><b style="color:var(--ac);font-size:20px">'+sv(I2.coin,'style="vertical-align:-5px;margin-right:8px"')+m[4]+' IP</b>'+(done&&!cl?'<button class="btn" data-a="claim" data-v="'+k+'" data-r="'+m[4]+'">Забрать</button>':'')+'</div></div>'};
 var LVB=[500,750,900,1050,1200,1350,1530,1750,2000]; // верхние границы уровней 1–9; от 2001 — 10
 var lvl=function(e){for(var i=0;i<LVB.length;i++)if(e<=LVB[i])return i+1;return 10};
@@ -260,8 +260,9 @@ tl('Винрейт',wr+'%','shield')+tl('Средние киллы',ak,'search')
 '<div class="card" style="margin-top:14px"><h2 style="font-size:30px;text-transform:uppercase">Default</h2>'+tl('Победы',w,'trophy')+tl('Поражения',n-w,'shield')+tl('Киллы',k,'search')+tl('Смерти',d,'shield')+'<div class="inner"><div class="sub" style="margin:0">Kills / Deaths / Assists</div><div class="big2" style="margin-top:8px">'+k+' / '+d+' / '+a+'</div></div></div>'+
 '<div class="card" style="margin-top:14px"><h2 style="font-size:30px">Последние матчи</h2>'+(n?H.map(function(h){var c=h.w?'var(--ok)':'var(--ac2)';return '<a class="mr" href="#/match/'+h.id+'" style="border-color:'+c+';background:color-mix(in srgb,'+c+' 10%,var(--card))"><span class="lv" style="width:54px;height:54px;font-size:18px;border-color:'+c+';color:'+c+';flex:none">'+(h.w?'W':'L')+'</span><div style="flex:1"><div style="font-size:20px">'+h.map+'</div><div class="sub" style="margin:0">'+h.k+'/'+h.d+'/'+h.a+'</div></div><div style="text-align:right"><div style="font-size:20px">'+(h.cal?'Калибровка':'Рейтинг')+'</div><div class="sub" style="margin:0">'+(h.w?'Победа':'Поражение')+'</div></div></a>'}).join(''):'<div class="dash" style="margin-top:12px">Матчей пока нет. Найди матч во вкладке «Поиск».</div>')+'</div></div>'},
 
+draft:function(){return '<div class="pg"><div class="card"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h2 style="margin:0">Драфт матча</h2><span class="ba" id="drT">—</span></div><div id="drTop"></div></div><div class="card" style="margin-top:12px"><h3 style="margin:0 0 8px">Чат драфта</h3><div id="drMsgs" style="max-height:180px;overflow:auto;font-size:14px"></div><div class="row" style="flex-wrap:nowrap;margin-top:8px"><input type="text" id="dci" maxlength="200" placeholder="Сообщение" style="flex:1;min-width:0"><button class="btn" data-a="dchat" style="flex:none">→</button></div></div></div>'},
 match:function(){var v=S.mv;if(!v)return '<div class="pg"><p class="sub">Загрузка матча…</p></div>';
-var stl={live:'Матч идёт',pending:'Результат на проверке',review:'Спорный результат',done:'Матч завершён',cancelled:'Матч отменён'},
+var stl={accept:'Принятие матча',ban:'Драфт карт',rounds:'Выбор раундов',live:'Матч идёт',pending:'Результат на проверке',review:'Спорный результат',done:'Матч завершён',cancelled:'Матч отменён'},
  dt=new Date(v.created*1000).toLocaleString('ru-RU',{day:'2-digit',month:'2-digit',year:'numeric',hour:'2-digit',minute:'2-digit'}),
  TN={A:'Атака (Т)',B:'Оборона (КТ)'},SC={A:v.score_a,B:v.score_b};
 var tile=function(l,x){return '<div class="inner" style="margin:0;text-align:center;padding:10px 4px"><div class="lb2" style="letter-spacing:.12em">'+l+'</div><div class="big2" style="font-size:24px">'+x+'</div></div>'};
@@ -271,7 +272,7 @@ var team=function(t){var L=v.players.filter(function(p){return p.team==t});retur
   (v.canPraise&&!p.me?'<button class="btn g" style="padding:8px 14px;flex:none" data-a="praise" data-v="'+esc(p.nick)+'"'+(p.mine?' disabled':'')+'>'+sv('<path d="M7 11v9H4v-9zM7 11l4-8c2 0 3 1 3 3v3h5a2 2 0 012 2l-1 7a2 2 0 01-2 2H7"/>')+(p.mine?'Похвалено':'Похвалить')+'</button>':'')+
   '</div><div class="grid" style="grid-template-columns:repeat(4,1fr);gap:8px;margin-top:12px">'+tile('K',p.k)+tile('A',p.a)+tile('D',p.d)+tile('K/D',kd)+'</div></div>'}).join('')+'</div>'};
 return '<div class="pg"><div class="card"><div class="row"><span class="ba">Матч #'+v.id+'</span><span class="ba">'+stl[v.status]+'</span>'+(v.mvp?'<span class="ba" style="color:#f5b301;border-color:#f5b30166">MVP: '+esc(v.mvp)+'</span>':'')+'<span class="ba">'+(LG[v.league]?LG[v.league][0]:v.league)+(v.mode&&v.mode!='admin'?' · '+v.mode.replace('x','×'):'')+'</span></div><p class="sub" style="margin:12px 0 0">Сыгран: '+dt+'</p></div>'+
-'<div class="card" style="margin-top:12px"><div class="inner" style="margin:0;padding:34px 12px;text-align:center;background:linear-gradient(135deg,color-mix(in srgb,var(--ac) 30%,var(--bg)),var(--bg) 70%)"><div class="lb2">Карта матча</div><div style="font-size:clamp(30px,10vw,46px);font-weight:800;text-transform:uppercase;letter-spacing:.04em">'+esc(v.map)+'</div></div></div>'+
+'<div class="card" style="margin-top:12px"><div class="inner" style="margin:0;padding:34px 12px;text-align:center;background:linear-gradient(135deg,color-mix(in srgb,var(--ac) 30%,var(--bg)),var(--bg) 70%)"><div class="lb2">Карта матча</div><div style="font-size:clamp(30px,10vw,46px);font-weight:800;text-transform:uppercase;letter-spacing:.04em">'+esc(v.map||'—')+'</div>'+(v.rounds?'<div class="lb2" style="margin-top:8px">До '+v.rounds+' раундов</div>':'')+'</div></div>'+
 '<div class="card" style="margin-top:12px"><div class="row" style="justify-content:space-between;flex-wrap:nowrap"><h2 style="margin:0">Итоги матча</h2><span class="ba">'+v.players.length+' игроков</span></div>'+team('A')+team('B')+'</div></div>'},
 
 report:function(){var R=S.rep||{},st={open:'На проверке',resolved:'Рассмотрена',rejected:'Отклонена'};
@@ -311,10 +312,11 @@ var qi=null;
 function stopQ(){clearInterval(qi);qi=null}
 async function lobby(){S.lobby=await api('/matches/'+parseInt(S.last,10))}
 function startQ(){if(qi)return;qi=setInterval(async function(){var q=S.q;q.sec++;
- try{var s=await api('/queue/status');if(s.match){stopQ();q.on=false;q.done=true;S.last=s.match;await lobby();toast('Матч найден!')}else if(s.searching){q.found=s.found;q.range=s.range;q.size=s.size}else{stopQ();q.on=false;q.sec=0}}catch(e){}
+ try{var s=await api('/queue/status');if(s.match&&DRS.indexOf(s.phase)>-1){stopQ();q.on=false;S.yank=s.match;unlockAudio();beep();go('#/draft/'+s.match);return}else if(s.match){stopQ();q.on=false;q.done=true;S.last=s.match;await lobby();toast('Матч найден!')}else if(s.searching){q.found=s.found;q.range=s.range;q.size=s.size}else{stopQ();q.on=false;q.sec=0}}catch(e){}
  paintQ()},1000)}
 async function qsync(){var q=S.q,s=await api('/queue/status');
- if(s.match){stopQ();q.on=false;q.done=true;S.last=s.match;await lobby()}
+ if(s.match&&DRS.indexOf(s.phase)>-1){stopQ();q.on=false;S.yank=s.match;go('#/draft/'+s.match)}
+ else if(s.match){stopQ();q.on=false;q.done=true;S.last=s.match;await lobby()}
  else if(s.searching){q.on=true;q.done=false;q.found=s.found;q.range=s.range;q.size=s.size;S.league=s.league;S.mode=s.mode;startQ()}
  else{stopQ();q.on=false;q.done=false;q.sec=0;q.found=0}}
 function paintQ(){var b=$('#qbox');if(!b)return;var q=S.q,m=Math.floor(q.sec/60),sc=q.sec%60;
@@ -326,7 +328,7 @@ function paintQ(){var b=$('#qbox');if(!b)return;var q=S.q,m=Math.floor(q.sec/60)
 function count(id,to){var el=$('#'+id);if(!el)return;var n=0,st=Math.max(1,Math.ceil(to/40)),t=setInterval(function(){n=Math.min(to,n+st);el.textContent=n.toLocaleString('ru-RU');if(n>=to)clearInterval(t)},25)}
 
 var lastF=0;
-var AUTHREQ=['match','report','queue','result','friends','missions','shop','profile'],rid=0,lastR='';
+var AUTHREQ=['draft','match','report','queue','result','friends','missions','shop','profile'],rid=0,lastR='';
 async function load(r){
  if(T){try{var rq=[api('/me')];if(r=='friends'||Date.now()-lastF>30000)rq.push(api('/friends'));var a=await Promise.all(rq);applyMe(a[0]);if(a[1]){applyFr(a[1]);lastF=Date.now()}}catch(e){if(e.banned)toast(e.message);else if(e.status!=401)throw e}}
  if(r=='home'){S.stats=await api('/stats');P=await api('/leaderboard')}
@@ -341,7 +343,7 @@ function paint(r){$('#v').innerHTML=pages[r]();
  $('#ipb').textContent=T?S.pts:0;var hp=$('#hp');hp.textContent=T?'Профиль':'Войти';hp.href=T?'#/profile':'#/auth';
  var bd=document.querySelector('.cb u');bd.textContent=S.inc.length;bd.style.display=T&&S.inc.length?'grid':'none';
  if(lastR!=r){window.scrollTo(0,0);lastR=r}
- if(r=='home'){count('c1',S.stats.players);count('c2',S.stats.matches)}if(r=='queue')paintQ();
+ if(r=='draft')paintDraft();if(r=='home'){count('c1',S.stats.players);count('c2',S.stats.matches)}if(r=='queue')paintQ();
  if(r=='leaderboard')$('#ls').oninput=function(e){var v=e.target.value.toLowerCase();$('#ll').innerHTML=P.map(function(p,i){return p.nick.toLowerCase().indexOf(v)>-1?row(i,p):''}).join('')}}
 async function render(){var hh=location.hash.replace(/^#\/?/,'')||'home',r=hh.split('/')[0];S.arg=hh.split('/')[1]||'';if(!pages[r])r='home';
  if(r=='match'&&S.mvArg!=S.arg){S.mv=null;S.mvArg=S.arg}
@@ -357,7 +359,38 @@ async function render(){var hh=location.hash.replace(/^#\/?/,'')||'home',r=hh.sp
 window.onhashchange=render;
 setInterval(function(){if(T&&location.hash=='#/friends'&&document.activeElement.tagName!='INPUT')render()},20000);
 
-document.addEventListener('click',async function(e){var t=e.target.closest('[data-a]');if(!t||t.tagName=='SELECT')return;var a=t.dataset.a,v=t.dataset.v,q=S.q,busy=['praise','rep','auth','sub','find','req','acc','del','claim','buyf','q'].indexOf(a)>-1,old=t.textContent;if(busy){if(t.disabled)return;t.disabled=true;if(a=='auth')t.textContent='Подождите…'}
+
+/* ---------- Драфт: звук, опрос, отрисовка ---------- */
+var AC=null,DRS=['accept','ban','rounds'];
+function unlockAudio(){try{AC=AC||new(window.AudioContext||window.webkitAudioContext)();if(AC.state=='suspended')AC.resume()}catch(e){}}
+document.addEventListener('click',unlockAudio);document.addEventListener('touchstart',unlockAudio);
+function beep(){if(AC)[880,1175,1480].forEach(function(f,i){var o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime+i*.18;o.type='sine';o.frequency.value=f;o.connect(g);g.connect(AC.destination);g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.4,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+.16);o.start(t);o.stop(t+.17)});if(navigator.vibrate)navigator.vibrate([200,100,200])}
+var drBusy=false;
+async function drPoll(){if(drBusy||!T||location.hash.indexOf('#/draft/')!=0)return;drBusy=true;
+ try{var id=parseInt(location.hash.split('/')[2],10);if(S.did!=id){S.did=id;S.dchat=[];S.drc=0;S.dr=null;S.beepT=0}
+  var d=await api('/matches/'+id+'/draft?after='+S.drc);
+  if(d.chat.length){S.dchat=S.dchat.concat(d.chat);S.drc=d.chat[d.chat.length-1].id}
+  S.dr=d;
+  if(d.status=='cancelled'){toast('Матч отменён: не все приняли. Принявшие вернулись в поиск');go('#/queue');return}
+  if(d.status!='accept'&&d.status!='ban'&&d.status!='rounds'){S.last=d.id;S.q.on=false;S.q.done=true;await lobby();toast('Драфт завершён — матч начался!');go('#/queue');return}
+  if(d.status=='accept'&&!d.accepted&&Date.now()-S.beepT>3000){beep();S.beepT=Date.now()}
+  paintDraft()}catch(e){}finally{drBusy=false}}
+setInterval(drPoll,1000);
+function paintDraft(){var d=S.dr,top=$('#drTop');if(!d||!top)return;
+ var TN={A:'Атака (Т)',B:'Оборона (КТ)'},tm=function(t){return '<div style="flex:1;min-width:0"><b>'+TN[t]+'</b>'+d.players.filter(function(p){return p.team==t}).map(function(p){return '<div class="sub" style="margin:2px 0">'+(p.cap?'★ ':'')+esc(p.nick)+(p.me?' (ты)':'')+(d.status=='accept'?(p.accepted?' ✓':' …'):d.status=='rounds'?(p.voted?' ✓':''):'')+'</div>'}).join('')+'</div>'};
+ $('#drT').textContent=d.left+' c';
+ var h='<div class="row" style="flex-wrap:nowrap;align-items:flex-start;margin-top:12px">'+tm('A')+tm('B')+'</div>';
+ if(d.status=='accept'){h+='<p class="sub c">Матч найден! Прими его, иначе он отменится.</p><div class="c"><button class="btn" data-a="dacc"'+(d.accepted?' disabled':'')+'>'+(d.accepted?'Принято — ждём остальных':'Принять матч')+'</button></div>'}
+ else if(d.status=='ban'){h+='<p class="sub c">Капитаны: Т — <b>'+esc(d.caps.A||'—')+'</b>, КТ — <b>'+esc(d.caps.B||'—')+'</b><br>Сейчас банит: <b>'+TN[d.turn]+'</b>'+(d.myTurn?' — твой ход!':'')+'</p><div class="grid" style="grid-template-columns:repeat(2,1fr);gap:8px">'+d.maps.map(function(m){var b=d.banned.indexOf(m)>-1;return '<button class="btn'+(b?' g':'')+'" data-a="dban" data-v="'+m+'"'+(b||!d.myTurn?' disabled':'')+' style="'+(b?'text-decoration:line-through;opacity:.4':'')+'">'+m+'</button>'}).join('')+'</div>'}
+ else{h+='<p class="sub c">Карта: <b>'+esc(d.map)+'</b>. Выбери количество раундов — победит вариант с большим числом голосов.</p><div class="grid" style="grid-template-columns:repeat(2,1fr);gap:8px">'+d.roundsOpts.map(function(r){return '<button class="btn'+(d.myVote==r?'':' g')+'" data-a="dvote" data-v="'+r+'">'+r+' · голосов: '+d.votes[r]+'</button>'}).join('')+'</div>'}
+ if(top.dataset.h!=h){top.innerHTML=h;top.dataset.h=h}
+ var mg=$('#drMsgs'),ch=S.dchat.map(function(c){return '<div><b style="color:'+(c.team=='A'?'#e5a13a':'#4aa3ff')+'">'+esc(c.nick)+':</b> '+esc(c.text)+'</div>'}).join('');
+ if(mg.dataset.h!=ch){mg.innerHTML=ch;mg.dataset.h=ch;mg.scrollTop=mg.scrollHeight}}
+// если матч найден, а пользователь не на экране драфта (в т.ч. после перезагрузки страницы) — ведём его на драфт
+setInterval(async function(){if(!T||qi||location.hash.indexOf('#/draft/')==0)return;
+ try{var s=await api('/queue/status');if(s.match&&DRS.indexOf(s.phase)>-1&&S.yank!=s.match){S.yank=s.match;go('#/draft/'+s.match)}}catch(e){}},4000);
+
+document.addEventListener('click',async function(e){var t=e.target.closest('[data-a]');if(!t||t.tagName=='SELECT')return;var a=t.dataset.a,v=t.dataset.v,q=S.q,busy=['praise','rep','auth','sub','find','req','acc','del','claim','buyf','q','dacc','dban','dvote','dchat'].indexOf(a)>-1,old=t.textContent;if(busy){if(t.disabled)return;t.disabled=true;if(a=='auth')t.textContent='Подождите…'}
  try{
  var ae=$('#ae');if(ae)ae.textContent='';
  if(a=='am'){S.reg=v=='1';render()}
@@ -378,6 +411,10 @@ document.addEventListener('click',async function(e){var t=e.target.closest('[dat
  else if(a=='find'){var qq=$('#fn').value.trim();S.fq=qq;if(!qq){toast('Введи ник или StandKnife ID');return}
    var fr=await api('/friends/search?q='+encodeURIComponent(qq));S.fres=fr.user?{n:fr.user.nick,id:fr.user.sid}:null;if(!fr.user)toast('Игрок не найден');render()}
  else if(a=='req'){if(!S.fres)return;var rs=await api('/friends/request','POST',{nick:S.fres.n});S.fres=null;S.fq='';toast(rs.status=='ok'?'Вы теперь друзья':'Заявка отправлена');render()}
+ else if(a=='dacc'){await api('/matches/'+S.did+'/accept','POST');drPoll()}
+ else if(a=='dban'){await api('/matches/'+S.did+'/ban','POST',{map:v});drPoll()}
+ else if(a=='dvote'){await api('/matches/'+S.did+'/vote','POST',{rounds:+v});drPoll()}
+ else if(a=='dchat'){var ci=$('#dci'),tx=ci.value.trim();if(tx){ci.value='';await api('/matches/'+S.did+'/chat','POST',{text:tx});drPoll()}}
  else if(a=='acc'){await api('/friends/accept','POST',{nick:v});toast('Заявка принята');render()}
  else if(a=='del'){await api('/friends/'+encodeURIComponent(S.friends[+v].n),'DELETE');render()}
  else if(a=='inv'){toast('Пати-режим появится в одном из следующих обновлений')}
@@ -387,7 +424,7 @@ document.addEventListener('click',async function(e){var t=e.target.closest('[dat
  else if(a=='help'){window.open('https://t.me/inknight666','_blank')}
  else if(a=='out'){setTok(null);stopQ();S.q={on:false,sec:0,found:0,done:false};go('#/auth')}
  }catch(x){fail(x.message)}finally{if(busy){t.disabled=false;if(a=='auth')t.textContent=old}}});
-document.addEventListener('keydown',function(e){if(e.key=='Enter'&&/^(an|as|ap)$/.test(e.target.id)){var b=document.querySelector('[data-a="auth"]');if(b)b.click()}});
+document.addEventListener('keydown',function(e){if(e.key=='Enter'&&e.target.id=='dci'){var cb=document.querySelector('[data-a="dchat"]');if(cb)cb.click()}if(e.key=='Enter'&&/^(an|as|ap)$/.test(e.target.id)){var b=document.querySelector('[data-a="auth"]');if(b)b.click()}});
 fetch('/api/health').then(function(r){return r.json()}).then(function(j){S.srv=!!j.ok}).catch(function(){S.srv=false;if(location.hash.indexOf('auth')>-1&&!($('#an')&&$('#an').value))paint('auth')});
 render();
 </script>
