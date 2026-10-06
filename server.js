@@ -49,7 +49,7 @@ try { db.exec('ALTER TABLE matches ADD COLUMN mode TEXT'); db.exec("UPDATE match
 
 for (const q of ['ALTER TABLE matches ADD COLUMN rounds INT', 'ALTER TABLE matches ADD COLUMN deadline INT DEFAULT 0', 'ALTER TABLE matches ADD COLUMN turn TEXT',
   'ALTER TABLE matches ADD COLUMN banned TEXT', 'ALTER TABLE matches ADD COLUMN cap_a INT', 'ALTER TABLE matches ADD COLUMN cap_b INT',
-  'ALTER TABLE mp ADD COLUMN accepted INT DEFAULT 1', 'ALTER TABLE mp ADD COLUMN vote INT']) { try { db.exec(q); } catch {} }
+  'ALTER TABLE mp ADD COLUMN accepted INT DEFAULT 1', 'ALTER TABLE mp ADD COLUMN vote INT', 'ALTER TABLE users ADD COLUMN avatar TEXT', 'ALTER TABLE users ADD COLUMN ava_v INT DEFAULT 0']) { try { db.exec(q); } catch {} }
 db.exec('CREATE TABLE IF NOT EXISTS draft_chat(id INTEGER PRIMARY KEY, match_id INT, nick TEXT, team TEXT, text TEXT, ts INT)');
 
 const RANK = { user: 0, moderator: 1, admin: 2 };
@@ -81,7 +81,7 @@ const bad = (s, c, m, x) => s.status(c).json({ error: m, ...x });
 const audit = (actor, action, target, info) =>
   db.prepare('INSERT INTO audit(actor,action,target,info,ts) VALUES(?,?,?,?,?)').run(actor, action, String(target), info || '', now());
 const device = q => /Android|iPhone|iPad|iPod|Mobile/i.test(q.headers['user-agent'] || '') ? 'phone' : 'pc';
-const pub = u => ({ id: u.id, nick: u.nick, sid: u.sid, role: u.role, elo: u.played >= 10 ? u.elo : null, played: u.played, points: u.points, frame: u.frame }); // Elo скрыт, пока не пройдена калибровка (10 матчей)
+const pub = u => ({ id: u.id, nick: u.nick, sid: u.sid, role: u.role, elo: u.played >= 10 ? u.elo : null, played: u.played, points: u.points, frame: u.frame, ava: u.ava_v || 0 }); // Elo скрыт, пока не пройдена калибровка (10 матчей)
 
 function auth(q, s, n) {
   let p;
@@ -97,6 +97,7 @@ const need = r => (q, s, n) => RANK[q.user.role] >= RANK[r] ? n() : bad(s, 403, 
 const app = express();
 app.use((q, s, n) => { const t = Date.now(); s.on('finish', () => { const d = Date.now() - t; if (d > 300) console.log('МЕДЛЕННО', q.method, q.originalUrl, d + 'мс'); }); n(); });
 app.set('trust proxy', 1);
+app.use('/api/me/avatar', express.json({ limit: '400kb' }));   // аватар приходит уже уменьшенным (≈10–30 КБ), запас на случай PNG
 app.use(express.json({ limit: '50kb' }));
 const lim = rateLimit({ windowMs: 15 * 60e3, max: 30, standardHeaders: true });
 app.get('/api/health', (q, s) => s.json({ ok: true }));
@@ -137,9 +138,28 @@ app.get('/api/users/:nick', auth, (q, s) => {
   const u = db.prepare('SELECT * FROM users WHERE nick=?').get(q.params.nick);
   u ? s.json({ user: { nick: u.nick, sid: u.sid, elo: u.played >= 10 ? u.elo : null, frame: u.frame }, stats: stats(u.id) }) : bad(s, 404, 'Игрок не найден');
 });
+
+/* ---------- Аватарки ---------- */
+const AVRE = /^data:image\/(jpeg|png|webp);base64,([A-Za-z0-9+/]+={0,2})$/;   // SVG запрещён намеренно (XSS)
+app.get('/api/avatar/:id', (q, s) => {
+  const u = db.prepare('SELECT avatar FROM users WHERE id=?').get(+q.params.id), m = u && u.avatar && AVRE.exec(u.avatar);
+  if (!m) return s.status(404).end();
+  s.set({ 'Content-Type': 'image/' + m[1], 'Cache-Control': 'public, max-age=31536000, immutable', 'X-Content-Type-Options': 'nosniff' });
+  s.send(Buffer.from(m[2], 'base64'));
+});
+app.post('/api/me/avatar', auth, (q, s) => {
+  const m = AVRE.exec(String((q.body || {}).image || ''));
+  if (!m) return bad(s, 400, 'Нужна картинка JPG, PNG или WebP');
+  const buf = Buffer.from(m[2], 'base64');
+  const ok = (m[1] === 'jpeg' && buf[0] === 0xff && buf[1] === 0xd8) || (m[1] === 'png' && buf.slice(1, 4).toString() === 'PNG') || (m[1] === 'webp' && buf.slice(8, 12).toString() === 'WEBP');
+  if (!ok || buf.length > 200 * 1024) return bad(s, 400, 'Файл повреждён или слишком большой (до 200 КБ)');
+  const v = now(); db.prepare('UPDATE users SET avatar=?, ava_v=? WHERE id=?').run(m[0], v, q.user.id); s.json({ ok: true, ava: v });
+});
+app.delete('/api/me/avatar', auth, (q, s) => { db.prepare('UPDATE users SET avatar=NULL, ava_v=0 WHERE id=?').run(q.user.id); s.json({ ok: true }); });
+
 app.get('/api/leaderboard', (q, s) => {
   const t = '%' + String(q.query.q || '').replace(/[%_]/g, '') + '%';
-  s.json(db.prepare('SELECT nick,sid,elo,played,frame FROM users WHERE banned_until<=? AND played>=10 AND nick LIKE ? ORDER BY elo DESC, played DESC LIMIT 50').all(now(), t));
+  s.json(db.prepare('SELECT id,nick,sid,elo,played,frame,ava_v FROM users WHERE banned_until<=? AND played>=10 AND nick LIKE ? ORDER BY elo DESC, played DESC LIMIT 50').all(now(), t));
 });
 app.get('/api/stats', (q, s) => s.json({ players: db.prepare('SELECT COUNT(*) c FROM users').get().c,
   matches: db.prepare("SELECT COUNT(*) c FROM matches WHERE status='done'").get().c }));
@@ -481,6 +501,21 @@ app.post('/api/admin/users/:id/adjust', auth, need('admin'), (q, s) => {
   db.prepare('UPDATE users SET points=MAX(0,points+?),elo=MAX(100,elo+?) WHERE id=?').run(p, e, u.id);
   audit(q.user.nick, 'adjust', u.nick, `points ${p}, elo ${e}`); s.json({ ok: true });
 });
+app.post('/api/admin/users/:id/edit', adminOnly, (q, s) => {   // смена ника (логина), StandKnife ID и пароля игрока
+  const u = db.prepare('SELECT * FROM users WHERE id=?').get(+q.params.id); if (!u) return bad(s, 404, 'Игрок не найден');
+  const b = q.body || {}, nick = String(b.nick || '').trim() || u.nick, sid = String(b.sid || '').trim() || u.sid, pw = String(b.password || '');
+  if (!/^[\wа-яА-ЯёЁ-]{3,16}$/.test(nick)) return bad(s, 400, 'Ник: 3–16 символов');
+  if (!/^\d{6,12}$/.test(sid)) return bad(s, 400, 'Некорректный StandKnife ID (6–12 цифр)');
+  if (pw && pw.length < 8) return bad(s, 400, 'Пароль минимум 8 символов');
+  try { db.prepare('UPDATE users SET nick=?, sid=?, pass=? WHERE id=?').run(nick, sid, pw ? bcrypt.hashSync(pw, 10) : u.pass, u.id); }
+  catch (e) { if (String(e.code).startsWith('SQLITE_CONSTRAINT')) return bad(s, 409, 'Ник или StandKnife ID уже заняты'); throw e; }
+  audit(q.user.nick, 'edit-user', u.nick, [nick !== u.nick && `ник ${u.nick} -> ${nick}`, sid !== u.sid && `sid ${u.sid} -> ${sid}`, pw && 'пароль изменён'].filter(Boolean).join('; ') || 'без изменений');
+  s.json({ ok: true });
+});
+app.delete('/api/admin/users/:id/avatar', A, (q, s) => {   // модерация: убрать неподходящую аватарку
+  const u = db.prepare('SELECT nick FROM users WHERE id=?').get(+q.params.id); if (!u) return bad(s, 404, 'Игрок не найден');
+  db.prepare('UPDATE users SET avatar=NULL, ava_v=0 WHERE id=?').run(+q.params.id); audit(q.user.nick, 'avatar-clear', u.nick, ''); s.json({ ok: true });
+});
 app.post('/api/admin/users/:id/role', auth, need('admin'), (q, s) => {
   const u = db.prepare('SELECT * FROM users WHERE id=?').get(+q.params.id), role = q.body.role;
   if (!u) return bad(s, 404, 'Игрок не найден'); if (!(role in RANK)) return bad(s, 400, 'Неверная роль');
@@ -572,6 +607,8 @@ app.get('/api/admin/audit', A, (q, s) => s.json(db.prepare('SELECT * FROM audit 
 /* ---------- Статика ---------- */
 app.get('/admin', (q, s) => s.sendFile(path.join(__dirname, 'public', 'admin.html')));
 app.use('/api', (q, s) => bad(s, 404, 'Нет такого метода API'));
+app.use('/img', express.static(path.join(__dirname, 'public', 'img')));
+app.use('/img', express.static(path.join(__dirname, 'public', 'IMG')));   // на GitHub папка может называться IMG
 app.use(express.static(path.join(__dirname, 'public'))); // сюда кладётся сайт: public/index.html
 // Проверка структуры проекта: частая ошибка — скопировать не тот файл или положить его не в public/
 for (const f of ['index.html', 'admin.html']) {
@@ -584,6 +621,6 @@ app.use((e, q, s, n) => { if (e.code && String(e.code).startsWith('LIMIT')) retu
 setInterval(() => db.prepare("UPDATE matches SET status='cancelled' WHERE status='live' AND created<?").run(now() - 3 * 3600), 10 * 60e3);
 app.listen(PORT, () => console.log('InkPlatform: http://localhost:' + PORT + '  админка: /admin'));
 pgsync.start(db);
-for (const f of ['logo.png', 'lvl1.png', 'lvl10.png', 'lvq.png', 'favicon.png']) if (!fs.existsSync(path.join(__dirname, 'public', 'img', f))) console.error(`ВНИМАНИЕ: нет файла public/img/${f}: картинки не загрузятся. Проверь, что папка public/img залита в репозиторий.`);
+for (const f of ['logo.png', 'lvl1.png', 'lvl10.png', 'lvq.png', 'favicon.png']) if (!fs.existsSync(path.join(__dirname, 'public', 'img', f)) && !fs.existsSync(path.join(__dirname, 'public', 'IMG', f))) console.error(`ВНИМАНИЕ: нет файла public/img/${f}: картинки не загрузятся. Проверь, что папка public/img залита в репозиторий.`);
 // В Termux не даём Android усыплять процесс в фоне (если установлен termux-wake-lock)
 require('child_process').execFile('termux-wake-lock', () => {});
